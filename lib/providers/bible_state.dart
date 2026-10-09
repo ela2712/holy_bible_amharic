@@ -73,6 +73,7 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
   Future<void> init() async {
     state = state.copyWith(isLoading: true);
     try {
+      await _repo.ensureInitialized();
       final translations = await _repo.getTranslations();
       final prefs = await SharedPreferences.getInstance();
       final savedTransId = prefs.getInt('active_translation_id') ?? 1;

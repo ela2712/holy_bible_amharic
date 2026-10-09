@@ -1,5 +1,7 @@
-import 'package:sqflite/sqflite.dart';
-import '../core/database/database_helper.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/geez_normalizer.dart';
 import '../models/translation.dart';
 import '../models/book.dart';
@@ -7,115 +9,361 @@ import '../models/verse.dart';
 import '../models/annotation.dart';
 
 class BibleRepository {
-  final DatabaseHelper _dbHelper;
+  static final BibleRepository instance = BibleRepository._init();
+  BibleRepository._init();
+  factory BibleRepository() => instance;
 
-  BibleRepository({DatabaseHelper? dbHelper})
-      : _dbHelper = dbHelper ?? DatabaseHelper.instance;
+  bool _isInitialized = false;
 
-  Future<Database> get _db async => await _dbHelper.database;
+  // In-memory data structures for fast access across all platforms (Web, Mobile, Desktop)
+  final List<Translation> _translations = [
+    const Translation(
+      id: 1,
+      code: 'amh_1954',
+      name: 'የቀዳማዊ ኃይለ ሥላሴ 1954/1962 ትርጉም',
+      shortName: '1954',
+      language: 'am',
+      canon: 'traditional_66',
+      isDefault: true,
+    ),
+    const Translation(
+      id: 2,
+      code: 'eotc_81',
+      name: 'ሰማንያ ወአሐዱ (81 Books Orthodox Canon)',
+      shortName: '81',
+      language: 'am',
+      canon: 'orthodox_81',
+      isDefault: false,
+    ),
+    const Translation(
+      id: 3,
+      code: 'en_kjv',
+      name: 'King James Version',
+      shortName: 'KJV',
+      language: 'en',
+      canon: 'protestant_66',
+      isDefault: false,
+    ),
+  ];
 
-  /// Fetch available translations
-  Future<List<Translation>> getTranslations() async {
-    final db = await _db;
-    final List<Map<String, dynamic>> maps =
-        await db.query('translations', orderBy: 'id ASC');
-    return maps.map((m) => Translation.fromMap(m)).toList();
+  final Map<int, List<Book>> _booksByTranslation = {};
+  // Key: '${bookId}_${chapter}' -> List<Verse>
+  final Map<String, List<Verse>> _versesCache = {};
+  // Key: '${bookId}_${chapter}' -> List<SectionHeading>
+  final Map<String, List<SectionHeading>> _headingsCache = {};
+
+  // All verses flattened for full-text search: Map<translationId, List<Map<String, dynamic>>>
+  final Map<int, List<Map<String, dynamic>>> _searchIndex = {};
+
+  Future<void> ensureInitialized() async {
+    if (_isInitialized) return;
+
+    try {
+      if (kDebugMode) print('Initializing BibleRepository datasets...');
+      await _load1954Bible();
+      await _load81CanonBible();
+      await _loadKjvBible();
+      _isInitialized = true;
+      if (kDebugMode) print('BibleRepository initialization completed successfully!');
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('Error initializing Bible data: $e');
+        print(stack);
+      }
+    }
   }
 
-  /// Fetch all books for a specific translation
+  Future<void> _load1954Bible() async {
+    final jsonStr = await rootBundle.loadString('assets/data/amharic_1954.json');
+    final data = json.decode(jsonStr) as Map<String, dynamic>;
+    final rawBooks = data['books'] as List<dynamic>;
+
+    final books = <Book>[];
+    final searchList = <Map<String, dynamic>>[];
+    int bookIdCounter = 1;
+
+    for (int i = 0; i < rawBooks.length; i++) {
+      final b = rawBooks[i] as Map<String, dynamic>;
+      final bookNum = i + 1;
+      final testament = bookNum <= 39 ? 'OT' : 'NT';
+      final chapters = b['chapters'] as List<dynamic>? ?? [];
+      final bookId = bookIdCounter++;
+
+      final book = Book(
+        id: bookId,
+        translationId: 1,
+        bookNumber: bookNum,
+        name: b['title'] as String? ?? 'መጽሐፍ $bookNum',
+        shortName: b['abbv'] as String? ?? '',
+        nameEn: '',
+        testament: testament,
+        orderIndex: bookNum,
+        totalChapters: chapters.length,
+      );
+      books.add(book);
+
+      for (int cIdx = 0; cIdx < chapters.length; cIdx++) {
+        final chObj = chapters[cIdx] as Map<String, dynamic>;
+        final chNum = int.tryParse(chObj['chapter']?.toString() ?? '') ?? (cIdx + 1);
+        final rawVerses = chObj['verses'] as List<dynamic>? ?? [];
+        final verseList = <Verse>[];
+
+        for (int vIdx = 0; vIdx < rawVerses.length; vIdx++) {
+          final vText = rawVerses[vIdx]?.toString().trim() ?? '';
+          if (vText.isNotEmpty) {
+            final vNum = vIdx + 1;
+            final normalized = GeezNormalizer.normalize(vText);
+
+            verseList.add(Verse(
+              id: bookId * 100000 + chNum * 1000 + vNum,
+              bookId: bookId,
+              chapter: chNum,
+              verse: vNum,
+              text: vText,
+              textNormalized: normalized,
+            ));
+
+            searchList.add({
+              'id': bookId * 100000 + chNum * 1000 + vNum,
+              'book_id': bookId,
+              'book_number': bookNum,
+              'book_name': book.name,
+              'chapter': chNum,
+              'verse': vNum,
+              'text': vText,
+              'text_normalized': normalized,
+            });
+          }
+        }
+        _versesCache['${bookId}_$chNum'] = verseList;
+      }
+    }
+
+    _booksByTranslation[1] = books;
+    _searchIndex[1] = searchList;
+  }
+
+  Future<void> _load81CanonBible() async {
+    final jsonStr = await rootBundle.loadString('assets/data/orthodox_81.json');
+    final rawBooks = json.decode(jsonStr) as List<dynamic>;
+
+    final books = <Book>[];
+    final searchList = <Map<String, dynamic>>[];
+    int bookIdCounter = 100;
+
+    for (int i = 0; i < rawBooks.length; i++) {
+      final b = rawBooks[i] as Map<String, dynamic>;
+      final bookNum = b['book_number'] as int? ?? (i + 1);
+      final testament = (b['testament']?.toString().toLowerCase() == 'new') ? 'NT' : 'OT';
+      final rawChapters = b['chapters'] as List<dynamic>? ?? [];
+      final bookId = bookIdCounter++;
+
+      final book = Book(
+        id: bookId,
+        translationId: 2,
+        bookNumber: bookNum,
+        name: b['book_name_am'] as String? ?? 'መጽሐፍ $bookNum',
+        shortName: b['book_short_name_am'] as String? ?? '',
+        nameEn: b['book_name_en'] as String? ?? '',
+        testament: testament,
+        orderIndex: bookNum,
+        totalChapters: rawChapters.length,
+      );
+      books.add(book);
+
+      for (final chObj in rawChapters) {
+        final chNum = chObj['chapter'] as int? ?? 1;
+        final sections = chObj['sections'] as List<dynamic>? ?? [];
+        final verseList = <Verse>[];
+        final headingList = <SectionHeading>[];
+
+        for (final sec in sections) {
+          final title = sec['title'] as String? ?? '';
+          final secVerses = sec['verses'] as List<dynamic>? ?? [];
+
+          if (title.isNotEmpty && secVerses.isNotEmpty) {
+            final firstVerseNum = secVerses[0]['verse'] as int? ?? 1;
+            headingList.add(SectionHeading(
+              id: bookId * 1000 + chNum * 50 + headingList.length,
+              bookId: bookId,
+              chapter: chNum,
+              verse: firstVerseNum,
+              title: title,
+            ));
+          }
+
+          for (final vObj in secVerses) {
+            final vNum = vObj['verse'] as int? ?? 1;
+            final vText = vObj['text']?.toString().trim() ?? '';
+            if (vText.isNotEmpty) {
+              final normalized = GeezNormalizer.normalize(vText);
+              verseList.add(Verse(
+                id: bookId * 100000 + chNum * 1000 + vNum,
+                bookId: bookId,
+                chapter: chNum,
+                verse: vNum,
+                text: vText,
+                textNormalized: normalized,
+              ));
+
+              searchList.add({
+                'id': bookId * 100000 + chNum * 1000 + vNum,
+                'book_id': bookId,
+                'book_number': bookNum,
+                'book_name': book.name,
+                'chapter': chNum,
+                'verse': vNum,
+                'text': vText,
+                'text_normalized': normalized,
+              });
+            }
+          }
+        }
+
+        _versesCache['${bookId}_$chNum'] = verseList;
+        if (headingList.isNotEmpty) {
+          _headingsCache['${bookId}_$chNum'] = headingList;
+        }
+      }
+    }
+
+    _booksByTranslation[2] = books;
+    _searchIndex[2] = searchList;
+  }
+
+  Future<void> _loadKjvBible() async {
+    final jsonStr = await rootBundle.loadString('assets/data/kjv.json');
+    final rawBooks = json.decode(jsonStr) as List<dynamic>;
+
+    final books = <Book>[];
+    final searchList = <Map<String, dynamic>>[];
+    int bookIdCounter = 300;
+
+    for (int i = 0; i < rawBooks.length; i++) {
+      final b = rawBooks[i] as Map<String, dynamic>;
+      final bookNum = i + 1;
+      final testament = bookNum <= 39 ? 'OT' : 'NT';
+      final chapters = b['chapters'] as List<dynamic>? ?? [];
+      final bookId = bookIdCounter++;
+
+      final book = Book(
+        id: bookId,
+        translationId: 3,
+        bookNumber: bookNum,
+        name: b['name'] as String? ?? 'Book $bookNum',
+        shortName: b['abbrev'] as String? ?? '',
+        nameEn: b['name'] as String? ?? '',
+        testament: testament,
+        orderIndex: bookNum,
+        totalChapters: chapters.length,
+      );
+      books.add(book);
+
+      for (int cIdx = 0; cIdx < chapters.length; cIdx++) {
+        final chNum = cIdx + 1;
+        final rawVerses = chapters[cIdx] as List<dynamic>? ?? [];
+        final verseList = <Verse>[];
+
+        for (int vIdx = 0; vIdx < rawVerses.length; vIdx++) {
+          final vText = rawVerses[vIdx]?.toString().trim() ?? '';
+          if (vText.isNotEmpty) {
+            final vNum = vIdx + 1;
+            verseList.add(Verse(
+              id: bookId * 100000 + chNum * 1000 + vNum,
+              bookId: bookId,
+              chapter: chNum,
+              verse: vNum,
+              text: vText,
+              textNormalized: vText.toLowerCase(),
+            ));
+
+            searchList.add({
+              'id': bookId * 100000 + chNum * 1000 + vNum,
+              'book_id': bookId,
+              'book_number': bookNum,
+              'book_name': book.name,
+              'chapter': chNum,
+              'verse': vNum,
+              'text': vText,
+              'text_normalized': vText.toLowerCase(),
+            });
+          }
+        }
+        _versesCache['${bookId}_$chNum'] = verseList;
+      }
+    }
+
+    _booksByTranslation[3] = books;
+    _searchIndex[3] = searchList;
+  }
+
+  // --- Read API ---
+
+  Future<List<Translation>> getTranslations() async {
+    await ensureInitialized();
+    return _translations;
+  }
+
   Future<List<Book>> getBooks({
     required int translationId,
     String? testament,
   }) async {
-    final db = await _db;
-    String? whereClause = 'translation_id = ?';
-    List<dynamic> whereArgs = [translationId];
-
-    if (testament != null && testament.isNotEmpty) {
-      whereClause += ' AND testament = ?';
-      whereArgs.add(testament.toUpperCase());
-    }
-
-    final List<Map<String, dynamic>> maps = await db.query(
-      'books',
-      where: whereClause,
-      whereArgs: whereArgs,
-      orderBy: 'order_index ASC',
-    );
-    return maps.map((m) => Book.fromMap(m)).toList();
+    await ensureInitialized();
+    final list = _booksByTranslation[translationId] ?? [];
+    if (testament == null || testament.isEmpty) return list;
+    return list.where((b) => b.testament.toUpperCase() == testament.toUpperCase()).toList();
   }
 
-  /// Fetch a book by ID
   Future<Book?> getBookById(int bookId) async {
-    final db = await _db;
-    final maps = await db.query(
-      'books',
-      where: 'id = ?',
-      whereArgs: [bookId],
-      limit: 1,
-    );
-    if (maps.isEmpty) return null;
-    return Book.fromMap(maps.first);
+    await ensureInitialized();
+    for (final books in _booksByTranslation.values) {
+      for (final b in books) {
+        if (b.id == bookId) return b;
+      }
+    }
+    return null;
   }
 
-  /// Find matching book in another translation by book number
   Future<Book?> getBookByNumber(int translationId, int bookNumber) async {
-    final db = await _db;
-    final maps = await db.query(
-      'books',
-      where: 'translation_id = ? AND book_number = ?',
-      whereArgs: [translationId, bookNumber],
-      limit: 1,
-    );
-    if (maps.isEmpty) return null;
-    return Book.fromMap(maps.first);
+    await ensureInitialized();
+    final books = _booksByTranslation[translationId] ?? [];
+    for (final b in books) {
+      if (b.bookNumber == bookNumber) return b;
+    }
+    return null;
   }
 
-  /// Fetch all verses in a chapter, joined with user annotations
   Future<List<Verse>> getVerses({
     required int bookId,
     required int chapter,
   }) async {
-    final db = await _db;
-    final sql = '''
-      SELECT 
-        v.id,
-        v.book_id,
-        v.chapter,
-        v.verse,
-        v.text,
-        v.text_normalized,
-        h.color_hex AS highlight_color,
-        CASE WHEN b.id IS NOT NULL THEN 1 ELSE 0 END AS is_bookmarked,
-        n.note_text
-      FROM verses v
-      LEFT JOIN highlights h ON h.book_id = v.book_id AND h.chapter = v.chapter AND h.verse = v.verse
-      LEFT JOIN bookmarks b ON b.book_id = v.book_id AND b.chapter = v.chapter AND b.verse = v.verse
-      LEFT JOIN notes n ON n.book_id = v.book_id AND n.chapter = v.chapter AND n.verse = v.verse
-      WHERE v.book_id = ? AND v.chapter = ?
-      ORDER BY v.verse ASC
-    ''';
+    await ensureInitialized();
+    final baseVerses = _versesCache['${bookId}_$chapter'] ?? [];
+    if (baseVerses.isEmpty) return [];
 
-    final List<Map<String, dynamic>> maps = await db.rawQuery(sql, [bookId, chapter]);
-    return maps.map((m) => Verse.fromMap(m)).toList();
+    // Annotations from SharedPreferences
+    final bookmarks = await _getStoredBookmarks();
+    final highlights = await _getStoredHighlights();
+    final notes = await _getStoredNotes();
+
+    return baseVerses.map((v) {
+      final key = '${v.bookId}_${v.chapter}_${v.verse}';
+      return v.copyWith(
+        isBookmarked: bookmarks.containsKey(key),
+        highlightColor: highlights[key],
+        note: notes[key],
+      );
+    }).toList();
   }
 
-  /// Fetch section headings (subtitles/pericopes) for a chapter
   Future<List<SectionHeading>> getSectionHeadings({
     required int bookId,
     required int chapter,
   }) async {
-    final db = await _db;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'sections',
-      where: 'book_id = ? AND chapter = ?',
-      whereArgs: [bookId, chapter],
-      orderBy: 'verse ASC',
-    );
-    return maps.map((m) => SectionHeading.fromMap(m)).toList();
+    await ensureInitialized();
+    return _headingsCache['${bookId}_$chapter'] ?? [];
   }
 
-  /// Smart Search with Ge'ez Homophone Normalization and Multi-word Queries
   Future<List<Map<String, dynamic>>> searchVerses({
     required String query,
     required int translationId,
@@ -123,265 +371,252 @@ class BibleRepository {
     int limit = 50,
     int offset = 0,
   }) async {
+    await ensureInitialized();
     if (query.trim().isEmpty) return [];
 
-    final db = await _db;
     final normalizedQuery = GeezNormalizer.normalize(query);
     final terms = normalizedQuery.split(' ').where((t) => t.isNotEmpty).toList();
-
     if (terms.isEmpty) return [];
 
-    // Build LIKE conditions for every word in query
-    final whereConditions = <String>[];
-    final whereArgs = <dynamic>[translationId];
+    final indexList = _searchIndex[translationId] ?? [];
+    final matches = <Map<String, dynamic>>[];
 
-    for (final term in terms) {
-      whereConditions.add('v.text_normalized LIKE ?');
-      whereArgs.add('%$term%');
+    for (final item in indexList) {
+      if (bookId != null && item['book_id'] != bookId) continue;
+
+      final normText = item['text_normalized'] as String? ?? '';
+      bool allTermsMatch = true;
+      for (final term in terms) {
+        if (!normText.contains(term)) {
+          allTermsMatch = false;
+          break;
+        }
+      }
+
+      if (allTermsMatch) {
+        matches.add(item);
+        if (matches.length >= (offset + limit)) break;
+      }
     }
 
-    String bookFilter = '';
-    if (bookId != null) {
-      bookFilter = 'AND b.id = ?';
-      whereArgs.add(bookId);
-    }
-
-    whereArgs.add(limit);
-    whereArgs.add(offset);
-
-    final sql = '''
-      SELECT 
-        v.id,
-        v.book_id,
-        v.chapter,
-        v.verse,
-        v.text,
-        b.name AS book_name,
-        b.book_number
-      FROM verses v
-      JOIN books b ON b.id = v.book_id
-      WHERE b.translation_id = ?
-        $bookFilter
-        AND (${whereConditions.join(' AND ')})
-      ORDER BY b.order_index ASC, v.chapter ASC, v.verse ASC
-      LIMIT ? OFFSET ?
-    ''';
-
-    return await db.rawQuery(sql, whereArgs);
+    if (offset >= matches.length) return [];
+    return matches.sublist(offset, matches.length.clamp(0, offset + limit));
   }
 
-  /// Toggle bookmark for a verse
+  Future<Map<String, String>> getParallelVerseTexts({
+    required int bookNumber,
+    required int chapter,
+    required int verse,
+  }) async {
+    await ensureInitialized();
+    final results = <String, String>{};
+
+    for (final trans in _translations) {
+      final book = await getBookByNumber(trans.id, bookNumber);
+      if (book != null) {
+        final verses = await getVerses(bookId: book.id, chapter: chapter);
+        final match = verses.where((v) => v.verse == verse).firstOrNull;
+        if (match != null && match.text.trim().isNotEmpty) {
+          results[trans.name] = match.text;
+        }
+      }
+    }
+    return results;
+  }
+
+  // --- User Annotations (Persistent via SharedPreferences) ---
+
+  Future<Map<String, bool>> _getStoredBookmarks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('user_bookmarks_map') ?? '{}';
+    final map = json.decode(raw) as Map<String, dynamic>;
+    return map.map((k, v) => MapEntry(k, v as bool));
+  }
+
+  Future<Map<String, String>> _getStoredHighlights() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('user_highlights_map') ?? '{}';
+    final map = json.decode(raw) as Map<String, dynamic>;
+    return map.map((k, v) => MapEntry(k, v.toString()));
+  }
+
+  Future<Map<String, String>> _getStoredNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('user_notes_map') ?? '{}';
+    final map = json.decode(raw) as Map<String, dynamic>;
+    return map.map((k, v) => MapEntry(k, v.toString()));
+  }
+
   Future<bool> toggleBookmark({
     required int bookId,
     required int chapter,
     required int verse,
     String translationCode = 'amh_1954',
   }) async {
-    final db = await _db;
-    final existing = await db.query(
-      'bookmarks',
-      where: 'book_id = ? AND chapter = ? AND verse = ?',
-      whereArgs: [bookId, chapter, verse],
-    );
+    final prefs = await SharedPreferences.getInstance();
+    final bookmarks = await _getStoredBookmarks();
+    final key = '${bookId}_${chapter}_$verse';
 
-    if (existing.isNotEmpty) {
-      await db.delete(
-        'bookmarks',
-        where: 'id = ?',
-        whereArgs: [existing.first['id']],
-      );
-      return false; // Removed
+    final willBookmark = !bookmarks.containsKey(key);
+    if (willBookmark) {
+      bookmarks[key] = true;
     } else {
-      await db.insert('bookmarks', {
-        'book_id': bookId,
-        'chapter': chapter,
-        'verse': verse,
-        'translation_code': translationCode,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      return true; // Added
+      bookmarks.remove(key);
     }
+
+    await prefs.setString('user_bookmarks_map', json.encode(bookmarks));
+    return willBookmark;
   }
 
-  /// Highlight a verse
   Future<void> setHighlight({
     required int bookId,
     required int chapter,
     required int verse,
     required String colorHex,
   }) async {
-    final db = await _db;
-    await db.delete(
-      'highlights',
-      where: 'book_id = ? AND chapter = ? AND verse = ?',
-      whereArgs: [bookId, chapter, verse],
-    );
-    await db.insert('highlights', {
-      'book_id': bookId,
-      'chapter': chapter,
-      'verse': verse,
-      'color_hex': colorHex,
-      'created_at': DateTime.now().toIso8601String(),
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final highlights = await _getStoredHighlights();
+    final key = '${bookId}_${chapter}_$verse';
+    highlights[key] = colorHex;
+    await prefs.setString('user_highlights_map', json.encode(highlights));
   }
 
-  /// Remove highlight
   Future<void> removeHighlight({
     required int bookId,
     required int chapter,
     required int verse,
   }) async {
-    final db = await _db;
-    await db.delete(
-      'highlights',
-      where: 'book_id = ? AND chapter = ? AND verse = ?',
-      whereArgs: [bookId, chapter, verse],
-    );
+    final prefs = await SharedPreferences.getInstance();
+    final highlights = await _getStoredHighlights();
+    final key = '${bookId}_${chapter}_$verse';
+    highlights.remove(key);
+    await prefs.setString('user_highlights_map', json.encode(highlights));
   }
 
-  /// Save or update verse note
   Future<void> saveNote({
     required int bookId,
     required int chapter,
     required int verse,
     required String noteText,
   }) async {
-    final db = await _db;
-    final trimmed = noteText.trim();
-    if (trimmed.isEmpty) {
-      await deleteNote(bookId: bookId, chapter: chapter, verse: verse);
-      return;
-    }
+    final prefs = await SharedPreferences.getInstance();
+    final notes = await _getStoredNotes();
+    final key = '${bookId}_${chapter}_$verse';
 
-    final existing = await db.query(
-      'notes',
-      where: 'book_id = ? AND chapter = ? AND verse = ?',
-      whereArgs: [bookId, chapter, verse],
-    );
-
-    if (existing.isNotEmpty) {
-      await db.update(
-        'notes',
-        {
-          'note_text': trimmed,
-          'updated_at': DateTime.now().toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [existing.first['id']],
-      );
+    if (noteText.trim().isEmpty) {
+      notes.remove(key);
     } else {
-      await db.insert('notes', {
-        'book_id': bookId,
-        'chapter': chapter,
-        'verse': verse,
-        'note_text': trimmed,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+      notes[key] = noteText.trim();
     }
+    await prefs.setString('user_notes_map', json.encode(notes));
   }
 
-  /// Delete note
-  Future<void> deleteNote({
-    required int bookId,
-    required int chapter,
-    required int verse,
-  }) async {
-    final db = await _db;
-    await db.delete(
-      'notes',
-      where: 'book_id = ? AND chapter = ? AND verse = ?',
-      whereArgs: [bookId, chapter, verse],
-    );
-  }
-
-  /// Fetch all user bookmarks
   Future<List<BookmarkItem>> getBookmarks() async {
-    final db = await _db;
-    final sql = '''
-      SELECT 
-        b.id,
-        b.book_id,
-        bk.name AS book_name,
-        b.chapter,
-        b.verse,
-        v.text AS verse_text,
-        b.translation_code,
-        b.created_at
-      FROM bookmarks b
-      JOIN books bk ON bk.id = b.book_id
-      JOIN verses v ON v.book_id = b.book_id AND v.chapter = b.chapter AND v.verse = b.verse
-      ORDER BY b.created_at DESC
-    ''';
-    final maps = await db.rawQuery(sql);
-    return maps.map((m) => BookmarkItem.fromMap(m)).toList();
+    final bookmarks = await _getStoredBookmarks();
+    final list = <BookmarkItem>[];
+    int counter = 1;
+
+    for (final entry in bookmarks.entries) {
+      final parts = entry.key.split('_');
+      if (parts.length == 3) {
+        final bId = int.tryParse(parts[0]) ?? 0;
+        final ch = int.tryParse(parts[1]) ?? 0;
+        final vNum = int.tryParse(parts[2]) ?? 0;
+
+        final book = await getBookById(bId);
+        final verses = _versesCache['${bId}_$ch'] ?? [];
+        final v = verses.firstWhere((x) => x.verse == vNum, orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
+
+        if (book != null) {
+          list.add(BookmarkItem(
+            id: counter++,
+            bookId: bId,
+            bookName: book.name,
+            chapter: ch,
+            verse: vNum,
+            verseText: v.text,
+            translationCode: 'amh_1954',
+            createdAt: DateTime.now(),
+          ));
+        }
+      }
+    }
+    return list;
   }
 
-  /// Fetch all user highlights
   Future<List<HighlightItem>> getHighlights() async {
-    final db = await _db;
-    final sql = '''
-      SELECT 
-        h.id,
-        h.book_id,
-        bk.name AS book_name,
-        h.chapter,
-        h.verse,
-        v.text AS verse_text,
-        h.color_hex,
-        h.created_at
-      FROM highlights h
-      JOIN books bk ON bk.id = h.book_id
-      JOIN verses v ON v.book_id = h.book_id AND v.chapter = h.chapter AND v.verse = h.verse
-      ORDER BY h.created_at DESC
-    ''';
-    final maps = await db.rawQuery(sql);
-    return maps.map((m) => HighlightItem.fromMap(m)).toList();
+    final highlights = await _getStoredHighlights();
+    final list = <HighlightItem>[];
+    int counter = 1;
+
+    for (final entry in highlights.entries) {
+      final parts = entry.key.split('_');
+      if (parts.length == 3) {
+        final bId = int.tryParse(parts[0]) ?? 0;
+        final ch = int.tryParse(parts[1]) ?? 0;
+        final vNum = int.tryParse(parts[2]) ?? 0;
+
+        final book = await getBookById(bId);
+        final verses = _versesCache['${bId}_$ch'] ?? [];
+        final v = verses.firstWhere((x) => x.verse == vNum, orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
+
+        if (book != null) {
+          list.add(HighlightItem(
+            id: counter++,
+            bookId: bId,
+            bookName: book.name,
+            chapter: ch,
+            verse: vNum,
+            verseText: v.text,
+            colorHex: entry.value,
+            createdAt: DateTime.now(),
+          ));
+        }
+      }
+    }
+    return list;
   }
 
-  /// Fetch all user notes
   Future<List<NoteItem>> getNotes() async {
-    final db = await _db;
-    final sql = '''
-      SELECT 
-        n.id,
-        n.book_id,
-        bk.name AS book_name,
-        n.chapter,
-        n.verse,
-        v.text AS verse_text,
-        n.note_text,
-        n.updated_at
-      FROM notes n
-      JOIN books bk ON bk.id = n.book_id
-      JOIN verses v ON v.book_id = n.book_id AND v.chapter = n.chapter AND v.verse = n.verse
-      ORDER BY n.updated_at DESC
-    ''';
-    final maps = await db.rawQuery(sql);
-    return maps.map((m) => NoteItem.fromMap(m)).toList();
+    final notes = await _getStoredNotes();
+    final list = <NoteItem>[];
+    int counter = 1;
+
+    for (final entry in notes.entries) {
+      final parts = entry.key.split('_');
+      if (parts.length == 3) {
+        final bId = int.tryParse(parts[0]) ?? 0;
+        final ch = int.tryParse(parts[1]) ?? 0;
+        final vNum = int.tryParse(parts[2]) ?? 0;
+
+        final book = await getBookById(bId);
+        final verses = _versesCache['${bId}_$ch'] ?? [];
+        final v = verses.firstWhere((x) => x.verse == vNum, orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
+
+        if (book != null) {
+          list.add(NoteItem(
+            id: counter++,
+            bookId: bId,
+            bookName: book.name,
+            chapter: ch,
+            verse: vNum,
+            verseText: v.text,
+            noteText: entry.value,
+            updatedAt: DateTime.now(),
+          ));
+        }
+      }
+    }
+    return list;
   }
 
-  /// Get daily inspirational verse
   Future<Map<String, dynamic>?> getDailyVerse(int translationId) async {
-    final db = await _db;
+    await ensureInitialized();
+    final list = _searchIndex[translationId] ?? [];
+    if (list.isEmpty) return null;
+
     final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
-    
-    // Curated beloved Psalms, Proverbs, Gospels offsets
-    final offset = (dayOfYear * 7) % 1500;
-    final sql = '''
-      SELECT 
-        v.id,
-        v.book_id,
-        v.chapter,
-        v.verse,
-        v.text,
-        b.name AS book_name
-      FROM verses v
-      JOIN books b ON b.id = v.book_id
-      WHERE b.translation_id = ?
-      LIMIT 1 OFFSET ?
-    ''';
-    final res = await db.rawQuery(sql, [translationId, offset]);
-    if (res.isEmpty) return null;
-    return res.first;
+    final index = (dayOfYear * 13) % list.length;
+    return list[index];
   }
 }

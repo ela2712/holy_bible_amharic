@@ -41,11 +41,11 @@ class ReaderThemeConfig {
   Color get backgroundColor {
     switch (mode) {
       case ReaderThemeMode.light:
-        return const Color(0xFFFAFAF7);
+        return const Color(0xFFFAF8F5); // Soft ivory liturgical parchment
       case ReaderThemeMode.sepia:
-        return const Color(0xFFF4ECD8);
+        return const Color(0xFFF3EBDB); // Ancient monastery parchment
       case ReaderThemeMode.dark:
-        return const Color(0xFF121212);
+        return const Color(0xFF131313); // Obsidian night
     }
   }
 
@@ -54,7 +54,7 @@ class ReaderThemeConfig {
       case ReaderThemeMode.light:
         return Colors.white;
       case ReaderThemeMode.sepia:
-        return const Color(0xFFEADBBE);
+        return const Color(0xFFE8DECA);
       case ReaderThemeMode.dark:
         return const Color(0xFF1E1E1E);
     }
@@ -63,33 +63,48 @@ class ReaderThemeConfig {
   Color get textColor {
     switch (mode) {
       case ReaderThemeMode.light:
-        return const Color(0xFF1E1E1E);
+        return const Color(0xFF221A16);
       case ReaderThemeMode.sepia:
-        return const Color(0xFF382C1E);
+        return const Color(0xFF382B1B);
       case ReaderThemeMode.dark:
-        return const Color(0xFFE2E2E2);
+        return const Color(0xFFE6E2DE);
     }
   }
 
   Color get secondaryTextColor {
     switch (mode) {
       case ReaderThemeMode.light:
-        return const Color(0xFF666666);
+        return const Color(0xFF6E645C);
       case ReaderThemeMode.sepia:
-        return const Color(0xFF6B5840);
+        return const Color(0xFF6F5E48);
       case ReaderThemeMode.dark:
-        return const Color(0xFFA0A0A0);
+        return const Color(0xFFA59F98);
     }
   }
 
   Color get accentColor {
     switch (mode) {
       case ReaderThemeMode.light:
-        return const Color(0xFF8B2500); // Deep Ethiopian crimson
+        return const Color(0xFF7D1A25); // Catena Imperial Burgundy
       case ReaderThemeMode.sepia:
-        return const Color(0xFF8B4513); // Saddle brown
+        return const Color(0xFF7A1C24); // Warm liturgical burgundy
       case ReaderThemeMode.dark:
-        return const Color(0xFFD4AF37); // Royal gold
+        return const Color(0xFFD4AF37); // Liturgical Gold
+    }
+  }
+
+  Color get goldAccent {
+    return const Color(0xFFC5A059); // Byzantine / Church Gold
+  }
+
+  Color get commentaryCardColor {
+    switch (mode) {
+      case ReaderThemeMode.light:
+        return const Color(0xFFF6F1E9);
+      case ReaderThemeMode.sepia:
+        return const Color(0xFFE2D6C0);
+      case ReaderThemeMode.dark:
+        return const Color(0xFF252220);
     }
   }
 
@@ -105,8 +120,8 @@ class ReaderThemeConfig {
   TextStyle getVerseNumberStyle() {
     return GoogleFonts.notoSansEthiopic(
       fontSize: fontSize * 0.75,
-      fontWeight: FontWeight.w600,
-      color: accentColor.withOpacity(0.9),
+      fontWeight: FontWeight.w700,
+      color: accentColor.withValues(alpha: 0.9),
     );
   }
 
@@ -116,6 +131,32 @@ class ReaderThemeConfig {
       fontWeight: FontWeight.w700,
       color: accentColor,
       height: 1.4,
+    );
+  }
+
+  ThemeData toThemeData() {
+    final isDark = mode == ReaderThemeMode.dark;
+    return ThemeData(
+      useMaterial3: true,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      scaffoldBackgroundColor: backgroundColor,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: accentColor,
+        brightness: isDark ? Brightness.dark : Brightness.light,
+        surface: surfaceColor,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: surfaceColor,
+        foregroundColor: textColor,
+        elevation: 0.5,
+        centerTitle: true,
+      ),
+      cardTheme: CardThemeData(
+        color: surfaceColor,
+        elevation: 0.8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      dividerColor: isDark ? Colors.white12 : Colors.black12,
     );
   }
 }
