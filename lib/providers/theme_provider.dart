@@ -50,4 +50,12 @@ class ThemeConfigNotifier extends StateNotifier<ReaderThemeConfig> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('reader_use_geez_numerals', state.useGeezNumerals);
   }
+
+  Future<void> toggleParagraphMode(bool isParagraph) async {
+    state = state.copyWith(isParagraphMode: isParagraph);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('reader_is_paragraph_mode', isParagraph);
+  }
+
+  Future<void> setThemeMode(ReaderThemeMode mode) => setMode(mode);
 }

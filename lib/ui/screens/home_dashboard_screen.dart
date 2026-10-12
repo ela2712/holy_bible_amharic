@@ -24,92 +24,223 @@ class HomeDashboardScreen extends ConsumerWidget {
     final repo = ref.watch(bibleRepositoryProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
 
+    if (bibleState.isLoading) {
+      return Scaffold(
+        backgroundColor: themeConfig.backgroundColor,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: themeConfig.backgroundColor,
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF7D1A25).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(bibleStateProvider.notifier).init(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 960),
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                slivers: [
+                  // 1. Modern Editorial Header (No boxy AppBar!)
+                  SliverToBoxAdapter(
+                    child: _buildModernHeader(context, ref, bibleState, themeConfig, isDark),
+                  ),
+
+                  // 2. Main Content Padding
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        // Hero: Editorial Daily Verse + Patristic Glass Card
+                        _buildDailyVerseHero(context, ref, repo, themeConfig),
+                        const SizedBox(height: 20),
+
+                        // 2-Column Bento Grid: Resume Reading + Active Plan
+                        _buildBentoGridRow(context, ref, bibleState, themeConfig, isDark),
+                        const SizedBox(height: 26),
+
+                        // Modern Canon Quick-Access Strip
+                        _buildCanonQuickStrip(context, ref, themeConfig, isDark),
+                        const SizedBox(height: 28),
+
+                        // Catena Church Fathers Spotlight Carousel
+                        _buildPatristicSpotlight(context, ref, themeConfig, isDark),
+                        const SizedBox(height: 28),
+
+                        // Visual Reading Plans Carousel
+                        _buildReadingPlansCarousel(context, ref, themeConfig, isDark),
+                        const SizedBox(height: 28),
+
+                        // Curated Thematic Collections Grid
+                        _buildThematicBentoSection(context, ref, themeConfig, isDark),
+                      ]),
+                    ),
+                  ),
+                ],
               ),
-              child: const Text('✝', style: TextStyle(color: Color(0xFF7D1A25), fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-            const SizedBox(width: 10),
-            Column(
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernHeader(
+    BuildContext context,
+    WidgetRef ref,
+    BibleViewState bibleState,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+  ) {
+    final shortTrans = _shortTransLabel(bibleState.currentTranslation?.name ?? '1954');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Row(
+        children: [
+          // Brand Mark
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(Icons.auto_stories_rounded, color: Colors.white, size: 22),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'መጽሐፍ ቅዱስ',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'መጽሐፍ ቅዱስ',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: themeConfig.textColor,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: themeConfig.accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'CATENA',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: themeConfig.accentColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  'Catena • ${bibleState.currentTranslation?.name ?? "1954 Haile Selassie"}',
-                  style: TextStyle(
-                    fontSize: 11,
+                  'የቀደምት አበው ትርጓሜና የጥናት መጽሐፍ ቅዱስ',
+                  style: GoogleFonts.notoSansEthiopic(
+                    fontSize: 11.5,
                     color: themeConfig.secondaryTextColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'ፈልግ (Search)',
-            onPressed: () => onNavigateTab(2), // Switch to Search tab
           ),
-          IconButton(
-            icon: const Icon(Icons.palette_outlined),
-            tooltip: 'ቀለምና ገጽታ (Themes)',
-            onPressed: () => _showThemeDialog(context, ref),
-          ),
-        ],
-      ),
-      body: bibleState.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => ref.read(bibleStateProvider.notifier).init(),
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+          // Translation Pill Switcher
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _showTranslationModal(context, ref, bibleState, themeConfig),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: themeConfig.surfaceColor,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: themeConfig.cardBorderColor),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. Hero: Daily Verse + Patristic Commentary Pairing
-                  _buildDailyVerseAndCatenaHero(context, ref, repo, themeConfig),
-                  const SizedBox(height: 18),
-
-                  // 2. Continue Reading Card
-                  _buildContinueReadingCard(context, ref, bibleState, themeConfig),
-                  const SizedBox(height: 22),
-
-                  // 3. Early Church Fathers Showcase (Catena Spotlight)
-                  _buildPatristicFathersSpotlight(context, ref, themeConfig, isDark),
-                  const SizedBox(height: 22),
-
-                  // 4. Reading Plans Showcase (10 Liturgical Plans)
-                  _buildReadingPlansShowcase(context, ref, themeConfig),
-                  const SizedBox(height: 22),
-
-                  // 5. Quick Jump Categories (Pentateuch, Gospels, Psalms, 81 Canon)
-                  _buildCategoryQuickJumps(context, ref, themeConfig),
-                  const SizedBox(height: 24),
-
-                  // 6. Curated Thematic Study Guides
-                  _buildThematicStudyGuides(context, ref, themeConfig),
-                  const SizedBox(height: 28),
+                  Icon(Icons.translate_rounded, size: 14, color: themeConfig.accentColor),
+                  const SizedBox(width: 5),
+                  Text(
+                    shortTrans,
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.textColor,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: themeConfig.secondaryTextColor),
                 ],
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+
+          // 1-Tap Theme Mode Button
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              final notifier = ref.read(themeConfigProvider.notifier);
+              if (themeConfig.mode == ReaderThemeMode.light) {
+                notifier.setMode(ReaderThemeMode.sepia);
+              } else if (themeConfig.mode == ReaderThemeMode.sepia) {
+                notifier.setMode(ReaderThemeMode.dark);
+              } else {
+                notifier.setMode(ReaderThemeMode.light);
+              }
+            },
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: themeConfig.surfaceColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: themeConfig.cardBorderColor),
+              ),
+              child: Icon(
+                themeConfig.mode == ReaderThemeMode.dark
+                    ? Icons.dark_mode_rounded
+                    : themeConfig.mode == ReaderThemeMode.sepia
+                        ? Icons.auto_stories_outlined
+                        : Icons.light_mode_rounded,
+                size: 18,
+                color: themeConfig.accentColor,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildDailyVerseAndCatenaHero(
+  Widget _buildDailyVerseHero(
     BuildContext context,
     WidgetRef ref,
     dynamic repo,
@@ -130,168 +261,225 @@ class HomeDashboardScreen extends ConsumerWidget {
 
         return Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(28),
             gradient: const LinearGradient(
-              colors: [Color(0xFF2C1417), Color(0xFF6B1720)],
+              colors: [
+                Color(0xFF0F172A),
+                Color(0xFF1E1B4B),
+                Color(0xFF312E81),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
+                color: const Color(0xFF312E81).withValues(alpha: 0.28),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Stack(
             children: [
-              // Header Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.wb_sunny_outlined, color: Color(0xFFFFD54F), size: 18),
-                      SizedBox(width: 6),
-                      Text(
-                        'የዕለቱ ቃልና የአበው ትምህርት',
-                        style: TextStyle(
-                          color: Color(0xFFFFD54F),
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+              // Decorative ambient glow circle
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.18),
                   ),
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => VerseCardMakerScreen(
-                            reference: reference,
-                            verseText: verseText,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top Pill Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.auto_awesome, color: Color(0xFFFBBF24), size: 14),
+                              const SizedBox(width: 6),
+                              Text(
+                                'የዕለቱ ቃል • DAILY SCRIPTURE',
+                                style: GoogleFonts.notoSansEthiopic(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.image, color: Colors.white, size: 13),
-                          SizedBox(width: 4),
-                          Text('ካርድ', style: TextStyle(color: Colors.white, fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Scripture Verse
-              Text(
-                '“$verseText”',
-                style: GoogleFonts.notoSansEthiopic(
-                  color: Colors.white.withValues(alpha: 0.98),
-                  fontSize: 16.5,
-                  height: 1.6,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                reference,
-                style: GoogleFonts.notoSansEthiopic(
-                  color: const Color(0xFFFFD54F),
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Accompanying Catena Church Father Excerpt
-              if (featuredCatena != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFC5A059).withValues(alpha: 0.35)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text('✝ ', style: TextStyle(color: Color(0xFFFFD54F), fontSize: 12)),
-                          Expanded(
-                            child: Text(
-                              '${featuredCatena.authorName} (${featuredCatena.sourceWork})',
-                              style: const TextStyle(
-                                color: Color(0xFFFFE082),
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.bold,
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => VerseCardMakerScreen(
+                                  reference: reference,
+                                  verseText: verseText,
+                                ),
                               ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBBF24).withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.palette_outlined, color: Color(0xFFFBBF24), size: 14),
+                                SizedBox(width: 5),
+                                Text(
+                                  'ካርድ ፍጠር',
+                                  style: TextStyle(
+                                    color: Color(0xFFFBBF24),
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Main Verse Quote
+                    Text(
+                      '“$verseText”',
+                      style: GoogleFonts.notoSansEthiopic(
+                        color: Colors.white,
+                        fontSize: 18,
+                        height: 1.65,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 5),
-                      Text(
-                        '«${featuredCatena.content}»',
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansEthiopic(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 12.5,
-                          height: 1.5,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Reference & Read Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '— $reference',
+                          style: GoogleFonts.notoSansEthiopic(
+                            color: const Color(0xFFFBBF24),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF1E1B4B),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          ),
+                          onPressed: () {
+                            if (verseData != null) {
+                              final bookNumber = verseData['book_number'] as int? ?? 1;
+                              final chapter = verseData['chapter'] as int? ?? 1;
+                              final bibleState = ref.read(bibleStateProvider);
+                              final targetBook = bibleState.books.firstWhere(
+                                (b) => b.bookNumber == bookNumber,
+                                orElse: () => bibleState.books.first,
+                              );
+                              ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                            }
+                            onNavigateTab(1);
+                          },
+                          icon: const Icon(Icons.menu_book_rounded, size: 15),
+                          label: const Text('ምዕራፉን አንብብ', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+
+                    // Frosted Glass Church Father Insight Box
+                    if (featuredCatena != null) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF818CF8).withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'የአበው ትርጓሜ',
+                                    style: TextStyle(
+                                      color: Color(0xFFC7D2FE),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    featuredCatena.authorName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.notoSansEthiopic(
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              featuredCatena.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.notoSansEthiopic(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 12.5,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 14),
-              ],
-
-              // Action buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFD54F),
-                      foregroundColor: const Color(0xFF2C1417),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                      minimumSize: const Size(0, 34),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                    onPressed: () {
-                      if (verseData != null) {
-                        final bookNumber = verseData['book_number'] as int? ?? 1;
-                        final chapter = verseData['chapter'] as int? ?? 1;
-                        final bibleState = ref.read(bibleStateProvider);
-                        final targetBook = bibleState.books.firstWhere(
-                          (b) => b.bookNumber == bookNumber,
-                          orElse: () => bibleState.books.first,
-                        );
-                        ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                      }
-                      onNavigateTab(1); // Jump to Reader tab
-                    },
-                    child: const Text('በሙሉ ምዕራፉ አንብብ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  ),
-                ],
               ),
             ],
           ),
@@ -300,80 +488,348 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContinueReadingCard(
+  Widget _buildBentoGridRow(
     BuildContext context,
     WidgetRef ref,
-    dynamic bibleState,
+    BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
+    bool isDark,
   ) {
     final book = bibleState.currentBook;
     final chapter = bibleState.currentChapter;
+    final totalCh = book?.totalChapters ?? 50;
+    final progress = (chapter / totalCh).clamp(0.02, 1.0);
 
-    return Card(
-      elevation: 0.8,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: const Color(0xFFC5A059).withValues(alpha: 0.25)),
-      ),
-      color: themeConfig.surfaceColor,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => onNavigateTab(1),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7D1A25).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF7D1A25).withValues(alpha: 0.2)),
-                ),
-                child: const Icon(Icons.auto_stories, color: Color(0xFF7D1A25), size: 26),
+    return Row(
+      children: [
+        // Left Bento: Resume Reading with Circular Progress
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => onNavigateTab(1),
+            child: Container(
+              height: 156,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: themeConfig.surfaceColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: themeConfig.cardBorderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'የቀጠለ ንባብ (Resume Reading)',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: themeConfig.secondaryTextColor,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: themeConfig.accentColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.import_contacts_rounded, color: themeConfig.accentColor, size: 20),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      book != null ? '${book.name} ምዕራፍ $chapter' : 'ኦሪት ዘፍጥረት ምዕራፍ 1',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.bold,
-                        color: themeConfig.textColor,
+                      SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              value: progress,
+                              strokeWidth: 3.5,
+                              backgroundColor: themeConfig.cardBorderColor,
+                              valueColor: AlwaysStoppedAnimation<Color>(themeConfig.accentColor),
+                            ),
+                            Text(
+                              '${(progress * 100).toInt()}%',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    'የቀጠለ ንባብ • RESUME',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: themeConfig.secondaryTextColor,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    book != null ? book.name : 'ኦሪት ዘፍጥረት',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ምዕራፍ $chapter ከ $totalCh',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: themeConfig.accentColor,
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: themeConfig.accentColor),
+                    ],
+                  ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7D1A25),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text('ቀጥል', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 14),
+
+        // Right Bento: Reading Plans Hub
+        Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => onNavigateTab(3),
+            child: Container(
+              height: 156,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: themeConfig.surfaceColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: themeConfig.cardBorderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: themeConfig.goldAccent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.explore_rounded, color: themeConfig.goldAccent, size: 20),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: themeConfig.goldAccent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '10 ዕቅዶች',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.goldAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    'ሥርዓተ ንባብ • PLANS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: themeConfig.secondaryTextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'የንባብ ዕቅዶች',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ጾም፣ በዓላትና ዓመታዊ',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: themeConfig.goldAccent,
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_rounded, size: 16, color: themeConfig.goldAccent),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildPatristicFathersSpotlight(
+  Widget _buildCanonQuickStrip(
+    BuildContext context,
+    WidgetRef ref,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+  ) {
+    final items = [
+      {
+        'label': 'ወንጌላት',
+        'sub': 'Gospels',
+        'icon': Icons.auto_awesome_rounded,
+        'bookNum': 40,
+        'grad': [const Color(0xFF4F46E5), const Color(0xFF6366F1)],
+      },
+      {
+        'label': 'መዝሙር',
+        'sub': 'Psalms',
+        'icon': Icons.music_note_rounded,
+        'bookNum': 19,
+        'grad': [const Color(0xFF0D9488), const Color(0xFF14B8A6)],
+      },
+      {
+        'label': 'ኦሪት',
+        'sub': 'Torah',
+        'icon': Icons.menu_book_rounded,
+        'bookNum': 1,
+        'grad': [const Color(0xFFD97706), const Color(0xFFF59E0B)],
+      },
+      {
+        'label': 'ጥበብ',
+        'sub': 'Proverbs',
+        'icon': Icons.lightbulb_rounded,
+        'bookNum': 20,
+        'grad': [const Color(0xFFE11D48), const Color(0xFFF43F5E)],
+      },
+      {
+        'label': '81 ቀኖና',
+        'sub': 'Orthodox',
+        'icon': Icons.account_balance_rounded,
+        'bookNum': 1,
+        'transId': 2,
+        'grad': [const Color(0xFF7C3AED), const Color(0xFF8B5CF6)],
+      },
+      {
+        'label': 'ሁሉም',
+        'sub': 'All Books',
+        'icon': Icons.grid_view_rounded,
+        'isAll': true,
+        'grad': [const Color(0xFF334155), const Color(0xFF475569)],
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('ፈጣን መዳረሻ', 'SACRED CANON', themeConfig),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, idx) {
+              final item = items[idx];
+              final grad = item['grad'] as List<Color>;
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () async {
+                  if (item['isAll'] == true) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BookSelectorScreen()));
+                  } else {
+                    final bibleState = ref.read(bibleStateProvider);
+                    final transId = item['transId'] as int?;
+                    if (transId != null) {
+                      final t = bibleState.translations.firstWhere((x) => x.id == transId);
+                      await ref.read(bibleStateProvider.notifier).selectTranslation(t);
+                    }
+                    final bookNum = item['bookNum'] as int? ?? 1;
+                    final targetBook = ref.read(bibleStateProvider).books.firstWhere(
+                          (b) => b.bookNumber == bookNum,
+                          orElse: () => ref.read(bibleStateProvider).books.first,
+                        );
+                    await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: 1);
+                    onNavigateTab(1);
+                  }
+                },
+                child: Container(
+                  width: 96,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: themeConfig.surfaceColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: themeConfig.cardBorderColor),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: grad),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(item['icon'] as IconData, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item['label'] as String,
+                        style: GoogleFonts.notoSansEthiopic(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: themeConfig.textColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPatristicSpotlight(
     BuildContext context,
     WidgetRef ref,
     ReaderThemeConfig themeConfig,
@@ -382,73 +838,64 @@ class HomeDashboardScreen extends ConsumerWidget {
     final fathers = [
       {
         'name': 'ቅዱስ ዮሐንስ አፈወርቅ',
-        'sub': 'St. John Chrysostom • 4ኛው መ.ክ.ዘ',
-        'desc': 'የቁስጥንጥንያ ሊቀ ጳጳስ፣ የወንጌላትና የመልእክታት ዝነኛ ተርጓሚ',
+        'en': 'St. John Chrysostom',
+        'era': '349–407 ዓ.ም.',
+        'quote': '«ትሕትና የሰማያዊ ሕይወት መሠረትና የመንግሥተ ሰማያት መግቢያ ናት።»',
+        'ref': 'ማቴዎስ 5:3',
         'bookNum': 40,
         'chapter': 5,
+        'color': const Color(0xFF4F46E5),
       },
       {
         'name': 'ቅዱስ ባስልዮስ ዘቂሣርያ',
-        'sub': 'St. Basil the Great • 330–379 ዓ.ም.',
-        'desc': 'የቂሣርያ ሊቀ ጳጳስ፣ የስድስቱ ዕለታት የፍጥረት ምስጢር ተንታኝ',
+        'en': 'St. Basil the Great',
+        'era': '330–379 ዓ.ም.',
+        'quote': '«ዓለም በድንገት ያልተገኘች፣ ነገር ግን በእግዚአብሔር ጥበብ የተፈጠረች ናት።»',
+        'ref': 'ዘፍጥረት 1:1',
         'bookNum': 1,
         'chapter': 1,
+        'color': const Color(0xFF0D9488),
       },
       {
         'name': 'ቅዱስ ቄርሎስ ዘእስክንድርያ',
-        'sub': 'St. Cyril of Alexandria • 376–444 ዓ.ም.',
-        'desc': 'የእስክንድርያ ፓትርያርክ፣ የተዋሕዶ ሃይማኖት አምድ',
+        'en': 'St. Cyril of Alexandria',
+        'era': '376–444 ዓ.ም.',
+        'quote': '«አማኑኤል መባሉ እውነተኛ አምላክ ከእኛ ጋር ሥጋ ለብሶ መገለጡን ይመሰክራል።»',
+        'ref': 'ማቴዎስ 1:23',
         'bookNum': 40,
         'chapter': 1,
+        'color': const Color(0xFFD97706),
       },
       {
         'name': 'ቅዱስ ኤፍሬም ሶርያዊ',
-        'sub': 'St. Ephrem the Syrian • 306–373 ዓ.ም.',
-        'desc': 'የቤተክርስቲያን በገና፣ የመንፈሳዊ ቅኔና የትርጓሜ አባት',
+        'en': 'St. Ephrem the Syrian',
+        'era': '306–373 ዓ.ም.',
+        'quote': '«መንፈስ ቅዱስ በውኃ ላይ ሰፍፎ ለዓለም አዲስ ሕይወትና ልደት ሰጠ።»',
+        'ref': 'ዘፍጥረት 1:2',
         'bookNum': 1,
         'chapter': 1,
-      },
-      {
-        'name': 'ቅዱስ ቆጵሪያኖስ ዘካርቴጅ',
-        'sub': 'St. Cyprian of Carthage • 210–258 ዓ.ም.',
-        'desc': 'የካርቴጅ ሰማዕትና ኤጲስ ቆጶስ፣ ስለ ጸሎተ እግዚኦ ትርጓሜ',
-        'bookNum': 40,
-        'chapter': 6,
+        'color': const Color(0xFF7C3AED),
       },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Text('✝ ', style: TextStyle(color: Color(0xFFC5A059), fontSize: 16)),
-                Text(
-                  'የቀደምት አበው ማህደር (Catena Fathers)',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: themeConfig.textColor,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
+        _buildSectionTitle('የቀደምት አበው ትርጓሜ', 'PATRISTIC COMMENTARIES', themeConfig),
+        const SizedBox(height: 12),
         SizedBox(
-          height: 120,
+          height: 158,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             itemCount: fathers.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (context, idx) {
               final f = fathers[idx];
+              final color = f['color'] as Color;
+
               return InkWell(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(22),
                 onTap: () async {
                   final bookNum = f['bookNum'] as int;
                   final chapter = f['chapter'] as int;
@@ -458,60 +905,100 @@ class HomeDashboardScreen extends ConsumerWidget {
                     orElse: () => bibleState.books.first,
                   );
                   await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                  onNavigateTab(1); // Jump to Reader
+                  onNavigateTab(1);
                 },
                 child: Container(
-                  width: 220,
-                  padding: const EdgeInsets.all(12),
+                  width: 268,
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: themeConfig.surfaceColor,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFC5A059).withValues(alpha: 0.3)),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: themeConfig.cardBorderColor),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: const Color(0xFF7D1A25).withValues(alpha: 0.1),
-                            child: const Text('✝', style: TextStyle(color: Color(0xFF7D1A25), fontSize: 12, fontWeight: FontWeight.bold)),
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Center(
+                              child: Icon(Icons.format_quote_rounded, color: color, size: 20),
+                            ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              f['name'] as String,
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF7D1A25),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  f['name'] as String,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.notoSansEthiopic(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: themeConfig.textColor,
+                                  ),
+                                ),
+                                Text(
+                                  '${f['en']} • ${f['era']}',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: themeConfig.secondaryTextColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        f['sub'] as String,
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: themeConfig.secondaryTextColor,
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: Text(
+                          f['quote'] as String,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12.5,
+                            height: 1.45,
+                            color: themeConfig.textColor.withValues(alpha: 0.85),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        f['desc'] as String,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 11,
-                          height: 1.3,
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              f['ref'] as String,
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: color,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'ትርጓሜውን ክፈት →',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -524,12 +1011,21 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildReadingPlansShowcase(
+  Widget _buildReadingPlansCarousel(
     BuildContext context,
     WidgetRef ref,
     ReaderThemeConfig themeConfig,
+    bool isDark,
   ) {
-    final topPlans = ReadingPlansData.allPlans.take(5).toList();
+    final plans = ReadingPlansData.allPlans.take(6).toList();
+    final gradients = [
+      [const Color(0xFF4F46E5), const Color(0xFF3730A3)],
+      [const Color(0xFF0D9488), const Color(0xFF115E59)],
+      [const Color(0xFFD97706), const Color(0xFF92400E)],
+      [const Color(0xFFE11D48), const Color(0xFF9F1239)],
+      [const Color(0xFF7C3AED), const Color(0xFF5B21B6)],
+      [const Color(0xFF2563EB), const Color(0xFF1E40AF)],
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,75 +1033,101 @@ class HomeDashboardScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'የንባብ ዕቅዶች (Reading Plans)',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: themeConfig.textColor,
-              ),
-            ),
+            _buildSectionTitle('የንባብ ዕቅዶች', 'DEVOTIONAL PLANS', themeConfig),
             TextButton(
-              onPressed: () => onNavigateTab(3), // Jump to Plans tab
-              child: const Text('ሁሉንም እይ (10 ዕቅዶች)'),
+              onPressed: () => onNavigateTab(3),
+              child: Text(
+                'ሁሉንም እይ (10) →',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: themeConfig.accentColor),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         SizedBox(
-          height: 128,
+          height: 152,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: topPlans.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            physics: const BouncingScrollPhysics(),
+            itemCount: plans.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (context, idx) {
-              final p = topPlans[idx];
+              final plan = plans[idx];
+              final grad = gradients[idx % gradients.length];
+
               return InkWell(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(22),
                 onTap: () => onNavigateTab(3),
                 child: Container(
-                  width: 200,
-                  padding: const EdgeInsets.all(12),
+                  width: 230,
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: themeConfig.surfaceColor,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFC5A059).withValues(alpha: 0.3)),
+                    gradient: LinearGradient(
+                      colors: grad,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: grad[0].withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF7D1A25).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          p.category,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF7D1A25)),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        p.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        p.subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 11, color: themeConfig.secondaryTextColor, height: 1.3),
-                      ),
-                      const Spacer(),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(p.badgeText, style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF8A641A))),
-                          const Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF7D1A25)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              plan.category,
+                              style: GoogleFonts.notoSansEthiopic(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${plan.totalDays} ቀናት',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ],
+                      ),
+                      const Spacer(),
+                      Text(
+                        plan.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.notoSansEthiopic(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        plan.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.notoSansEthiopic(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          fontSize: 11.5,
+                          height: 1.35,
+                        ),
                       ),
                     ],
                   ),
@@ -618,181 +1140,127 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryQuickJumps(
+  Widget _buildThematicBentoSection(
     BuildContext context,
     WidgetRef ref,
     ReaderThemeConfig themeConfig,
-  ) {
-    final categories = [
-      {'name': 'ወንጌላት\n(Gospels)', 'icon': Icons.favorite, 'bookNum': 40, 'color': const Color(0xFF7D1A25)},
-      {'name': 'መዝሙር\n(Psalms)', 'icon': Icons.music_note, 'bookNum': 19, 'color': const Color(0xFF1976D2)},
-      {'name': 'ኦሪት\n(Torah)', 'icon': Icons.menu_book, 'bookNum': 1, 'color': const Color(0xFF2E7D32)},
-      {'name': 'ምሳሌ\n(Proverbs)', 'icon': Icons.lightbulb, 'bookNum': 20, 'color': const Color(0xFFE65100)},
-      {'name': '81 መጻሕፍት\n(Orthodox)', 'icon': Icons.church, 'bookNum': 1, 'transId': 2, 'color': const Color(0xFF6A1B9A)},
-      {'name': 'መጻሕፍት ዝርዝር\n(All Books)', 'icon': Icons.grid_view, 'isAll': true, 'color': const Color(0xFF455A64)},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ፈጣን መዳረሻ (Sacred Canon Access)',
-          style: GoogleFonts.notoSansEthiopic(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: themeConfig.textColor,
-          ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 94,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: categories.length,
-            itemBuilder: (context, idx) {
-              final cat = categories[idx];
-              final color = cat['color'] as Color;
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 12.0),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: () async {
-                    if (cat['isAll'] == true) {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const BookSelectorScreen()));
-                    } else {
-                      final bibleState = ref.read(bibleStateProvider);
-                      final transId = cat['transId'] as int?;
-                      if (transId != null) {
-                        final t = bibleState.translations.firstWhere((x) => x.id == transId);
-                        await ref.read(bibleStateProvider.notifier).selectTranslation(t);
-                      }
-                      final bookNum = cat['bookNum'] as int? ?? 1;
-                      final targetBook = ref.read(bibleStateProvider).books.firstWhere(
-                            (b) => b.bookNumber == bookNum,
-                            orElse: () => ref.read(bibleStateProvider).books.first,
-                          );
-                      await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: 1);
-                      onNavigateTab(1); // Jump to Reader
-                    }
-                  },
-                  child: Container(
-                    width: 90,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: themeConfig.surfaceColor,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: color.withValues(alpha: 0.2)),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(cat['icon'] as IconData, color: color, size: 24),
-                        const SizedBox(height: 4),
-                        Text(
-                          cat['name'] as String,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildThematicStudyGuides(
-    BuildContext context,
-    WidgetRef ref,
-    ReaderThemeConfig themeConfig,
+    bool isDark,
   ) {
     final guides = [
       {
-        'title': 'የኢየሱስ ክርስቶስ ሕይወትና ተአምራት',
-        'subtitle': 'ልደቱ፣ ጥምቀቱ፣ ተራራው ስብከትና ትንሣኤው',
+        'title': 'የተራራው ስብከት',
+        'sub': 'ማቴዎስ ምዕራፍ 5–7',
         'bookNum': 40,
         'chapter': 5,
-        'icon': Icons.stars,
+        'icon': Icons.wb_twilight_rounded,
+        'color': const Color(0xFF4F46E5),
       },
       {
-        'title': 'የመጽናኛና የተስፋ ቃላት',
-        'subtitle': 'መዝሙረ ዳዊት 23 & 91 — እግዚአብሔር እረኛዬ ነው',
+        'title': 'መጽናኛና ጥበቃ',
+        'sub': 'መዝሙር 23 እና 91',
         'bookNum': 19,
         'chapter': 23,
-        'icon': Icons.spa,
+        'icon': Icons.shield_outlined,
+        'color': const Color(0xFF0D9488),
       },
       {
-        'title': 'የጥበብና የእውቀት መመሪያዎች',
-        'subtitle': 'መጽሐፈ ምሳሌ — እግዚአብሔርን መፍራት የጥበብ መጀመሪያ ነው',
+        'title': 'የጥበብ መጀመሪያ',
+        'sub': 'መጽሐፈ ምሳሌ ምዕራፍ 1',
         'bookNum': 20,
         'chapter': 1,
-        'icon': Icons.psychology,
+        'icon': Icons.workspace_premium_outlined,
+        'color': const Color(0xFFD97706),
       },
       {
-        'title': 'የፍቅርና የጸጋ ትምህርት',
-        'subtitle': '1 ቆሮንቶስ 13 — ፍቅር ለዘወትር አትወድቅም',
+        'title': 'የፍቅር መዝሙር',
+        'sub': '1 ቆሮንቶስ ምዕራፍ 13',
         'bookNum': 46,
         'chapter': 13,
-        'icon': Icons.volunteer_activism,
+        'icon': Icons.favorite_border_rounded,
+        'color': const Color(0xFFE11D48),
       },
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'የጥናት መመሪያዎች (Sacred Themes & Guides)',
-          style: GoogleFonts.notoSansEthiopic(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: themeConfig.textColor,
-          ),
-        ),
-        const SizedBox(height: 10),
-        ListView.separated(
+        _buildSectionTitle('የተመረጡ የጥናት ርዕሶች', 'CURATED PASSAGES', themeConfig),
+        const SizedBox(height: 12),
+        GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.1,
+          ),
           itemCount: guides.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, idx) {
             final g = guides[idx];
-            return Card(
-              elevation: 0.5,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              color: themeConfig.surfaceColor,
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFF7D1A25).withValues(alpha: 0.12),
-                  child: Icon(g['icon'] as IconData, color: const Color(0xFF7D1A25), size: 20),
+            final color = g['color'] as Color;
+
+            return InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () async {
+                final bookNum = g['bookNum'] as int;
+                final chapter = g['chapter'] as int;
+                final targetBook = ref.read(bibleStateProvider).books.firstWhere(
+                      (b) => b.bookNumber == bookNum,
+                      orElse: () => ref.read(bibleStateProvider).books.first,
+                    );
+                await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                onNavigateTab(1);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: themeConfig.surfaceColor,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: themeConfig.cardBorderColor),
                 ),
-                title: Text(
-                  g['title'] as String,
-                  style: GoogleFonts.notoSansEthiopic(fontSize: 14, fontWeight: FontWeight.bold),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(g['icon'] as IconData, color: color, size: 19),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            g['title'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: themeConfig.textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            g['sub'] as String,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 11,
+                              color: themeConfig.secondaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                subtitle: Text(
-                  g['subtitle'] as String,
-                  style: GoogleFonts.notoSansEthiopic(fontSize: 12, color: themeConfig.secondaryTextColor),
-                ),
-                trailing: const Icon(Icons.chevron_right, size: 18),
-                onTap: () async {
-                  final bookNum = g['bookNum'] as int;
-                  final chapter = g['chapter'] as int;
-                  final targetBook = ref.read(bibleStateProvider).books.firstWhere(
-                        (b) => b.bookNumber == bookNum,
-                        orElse: () => ref.read(bibleStateProvider).books.first,
-                      );
-                  await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                  onNavigateTab(1); // Jump to Reader
-                },
               ),
             );
           },
@@ -801,44 +1269,101 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showThemeDialog(BuildContext context, WidgetRef ref) {
-    final themeConfig = ref.read(themeConfigProvider);
-    final themeNotifier = ref.read(themeConfigProvider.notifier);
+  Widget _buildSectionTitle(String amharic, String english, ReaderThemeConfig themeConfig) {
+    return Row(
+      children: [
+        Text(
+          amharic,
+          style: GoogleFonts.notoSansEthiopic(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: themeConfig.textColor,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '• $english',
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.7,
+            color: themeConfig.secondaryTextColor,
+          ),
+        ),
+      ],
+    );
+  }
 
-    showDialog(
+  String _shortTransLabel(String name) {
+    if (name.contains('81')) return '81 ቀኖና';
+    if (name.contains('King James') || name.contains('KJV')) return 'KJV';
+    return '1954 ትርጉም';
+  }
+
+  void _showTranslationModal(
+    BuildContext context,
+    WidgetRef ref,
+    BibleViewState bibleState,
+    ReaderThemeConfig themeConfig,
+  ) {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('የንባብ ገጽታ (Theme)'),
-        content: Column(
+      backgroundColor: themeConfig.surfaceColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ListTile(
-              leading: const Icon(Icons.wb_sunny, color: Colors.orange),
-              title: const Text('ቀን (Light Parchment)'),
-              trailing: themeConfig.mode == ReaderThemeMode.light ? const Icon(Icons.check) : null,
-              onTap: () {
-                themeNotifier.setMode(ReaderThemeMode.light);
-                Navigator.pop(ctx);
-              },
+            Text(
+              'የመጽሐፍ ቅዱስ ትርጉም ይምረጡ',
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: themeConfig.textColor,
+              ),
             ),
-            ListTile(
-              leading: const Icon(Icons.menu_book, color: Color(0xFF7D1A25)),
-              title: const Text('ብራና (Monastery Sepia)'),
-              trailing: themeConfig.mode == ReaderThemeMode.sepia ? const Icon(Icons.check) : null,
-              onTap: () {
-                themeNotifier.setMode(ReaderThemeMode.sepia);
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.nightlight_round, color: Colors.indigo),
-              title: const Text('ጽልመት (Obsidian Dark)'),
-              trailing: themeConfig.mode == ReaderThemeMode.dark ? const Icon(Icons.check) : null,
-              onTap: () {
-                themeNotifier.setMode(ReaderThemeMode.dark);
-                Navigator.pop(ctx);
-              },
-            ),
+            const SizedBox(height: 14),
+            ...bibleState.translations.map((t) {
+              final selected = t.id == bibleState.currentTranslation?.id;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? themeConfig.accentColor.withValues(alpha: 0.08)
+                      : themeConfig.backgroundColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: selected ? themeConfig.accentColor : themeConfig.cardBorderColor,
+                    width: selected ? 1.8 : 1,
+                  ),
+                ),
+                child: ListTile(
+                  title: Text(
+                    t.name,
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14.5,
+                      color: themeConfig.textColor,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${t.canon} • ${t.language}',
+                    style: TextStyle(fontSize: 12, color: themeConfig.secondaryTextColor),
+                  ),
+                  trailing: selected
+                      ? Icon(Icons.check_circle_rounded, color: themeConfig.accentColor)
+                      : null,
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ref.read(bibleStateProvider.notifier).selectTranslation(t);
+                  },
+                ),
+              );
+            }),
           ],
         ),
       ),

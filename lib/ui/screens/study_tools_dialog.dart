@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/verse.dart';
 import '../../models/commentary.dart';
+import '../../models/cross_reference.dart';
 import '../../data/patristic_commentaries.dart';
+import '../../data/cross_references_data.dart';
+import '../../providers/bible_state.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/bible_repository.dart';
 import '../widgets/built_in_geez_keyboard.dart';
 import 'verse_card_maker_screen.dart';
 
-class StudyToolsSheet extends StatefulWidget {
+class StudyToolsSheet extends ConsumerStatefulWidget {
   final Verse verse;
   final String bookName;
   final int bookNumber;
   final BibleRepository repository;
   final VoidCallback onVerseUpdated;
+  final VoidCallback? onDismissed;
+  final Function(int targetBookNum, int targetCh, int targetVerse)? onJumpToReference;
   final int initialTabIndex;
 
   const StudyToolsSheet({
@@ -24,19 +32,23 @@ class StudyToolsSheet extends StatefulWidget {
     required this.bookNumber,
     required this.repository,
     required this.onVerseUpdated,
+    this.onDismissed,
+    this.onJumpToReference,
     this.initialTabIndex = 0,
   });
 
-  static void show(
+  static Future<void> show(
     BuildContext context, {
     required Verse verse,
     required String bookName,
     required int bookNumber,
     required BibleRepository repository,
     required VoidCallback onVerseUpdated,
+    VoidCallback? onDismissed,
+    Function(int targetBookNum, int targetCh, int targetVerse)? onJumpToReference,
     int initialTabIndex = 0,
-  }) {
-    showModalBottomSheet(
+  }) async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -46,46 +58,53 @@ class StudyToolsSheet extends StatefulWidget {
         bookNumber: bookNumber,
         repository: repository,
         onVerseUpdated: onVerseUpdated,
+        onDismissed: onDismissed,
+        onJumpToReference: onJumpToReference,
         initialTabIndex: initialTabIndex,
       ),
     );
+    onDismissed?.call();
   }
 
   @override
-  State<StudyToolsSheet> createState() => _StudyToolsSheetState();
+  ConsumerState<StudyToolsSheet> createState() => _StudyToolsSheetState();
 }
 
-class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
+  // Filter pills: 'ALL', 'ANDIMTA', 'EARLY_FATHERS', 'CROSS_REF', 'PARALLEL'
+  String _selectedFilter = 'ALL';
   late bool _isBookmarked;
   String? _currentHighlight;
+  bool _showNoteEditor = false;
   bool _showCustomKeyboard = false;
   late TextEditingController _noteController;
 
   static const List<Map<String, dynamic>> _highlightColors = [
-    {'name': 'ቢጫ (Yellow)', 'hex': '#FFF59D', 'color': Color(0xFFFFF59D)},
-    {'name': 'አረንጓዴ (Green)', 'hex': '#C8E6C9', 'color': Color(0xFFC8E6C9)},
-    {'name': 'ሰማያዊ (Blue)', 'hex': '#BBDEFB', 'color': Color(0xFFBBDEFB)},
-    {'name': 'ሮዝ (Pink)', 'hex': '#F8BBD0', 'color': Color(0xFFF8BBD0)},
-    {'name': 'ብርቱካን (Orange)', 'hex': '#FFE0B2', 'color': Color(0xFFFFE0B2)},
+    {'hex': '#FDE68A', 'color': Color(0xFFFDE68A)},
+    {'hex': '#A7F3D0', 'color': Color(0xFFA7F3D0)},
+    {'hex': '#BAE6FD', 'color': Color(0xFFBAE6FD)},
+    {'hex': '#FECDD3', 'color': Color(0xFFFECDD3)},
+    {'hex': '#DDD6FE', 'color': Color(0xFFDDD6FE)},
   ];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 4,
-      vsync: this,
-      initialIndex: widget.initialTabIndex.clamp(0, 3),
-    );
     _isBookmarked = widget.verse.isBookmarked;
     _currentHighlight = widget.verse.highlightColor;
     _noteController = TextEditingController(text: widget.verse.note ?? '');
+    if (widget.verse.note != null && widget.verse.note!.isNotEmpty) {
+      _showNoteEditor = true;
+    }
+    if (widget.initialTabIndex == 1) {
+      _selectedFilter = 'PARALLEL';
+    } else if (widget.initialTabIndex == 2) {
+      _showNoteEditor = true;
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -130,6 +149,7 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
     );
     widget.onVerseUpdated();
     if (mounted) {
+      setState(() => _showNoteEditor = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ማስታወሻ ተቀምጧል (Note saved)')),
       );
@@ -138,200 +158,364 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final themeConfig = ref.watch(themeConfigProvider);
+    final isDark = themeConfig.mode == ReaderThemeMode.dark;
     final reference = '${widget.bookName} ${widget.verse.chapter}:${widget.verse.verse}';
-    final commentaries = PatristicCommentariesData.getCommentariesForVerse(
+
+    final allCommentaries = PatristicCommentariesData.getCommentariesOrContextualForVerse(
+      widget.bookNumber,
+      widget.verse.chapter,
+      widget.verse.verse,
+    );
+    final andimtaCommentaries =
+        allCommentaries.where(PatristicCommentariesData.isEthiopianTradition).toList();
+    final earlyFatherCommentaries =
+        allCommentaries.where((c) => !PatristicCommentariesData.isEthiopianTradition(c)).toList();
+
+    final crossReferences = CrossReferencesData.getCrossReferencesForVerse(
       widget.bookNumber,
       widget.verse.chapter,
       widget.verse.verse,
     );
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.78,
+      initialChildSize: 0.72,
       minChildSize: 0.45,
       maxChildSize: 0.94,
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF191716) : const Color(0xFFFAF8F5),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+            color: themeConfig.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: themeConfig.cardBorderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 18,
-                offset: const Offset(0, -4),
+                color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.16),
+                blurRadius: 28,
+                offset: const Offset(0, -6),
               ),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Drag bar
+              // 1. Drag Handle
               const SizedBox(height: 10),
               Center(
                 child: Container(
-                  width: 44,
-                  height: 4.5,
+                  width: 42,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black26,
-                    borderRadius: BorderRadius.circular(3),
+                    color: themeConfig.cardBorderColor,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
 
-              // 2. Verse Reference Header
+              // 2. Verse Header + Quick Action Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF7D1A25).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                        color: themeConfig.accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.church_outlined, color: Color(0xFF7D1A25), size: 20),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            reference,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF7D1A25),
-                            ),
-                          ),
-                          Text(
-                            commentaries.isNotEmpty
-                                ? 'የቀደምት አበው ትርጓሜ (${commentaries.length})'
-                                : 'የጥናትና ትርጓሜ መድረክ (Study Panel)',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: isDark ? Colors.white60 : Colors.black54,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        reference,
+                        style: GoogleFonts.notoSansEthiopic(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: themeConfig.accentColor,
+                        ),
                       ),
                     ),
+                    const Spacer(),
+                    // Bookmark
                     IconButton(
+                      visualDensity: VisualDensity.compact,
                       icon: Icon(
-                        _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                        color: _isBookmarked ? const Color(0xFF7D1A25) : null,
+                        _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                        color: _isBookmarked ? themeConfig.accentColor : themeConfig.secondaryTextColor,
+                        size: 21,
                       ),
-                      tooltip: 'Bookmark',
+                      tooltip: 'ዕልባት (Bookmark)',
                       onPressed: _toggleBookmark,
                     ),
+                    // Note Toggle
                     IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Close',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        _showNoteEditor ? Icons.sticky_note_2_rounded : Icons.sticky_note_2_outlined,
+                        color: _showNoteEditor ? themeConfig.accentColor : themeConfig.secondaryTextColor,
+                        size: 21,
+                      ),
+                      tooltip: 'ማስታወሻ (Note)',
+                      onPressed: () => setState(() => _showNoteEditor = !_showNoteEditor),
+                    ),
+                    // Copy
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.copy_rounded, size: 19, color: themeConfig.secondaryTextColor),
+                      tooltip: 'ቅዳ (Copy)',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: '$reference\n«${widget.verse.text}»'));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('ጥቅሱ ተገልብጧል (Copied)')),
+                        );
+                      },
+                    ),
+                    // Share
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.ios_share_rounded, size: 19, color: themeConfig.secondaryTextColor),
+                      tooltip: 'አጋራ (Share)',
+                      onPressed: () {
+                        Share.share('$reference\n«${widget.verse.text}»');
+                      },
+                    ),
+                    // Verse Card Maker
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.photo_outlined, size: 20, color: themeConfig.secondaryTextColor),
+                      tooltip: 'የጥቅስ ካርድ (Verse Card)',
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => VerseCardMakerScreen(
+                              reference: reference,
+                              verseText: widget.verse.text,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.close_rounded, size: 21, color: themeConfig.secondaryTextColor),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
               ),
 
-              // 3. Compact Verse Snippet
+              // 3. Highlight Swatch Strip + Selected Verse Quote
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF24201E) : Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFC5A059).withValues(alpha: 0.25),
-                    ),
+                    color: themeConfig.surfaceColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: themeConfig.cardBorderColor),
                   ),
-                  child: Text(
-                    '«${widget.verse.text}»',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 14,
-                      height: 1.55,
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF221A16),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '«${widget.verse.text}»',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.notoSerifEthiopic(
+                          fontSize: 14.5,
+                          height: 1.55,
+                          color: themeConfig.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Text(
+                            'ቀለም፦',
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: themeConfig.secondaryTextColor,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          ..._highlightColors.map((c) {
+                            final isSelected = _currentHighlight == c['hex'];
+                            return GestureDetector(
+                              onTap: () => _setHighlight(c['hex'] as String),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 10),
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: c['color'] as Color,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? themeConfig.accentColor : Colors.black26,
+                                    width: isSelected ? 2.5 : 1,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? Icon(Icons.check, size: 13, color: themeConfig.accentColor)
+                                    : null,
+                              ),
+                            );
+                          }),
+                          if (_currentHighlight != null)
+                            GestureDetector(
+                              onTap: _removeHighlight,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'አጥፋ',
+                                  style: GoogleFonts.notoSansEthiopic(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.redAccent,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-              // 4. Tab Bar (Catena / Church Fathers first!)
-              TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                labelColor: const Color(0xFF7D1A25),
-                unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
-                indicatorColor: const Color(0xFF7D1A25),
-                indicatorWeight: 3,
-                labelStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: GoogleFonts.notoSansEthiopic(fontSize: 13),
-                tabs: [
-                  Tab(
-                    icon: Row(
-                      mainAxisSize: MainAxisSize.min,
+              // 4. Collapsible Personal Note Editor (if toggled)
+              if (_showNoteEditor)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: themeConfig.surfaceColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: themeConfig.accentColor.withValues(alpha: 0.4)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text('✝ ', style: TextStyle(color: Color(0xFFC5A059), fontSize: 15)),
-                        Text('የአበው ትርጓሜ (${commentaries.length})'),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'የግል ማስታወሻ (Personal Study Note)',
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.accentColor,
+                              ),
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: Icon(
+                                _showCustomKeyboard ? Icons.keyboard_rounded : Icons.keyboard_alt_outlined,
+                                size: 18,
+                                color: themeConfig.accentColor,
+                              ),
+                              onPressed: () => setState(() => _showCustomKeyboard = !_showCustomKeyboard),
+                            ),
+                          ],
+                        ),
+                        TextField(
+                          controller: _noteController,
+                          maxLines: 2,
+                          style: GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.textColor),
+                          decoration: InputDecoration(
+                            hintText: 'ማስታወሻዎን እዚህ ይጻፉ...',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        if (_showCustomKeyboard) ...[
+                          const SizedBox(height: 6),
+                          BuiltInGeezKeyboard(controller: _noteController),
+                        ],
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: themeConfig.accentColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: _saveNote,
+                            icon: const Icon(Icons.check_rounded, size: 16),
+                            label: Text(
+                              'ማስታወሻ አስቀምጥ',
+                              style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const Tab(
-                    icon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.compare_arrows, size: 16),
-                        SizedBox(width: 4),
-                        Text('ማነፃፀሪያ (Parallel)'),
-                      ],
+                ),
+
+              // 5. Tradition & Study Filter Pills
+              SizedBox(
+                height: 46,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  children: [
+                    _buildFilterPill(
+                      id: 'ALL',
+                      label: 'ሁሉም አበው (${allCommentaries.length})',
+                      icon: Icons.auto_awesome_rounded,
+                      themeConfig: themeConfig,
                     ),
-                  ),
-                  const Tab(
-                    icon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.edit_note, size: 16),
-                        SizedBox(width: 4),
-                        Text('ማስታወሻና ቀለም'),
-                      ],
+                    const SizedBox(width: 8),
+                    _buildFilterPill(
+                      id: 'ANDIMTA',
+                      label: 'አንድምታ (${andimtaCommentaries.length})',
+                      icon: Icons.menu_book_rounded,
+                      themeConfig: themeConfig,
                     ),
-                  ),
-                  const Tab(
-                    icon: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.image_outlined, size: 16),
-                        SizedBox(width: 4),
-                        Text('የጥቅስ ካርድ'),
-                      ],
+                    const SizedBox(width: 8),
+                    _buildFilterPill(
+                      id: 'EARLY_FATHERS',
+                      label: 'ቀደምት አበው (${earlyFatherCommentaries.length})',
+                      icon: Icons.history_edu_rounded,
+                      themeConfig: themeConfig,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    _buildFilterPill(
+                      id: 'CROSS_REF',
+                      label: 'ተዛማጅ ጥቅሶች (${crossReferences.length})',
+                      icon: Icons.hub_outlined,
+                      themeConfig: themeConfig,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildFilterPill(
+                      id: 'PARALLEL',
+                      label: 'ማነፃፀሪያ (3 ትርጉም)',
+                      icon: Icons.compare_arrows_rounded,
+                      themeConfig: themeConfig,
+                    ),
+                  ],
+                ),
               ),
+
               const Divider(height: 1),
 
-              // 5. Tab Content Views
+              // 6. Filtered Content Stream
               Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Tab 0: Church Fathers Catena Commentary
-                    _buildPatristicTab(context, commentaries, isDark, scrollController),
-
-                    // Tab 1: Parallel Translations
-                    _buildParallelTab(context, isDark, scrollController),
-
-                    // Tab 2: Notes & Highlights
-                    _buildNotesAndHighlightTab(context, theme, isDark, reference, scrollController),
-
-                    // Tab 3: Verse Card Maker shortcut
-                    _buildVerseCardTab(context, reference, isDark),
-                  ],
+                child: _buildActiveContentView(
+                  scrollController: scrollController,
+                  themeConfig: themeConfig,
+                  allCommentaries: allCommentaries,
+                  andimtaCommentaries: andimtaCommentaries,
+                  earlyFatherCommentaries: earlyFatherCommentaries,
+                  crossReferences: crossReferences,
                 ),
               ),
             ],
@@ -341,111 +525,107 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
     );
   }
 
-  Widget _buildPatristicTab(
-    BuildContext context,
-    List<Commentary> commentaries,
-    bool isDark,
-    ScrollController scrollController,
-  ) {
-    if (commentaries.isEmpty) {
-      return ListView(
-        controller: scrollController,
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF221F1D) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFC5A059).withValues(alpha: 0.3)),
-            ),
-            child: Column(
-              children: [
-                const Icon(Icons.menu_book, color: Color(0xFFC5A059), size: 40),
-                const SizedBox(height: 12),
-                Text(
-                  'የቀደምት አበውና አንድምታ ትምህርት',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF7D1A25),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'ለዚህ የተለየ ጥቅስ የቀጥታ ሐተታ ባይመዘገብም፣ የዚህ ምዕራፍና የመጽሐፉ አጠቃላይ ትርጓሜ በቅዱሳን አበው ትምህርት መሠረት ከቀደምት የቤተክርስቲያን ትውፊት ጋር የተስማማ ነው።',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 13.5,
-                    height: 1.6,
-                    color: isDark ? Colors.white70 : Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    Chip(
-                      avatar: const Icon(Icons.bookmark_outline, size: 16, color: Color(0xFF7D1A25)),
-                      label: const Text('አንድምታ ትርጓሜ'),
-                      backgroundColor: const Color(0xFF7D1A25).withValues(alpha: 0.08),
-                    ),
-                    Chip(
-                      avatar: const Icon(Icons.verified_outlined, size: 16, color: Color(0xFFC5A059)),
-                      label: const Text('የኢትዮጵያ ኦርቶዶክስ ትውፊት'),
-                      backgroundColor: const Color(0xFFC5A059).withValues(alpha: 0.1),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+  Widget _buildFilterPill({
+    required String id,
+    required String label,
+    required IconData icon,
+    required ReaderThemeConfig themeConfig,
+  }) {
+    final isSelected = _selectedFilter == id;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? themeConfig.accentColor : themeConfig.surfaceColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? themeConfig.accentColor : themeConfig.cardBorderColor,
           ),
-        ],
-      );
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? Colors.white : themeConfig.accentColor,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : themeConfig.textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveContentView({
+    required ScrollController scrollController,
+    required ReaderThemeConfig themeConfig,
+    required List<Commentary> allCommentaries,
+    required List<Commentary> andimtaCommentaries,
+    required List<Commentary> earlyFatherCommentaries,
+    required List<CrossReferenceItem> crossReferences,
+  }) {
+    if (_selectedFilter == 'CROSS_REF') {
+      return _buildCrossReferencesList(scrollController, crossReferences, themeConfig);
     }
+    if (_selectedFilter == 'PARALLEL') {
+      return _buildParallelTranslationsList(scrollController, themeConfig);
+    }
+
+    final commentariesToShow = _selectedFilter == 'ANDIMTA'
+        ? andimtaCommentaries
+        : _selectedFilter == 'EARLY_FATHERS'
+            ? earlyFatherCommentaries
+            : allCommentaries;
 
     return ListView.separated(
       controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      itemCount: commentaries.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+      itemCount: commentariesToShow.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, idx) {
-        final item = commentaries[idx];
+        final item = commentariesToShow[idx];
+        final isAndimta = PatristicCommentariesData.isEthiopianTradition(item);
+        final badgeColor = isAndimta ? themeConfig.goldAccent : themeConfig.accentColor;
+
         return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF23201D) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFC5A059).withValues(alpha: 0.35),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: themeConfig.surfaceColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: themeConfig.cardBorderColor),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Author Header
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF7D1A25).withValues(alpha: 0.1),
+                      color: badgeColor.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFC5A059), width: 1.5),
                     ),
-                    child: const Center(
-                      child: Text('✝', style: TextStyle(color: Color(0xFF7D1A25), fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      isAndimta ? 'አ' : '✝',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: badgeColor,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -453,67 +633,76 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isAndimta ? 'የኢትዮጵያ አንድምታ' : 'ቀደምት አበው',
+                                style: GoogleFonts.notoSansEthiopic(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: badgeColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                item.authorEra,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11, color: themeConfig.secondaryTextColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           item.authorName,
                           style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF7D1A25),
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${item.authorTitle} • ${item.authorEra}',
-                          style: TextStyle(
+                          'ምንጭ፦ ${item.sourceWork}',
+                          style: GoogleFonts.notoSansEthiopic(
                             fontSize: 11.5,
-                            color: isDark ? Colors.white60 : Colors.black54,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFC5A059).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'ምንጭ፦ ${item.sourceWork}',
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              color: Color(0xFF8A641A),
-                              fontWeight: FontWeight.w600,
-                            ),
+                            fontWeight: FontWeight.w600,
+                            color: themeConfig.secondaryTextColor,
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy, size: 18),
-                    tooltip: 'ትርጓሜውን ቅዳ (Copy)',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.copy_rounded, size: 17, color: themeConfig.secondaryTextColor),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(
-                        text: '${item.authorName} (${item.sourceWork}):\n"${item.content}"\n— Catena Amharic Bible',
+                        text: '${item.authorName} (${item.sourceWork}):\n"${item.content}"',
                       ));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('የአበው ትርጓሜ ተገልብጧል (Commentary copied)')),
+                        const SnackBar(content: Text('ትርጓሜው ተገልብጧል (Commentary copied)')),
                       );
                     },
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-
-              // Commentary Content
               Text(
                 item.content,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 14.5,
-                  height: 1.65,
-                  color: isDark ? Colors.white.withValues(alpha: 0.92) : const Color(0xFF1E1714),
-                  fontWeight: FontWeight.w400,
+                style: GoogleFonts.notoSerifEthiopic(
+                  fontSize: 15,
+                  height: 1.7,
+                  color: themeConfig.textColor,
                 ),
               ),
             ],
@@ -523,10 +712,177 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
     );
   }
 
-  Widget _buildParallelTab(
-    BuildContext context,
-    bool isDark,
+  Widget _buildCrossReferencesList(
     ScrollController scrollController,
+    List<CrossReferenceItem> crossRefs,
+    ReaderThemeConfig themeConfig,
+  ) {
+    return ListView.separated(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+      itemCount: crossRefs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, idx) {
+        final refItem = crossRefs[idx];
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: themeConfig.surfaceColor,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: themeConfig.cardBorderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Target Reference & Connection Type Pill
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: themeConfig.goldAccent.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.link_rounded, size: 14, color: themeConfig.goldAccent),
+                        const SizedBox(width: 5),
+                        Text(
+                          refItem.targetReference,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.goldAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      refItem.connectionType,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: themeConfig.accentColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Detailed Scholarly / Canonical Source Box
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: themeConfig.backgroundColor,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: themeConfig.cardBorderColor),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.verified_outlined, size: 14, color: themeConfig.accentColor),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        refItem.sourceCitation,
+                        style: GoogleFonts.notoSansEthiopic(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: themeConfig.secondaryTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Target Verse Preview Quote
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: themeConfig.goldAccent, width: 3),
+                  ),
+                  color: themeConfig.goldAccent.withValues(alpha: 0.05),
+                ),
+                child: Text(
+                  '«${refItem.targetPreviewText}»',
+                  style: GoogleFonts.notoSerifEthiopic(
+                    fontSize: 14,
+                    height: 1.6,
+                    fontWeight: FontWeight.w600,
+                    color: themeConfig.textColor,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Detailed Exegetical Explanation
+              Text(
+                refItem.explanation,
+                style: GoogleFonts.notoSansEthiopic(
+                  fontSize: 13.5,
+                  height: 1.6,
+                  color: themeConfig.textColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Action to jump directly to the cross-referenced verse
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: themeConfig.goldAccent,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  onPressed: () async {
+                    final bibleState = ref.read(bibleStateProvider);
+                    final targetBook = bibleState.books.firstWhere(
+                      (b) => b.bookNumber == refItem.targetBookNumber,
+                      orElse: () => bibleState.books.first,
+                    );
+                    await ref.read(bibleStateProvider.notifier).selectBook(
+                          targetBook,
+                          chapter: refItem.targetChapter,
+                        );
+                    widget.onJumpToReference?.call(
+                      refItem.targetBookNumber,
+                      refItem.targetChapter,
+                      refItem.targetVerse,
+                    );
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                  label: Text(
+                    'ወደ ${refItem.targetReference} ሂድ',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildParallelTranslationsList(
+    ScrollController scrollController,
+    ReaderThemeConfig themeConfig,
   ) {
     return FutureBuilder<Map<String, String>>(
       future: widget.repository.getParallelVerseTexts(
@@ -536,7 +892,7 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator(color: themeConfig.accentColor));
         }
 
         final parallels = snapshot.data ?? {};
@@ -546,283 +902,64 @@ class _StudyToolsSheetState extends State<StudyToolsSheet> with SingleTickerProv
 
         return ListView(
           controller: scrollController,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
           children: parallels.entries.map((entry) {
-            final isKjv = entry.key.contains('King James');
-            final is81 = entry.key.contains('81');
-
-            return Card(
+            return Container(
               margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(
-                  color: is81
-                      ? const Color(0xFF7D1A25).withValues(alpha: 0.3)
-                      : isKjv
-                          ? const Color(0xFFC5A059).withValues(alpha: 0.4)
-                          : Colors.black12,
-                ),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: themeConfig.surfaceColor,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: themeConfig.cardBorderColor),
               ),
-              color: isDark ? const Color(0xFF221F1D) : Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: is81
-                                ? const Color(0xFF7D1A25).withValues(alpha: 0.12)
-                                : const Color(0xFFC5A059).withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            entry.key,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: is81 ? const Color(0xFF7D1A25) : const Color(0xFF8A641A),
-                            ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeConfig.accentColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          entry.key,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.accentColor,
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.copy, size: 16),
-                          tooltip: 'Copy',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: '${entry.key}:\n${entry.value}'));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('${entry.key} ተገልብጧል')),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      entry.value,
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 14.5,
-                        height: 1.6,
-                        color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF221A16),
                       ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(Icons.copy_rounded, size: 16, color: themeConfig.secondaryTextColor),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: '${entry.key}:\n${entry.value}'));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${entry.key} ተገልብጧል')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    entry.value,
+                    style: GoogleFonts.notoSerifEthiopic(
+                      fontSize: 15,
+                      height: 1.65,
+                      color: themeConfig.textColor,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           }).toList(),
         );
       },
-    );
-  }
-
-  Widget _buildNotesAndHighlightTab(
-    BuildContext context,
-    ThemeData theme,
-    bool isDark,
-    String reference,
-    ScrollController scrollController,
-  ) {
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Highlight Palette
-        Text(
-          'የጥቅስ ቀለም ምረጥ (Highlight Palette)',
-          style: GoogleFonts.notoSansEthiopic(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            ..._highlightColors.map((c) {
-              final isSelected = _currentHighlight == c['hex'];
-              return GestureDetector(
-                onTap: () => _setHighlight(c['hex'] as String),
-                child: Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: c['color'] as Color,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isSelected ? const Color(0xFF7D1A25) : Colors.black12,
-                      width: isSelected ? 3 : 1,
-                    ),
-                  ),
-                ),
-              );
-            }),
-            if (_currentHighlight != null)
-              IconButton(
-                icon: const Icon(Icons.format_color_reset, size: 22, color: Colors.redAccent),
-                tooltip: 'ቀለም አጥፋ (Clear Highlight)',
-                onPressed: _removeHighlight,
-              ),
-          ],
-        ),
-        const Divider(height: 28),
-
-        // Note Section
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'የግል ማስታወሻ (Personal Study Note)',
-              style: GoogleFonts.notoSansEthiopic(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: Icon(
-                _showCustomKeyboard ? Icons.keyboard : Icons.keyboard_alt_outlined,
-                color: const Color(0xFF7D1A25),
-              ),
-              tooltip: 'የግዕዝ ኪቦርድ (Ge\'ez Keyboard)',
-              onPressed: () => setState(() => _showCustomKeyboard = !_showCustomKeyboard),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _noteController,
-          maxLines: 4,
-          style: GoogleFonts.notoSansEthiopic(fontSize: 14.5),
-          decoration: InputDecoration(
-            hintText: 'የመንፈሳዊ ንባብ ማስታወሻዎን እዚህ ይጻፉ...',
-            filled: true,
-            fillColor: isDark ? const Color(0xFF24201E) : Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        if (_showCustomKeyboard) ...[
-          const SizedBox(height: 8),
-          BuiltInGeezKeyboard(controller: _noteController),
-        ],
-        const SizedBox(height: 10),
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF7D1A25),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          onPressed: _saveNote,
-          icon: const Icon(Icons.save, size: 18),
-          label: const Text('ማስታወሻ አስቀምጥ (Save Note)'),
-        ),
-        const SizedBox(height: 16),
-
-        // Quick sharing row
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(
-                    text: '$reference\n"${widget.verse.text}"\n— ከመጽሐፍ ቅዱስ',
-                  ));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('ጥቅሱ ተገልብጧል (Copied)')),
-                  );
-                },
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('ቅዳ (Copy)'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Share.share('$reference\n"${widget.verse.text}"\n— ከመጽሐፍ ቅዱስ መተግበሪያ');
-                },
-                icon: const Icon(Icons.share, size: 16),
-                label: const Text('አጋራ (Share)'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildVerseCardTab(
-    BuildContext context,
-    String reference,
-    bool isDark,
-  ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF2C1810), Color(0xFF7D1A25)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  const Icon(Icons.format_quote, color: Color(0xFFFFD54F), size: 36),
-                  const SizedBox(height: 8),
-                  Text(
-                    '«${widget.verse.text}»',
-                    textAlign: TextAlign.center,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansEthiopic(
-                      color: Colors.white,
-                      fontSize: 14,
-                      height: 1.6,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    reference,
-                    style: const TextStyle(
-                      color: Color(0xFFFFD54F),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7D1A25),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => VerseCardMakerScreen(
-                      reference: reference,
-                      verseText: widget.verse.text,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.palette),
-              label: const Text('የጥቅስ ካርድ አዘጋጅ (Design Verse Card)', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
