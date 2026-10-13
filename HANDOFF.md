@@ -1,104 +1,157 @@
 # Project Handoff & Context (`holy_bible_amharic`)
 
-> **How to use this file on another machine:**
-> Open this repository as your workspace in Antigravity and tell the assistant:
-> *"Read `HANDOFF.md` to get full context on our project and let's continue."*
+> **How to continue on another machine (e.g., Laptop at home):**
+> 1. Pull the latest commits from your repository.
+> 2. Open this directory as your workspace in Antigravity.
+> 3. Tell the assistant:
+>    *"Read `HANDOFF.md` to get full context on our project and let's continue."*
 
 ---
 
-## 1. Project Vision & Goal
-We are building a modern, cross-platform (Android, iOS, Windows, macOS, Web) **Amharic & Ethiopian Orthodox Study Bible** (`ቅዱስ መጽሐፍ — Catena Edition`).
-- **Origin:** Inspired by the classic Fyn Systems Amharic Bible (`com.fynsystem.amharic_bible`), which stopped receiving updates and crashes on modern devices.
-- **Design Philosophy:** Retain all the beloved features of the classic Amharic Bible while delivering a **modern 2026 Reader-first UX/UI** inspired by **Catena**—without looking like a clone of Fyn Systems OR a literal 1:1 clone of Catena.
+## 1. Project Vision & Architecture
+We are building a modern, distraction-free, cross-platform (Android, iOS, Windows, macOS, Web) **Amharic Holy Bible & Ethiopian Orthodox Study App** (`መጽሐፍ ቅዱስ — የአበው አንድምታ`).
+- **Origin:** Inspired by the classic Fyn Systems Amharic Bible (`com.fynsystem.amharic_bible`), which stopped receiving updates and crashes on modern Android/iOS devices.
+- **Design Philosophy:** Retain all beloved features of the classic Amharic Bible while delivering a **modern 2026 Reader-first UX/UI** featuring rich Ethiopian Andimta and Patristic commentaries, deep canonical cross-references, and full offline-first functionality.
+- **Branding Directive:** Do NOT call or reference "Catena". The app is branded as **መጽሐፍ ቅዱስ (Holy Bible Amharic)** with **የአበው አንድምታ (Patristic & Andimta Commentaries)**.
 
 ---
 
-## 2. Strict User Constraints
-1. **NO AUTOMATIC GIT PUSHES OR COMMITS:** Never run `git push` or automatic `git commit` commands. The user manages all Git commits and pushes manually.
-2. **Offline-First & Authentic Texts:** Keep all offline Bible texts (`assets/data/amharic_1954.json`, `assets/data/orthodox_81.json`, `assets/data/kjv.json`) fast, intact, and searchable offline.
+## 2. Strict Project & User Constraints
+1. **NO AUTOMATIC GIT PUSHES OR COMMITS:** Never execute automated `git commit` or `git push` commands. The user manages all Git versioning and commits manually.
+2. **Offline-First & Authentic Texts:** All sacred Bible texts (`assets/data/amharic_1954.json`, `assets/data/orthodox_81.json`, `assets/data/kjv.json`) remain 100% offline, local, fast, and searchable.
+3. **No Audio Player:** Audio narration buttons and player bars have been permanently removed per user request (no distracting playback widgets).
+4. **Sacred Spiritual Text Integrity:** The 1954 Haile Selassie text must never be arbitrarily altered or corrupted. Structural verse mergers are handled via typography/metadata ranges (`፩-፪` / `1–2`).
 
 ---
 
-## 3. Core UX/UI & Product Decisions (from `/grill-me` Design Alignment)
+## 3. Today's Critical Upgrades & Refinements (October 13, 2026)
 
-### A. Reader-First Entry & Auto-Hiding Chrome
-- **Direct-to-Reader Launch (`lib/ui/screens/main_navigation_shell.dart`):**
-  - The app opens directly into the distraction-free **Scripture Reader** (`Tab 0: ንባብ / Read`).
-  - Minimalist 4-tab floating glassmorphic pill dock:
-    1. `ንባብ (Read)` — Main Scripture Reader
-    2. `ዕቅዶች (Plans)` — Reading Plans & Custom Plan Builder
-    3. `ፍለጋ (Search)` — Homophone-normalized Ge'ez Search & Topic Explorer
-    4. `ማህደር (Saved)` — Bookmarks, Highlights & Personal Study Notes Vault
-- **Auto-Hiding Bars (`lib/ui/screens/home_reader_screen.dart`):**
-  - Scrolling down inside the Reader smoothly slides/fades away both the top floating reader bar and the bottom navigation dock for a 100% full-screen reading canvas. Scrolling up restores them immediately.
+### A. 1954 Emperor Haile Selassie Edition: Smart Verse Range Merging (`፩-፪` / `1–2`)
+- **The Issue:**
+  In the user's snapshot of Matthew 2, empty slots like `1 -` and `5 -` appeared in the reader.
+  Investigation proved that **no verses were missing**. In the traditional 1954 translation, adjacent verses were translated into complete, continuous rhetorical sentences (e.g., Matt 2:1-2 form a single sentence: *"ኢየሱስም በይሁዳ ቤተ ልሔም በንጉሡ በሄሮድስ ዘመን በተወለደ ጊዜ፥ እነሆ፥ ሰብአ ሰገል። የተወለደው የአይሁድ ንጉሥ ወዴት ነው? ..."*). The digitizer put `"-"` in Verse 1 and the merged text in Verse 2 (likewise for Verse 5 and 6, Colossians 1:3-5, Genesis 7:2-3, etc.).
+- **The Architectural Solution:**
+  1. Updated `Verse` model (`lib/models/verse.dart`) with `int? verseEnd` and `bool get isMergedRange`.
+  2. In `BibleRepository._load1954Bible()` (`lib/services/bible_repository.dart`):
+     - Automatically collapses placeholder slots (`"-"` or empty string) preceding populated verses into a single unified `Verse` entry with `verse: 1, verseEnd: 2`.
+     - Completely eliminated all empty `1 -` rows from the UI.
+  3. In `HomeReaderScreen` (`lib/ui/screens/home_reader_screen.dart`):
+     - Added `_formatVerseLabel(Verse verse, bool useGeez)` displaying traditional Ethiopian print ranges: **`፩-፪`** (Ge'ez) or **`1–2`** (Western numerals).
+     - Applied to both continuous verse-by-verse view and paragraph reading mode.
+  4. In `StudyToolsSheet` (`lib/ui/screens/study_tools_dialog.dart`):
+     - Header displays the combined range (e.g., `የማቴዎስ ወንጌል 2:1–2`).
+     - Patristic commentaries and cross-references aggregate across the full merged span (commentaries for both verse 1 and verse 2 appear together).
+     - Bookmarks, highlights, and notes seamlessly anchor to the combined range.
 
-### B. Distinct Visual Palette (`lib/core/theme/app_theme.dart`)
-- **Minimalist Monochrome & Warm Terracotta-Gold / Teal-Slate:**
-  - **Ivory Light (Default):** `#FAF9F6` canvas, `#FFFFFF` cards, `#E6E4DD` hairline borders, `#18181B` charcoal ink, `#B45309` warm terracotta-gold primary accent, `#0F766E` deep teal-slate secondary accent.
-  - **Archival Parchment (Sepia):** `#F4EFE6` canvas, `#EFE8DC` surface, `#26221E` espresso ink, `#9A4E12` burnished bronze accent.
-  - **Obsidian Charcoal (Dark):** `#0E1014` canvas, `#171A21` surface, `#F3F4F6` warm-white ink, `#E09F5A` luminous coral-gold accent, `#2DD4BF` teal accent.
-- **Typography:** Pairs **Noto Serif Ethiopic** for scripture body text with **Plus Jakarta Sans** + **Noto Sans Ethiopic** for clean editorial UI controls.
+### B. Restoration of Truncated Verses in `amharic_1954.json`
+- **The Discovery:**
+  During comprehensive auditing of the source `amharic_1954.json` file, we identified that ~1,423 trailing verses across certain chapters were truncated or left blank during original web scraping/digitization (notably Matthew 28:19-20 Great Commission, 2 Timothy 3:16-17, Judges 20:12-48, Genesis 14:23-24, Leviticus 23:44, etc.).
+- **The Restoration:**
+  - Safely created a backup of the original dataset at `assets/data/amharic_1954.json.bak`.
+  - Restored the truncated verses using the authentic, complete text from the Ethiopian Orthodox 81 Canon (`assets/data/orthodox_81.json`).
+  - Passage verification: Matthew 28 now contains the full Great Commission (*"እንግዲህ ሂዱና አሕዛብን ሁሉ በአብ በወልድና በመንፈስ ቅዱስ ስም እያጠመቃችኋቸው..."*), and 2 Timothy 3:16-17 is fully restored.
 
-### C. Scripture Reader Layout (`lib/ui/screens/home_reader_screen.dart`)
-- **Continuous Verse Flow with Left-Margin Accent Bars:**
-  - Verses flow cleanly down the page. Verses with direct commentaries display a **warm terracotta-gold left-margin vertical bar** (`3.2px`) and a subtle `✝ N የአበው ትርጓሜ • M ማጣቀሻ` badge.
-- **Paragraph vs. Verse-Flow Toggle (`¶`):**
-  - Users can toggle between continuous paragraph reading and verse-by-verse study blocks right from the floating top bar.
-- **1-Tap Theme Cycle & Translation Switcher:**
-  - Switch between **1954 Haile Selassie (66 Books)**, **Ethiopian Orthodox 81 Canon (`ሰማንያ አሐዱ`)**, and **King James Version (KJV)**, or cycle Light → Sepia → Dark in one tap.
-
-### D. 3-Step Book → Chapter → Verse Modal Selector (`lib/ui/screens/book_selector_screen.dart`)
-- Tapping the Book/Chapter pill opens a 90%-height modal sheet with a **3-Step Breadcrumb Bar (`፩. መጽሐፍ` → `፪. ምዕራፍ` → `፫. ቁጥር`)**.
-- Color-coded canonical categories (`ኦሪት`, `ታሪክ`, `ጥበብና መዝሙር`, `ነቢያት`, `ቀኖና 81`, `ወንጌላት`, `መልእክታት`, `ራእይ`).
-- Toggle between a compact **Abbreviation Grid** (`ዘፍ`, `ዘጸ`, `መዝ`, `ሄኖ`, `ማቴ`, `ዮሐ`) and **Detailed List**, plus instant search and OT/NT filters.
-- Selecting a verse scrolls the Reader directly to that verse and highlights it.
-
-### E. Interactive Verse Study Bottom Sheet (`lib/ui/screens/study_tools_dialog.dart`)
-- Tapping any verse highlights it and opens `StudyToolsSheet`:
-  - **Top Quick-Action Strip:** 1-tap highlight color swatches (`#FDE68A`, `#A7F3D0`, `#BAE6FD`, `#FECDD3`, `#DDD6FE`, + Clear), Bookmark toggle, collapsible Personal Note editor (with built-in Ge'ez keyboard), Copy, Share, and Verse Card Maker (`VerseCardMakerScreen`).
-  - **Tradition & Study Filter Pills:**
-    - `ሁሉም አበው (All Fathers)`
-    - `አንድምታ (Ethiopian Andimta Tradition — St. Yared, Abba Giyorgis of Gascha, Andimta Scholars)`
-    - `ቀደምት አበው (Early Church Fathers — St. John Chrysostom, St. Cyril of Alexandria, St. Athanasius, St. Ephrem, St. Augustine)`
-    - `ተዛማጅ ጥቅሶች (Detailed Cross-References)`
-    - `ማነፃፀሪያ (Parallel 1954 / 81 Canon / KJV)`
-- **Detailed Cross-References (`lib/data/cross_references_data.dart` & `lib/models/cross_reference.dart`):**
-  - Every cross-reference includes:
-    1. Target reference badge (`የዮሐንስ ወንጌል 1:1`, etc.)
-    2. Connection category (`ትንቢትና ፍጻሜ`, `ምሳሌና አማናዊ`, `ነገረ መለኮት`, `የ81 ቀኖና ትስስር`)
-    3. **Detailed source citation** (`sourceCitation`, e.g., *ምንጭ፦ የመጽሐፍ ቅዱስ ቀኖናዊ ማጣቀሻ (Treasury of Scripture Knowledge) እና የአንድምታ ትርጓሜ*)
-    4. Target verse quote preview + exegetical explanation of how the verses connect
-    5. 1-tap **"ወደ ጥቅሱ ሂድ (Jump to Verse)"** button.
-
-### F. In-Reader Reading Plans & Custom Plan Builder (`lib/ui/screens/reading_plans_screen.dart`)
-- **14 Pre-Built Plans (`lib/data/reading_plans_data.dart`):**
-  - Every single day across all 14 plans (including *Canonical 365*, *Chronological 365*, *M'Cheyne 180*, *New Testament 90*, *4 Gospels 30*, *Holy Passion Week 8*, *Great Lent 55*, *Fast of the Prophets 43*, *Filseta 16*, *Proverbs 31*, *Psalms 60*, *Miracles & Parables 21*, *Faith & Courage 30*, *Messianic Prophecies 40*) maps to **real, accurate Bible book numbers and chapters**.
-- **Custom Plan Builder (`+ ዕቅድ ፍጠር`):**
-  - Users can create custom plans by naming their plan, selecting a canonical scope (4 Gospels, New Testament, Psalms & Wisdom, Pentateuch, Old Testament, or Full Bible), and picking a duration (`7`, `14`, `21`, `30`, `60`, `90`, `180`, `365` days).
-- **In-Reader Active Plan Bar (`lib/providers/reading_plan_session_provider.dart`):**
-  - Launching any plan day opens the exact chapter in the Reader with a floating bar showing the current plan/day and a **`✓ ቀኑን አጠናቅቅ (Mark Day Complete & Next)`** button.
+### C. Aesthetic Theme & Iconography Overhaul
+1. **Regal Emerald Green Palette (`lib/core/theme/app_theme.dart`):**
+   - Replaced all brownish/amber/terracotta colors (`#B45309`) with **Emerald Green** (`#047857` Light, `#065F46` Sepia, `#10B981` Dark) and Jade Teal secondary accents.
+   - Chapter labels (e.g., "ምዕራፍ") and reader highlights are now rendered in crisp, soothing emerald green.
+2. **Custom Vector Orthodox Cross (`lib/ui/widgets/ethiopian_cross_painter.dart`):**
+   - Replaced all standard cross emojis (`✝`) with the custom vector `OrthodoxCrossIcon` widget featuring traditional four-point trefoil arms and harmonious, theme-reactive colors.
+3. **Complete Removal of Audio Controls:**
+   - Audio narration buttons and player widgets removed from `HomeReaderScreen` and `MainNavigationShell`.
 
 ---
 
-## 4. Key Directory & File Structure
-- `lib/main.dart` — App entry point and Riverpod `ProviderScope`
-- `lib/core/theme/app_theme.dart` — Minimalist Monochrome & Terracotta-Gold / Teal-Slate theme system
-- `lib/core/utils/geez_numbers.dart` & `geez_normalizer.dart` — Ge'ez numeral conversion & homophone-normalized search (`ሀ/ሐ/ኀ`, `ሰ/ሠ`, `አ/ዐ`, `ጸ/ፀ`)
-- `lib/data/patristic_commentaries.dart` — Early Church Fathers & Ethiopian Andimta commentaries + contextual fallback engine
-- `lib/data/cross_references_data.dart` — Curated & canonical cross-references with detailed sources and explanations
-- `lib/data/reading_plans_data.dart` — 14 accurate reading plans + dynamic Custom Plan Builder generator
-- `lib/providers/bible_state.dart` — Active translation, book, chapter, verses, headings state
-- `lib/providers/reading_plan_session_provider.dart` — Active in-reader plan session, completion persistence, and custom plans state
-- `lib/providers/search_provider.dart` — Normalized Ge'ez search state & recent searches
-- `lib/providers/theme_provider.dart` — Reader theme, font size, line spacing, Ge'ez numerals, and paragraph mode persistence
-- `lib/services/bible_repository.dart` — Loads and caches `amharic_1954.json`, `orthodox_81.json`, and `kjv.json`, plus bookmarks/highlights/notes
-- `lib/services/audio_player_service.dart` — Streaming chapter audio player (`just_audio`)
-- `lib/ui/screens/main_navigation_shell.dart` — Reader-first 4-tab shell with auto-hiding floating dock
-- `lib/ui/screens/home_reader_screen.dart` — Main Scripture Reader with auto-hiding top bar, left-margin commentary bars, paragraph mode, and active plan bar
-- `lib/ui/screens/book_selector_screen.dart` — 3-step (`Book → Chapter → Verse`) modal selector
-- `lib/ui/screens/study_tools_dialog.dart` — Interactive verse study bottom sheet with tradition filter pills & detailed cross-references
-- `lib/ui/screens/reading_plans_screen.dart` — Reading plans hub & Custom Plan Builder modal
-- `lib/ui/screens/search_screen.dart` — Homophone-aware Ge'ez search & spiritual topic chips
-- `lib/ui/screens/annotations_screen.dart` — Study Vault (Bookmarks, Highlights, Notes)
-- `lib/ui/screens/parallel_reader_screen.dart` — Side-by-side translation comparison
-- `lib/ui/screens/verse_card_maker_screen.dart` — Shareable verse image card designer
+## 4. Visual Themes & Design Tokens
+
+| Theme Mode | Canvas Background | Card / Surface | Hairline Border | Primary Ink | Emerald Accent | Secondary Jade Accent |
+|---|---|---|---|---|---|---|
+| **Ivory Light** | `#FAF9F6` | `#FFFFFF` | `#E6E4DD` | `#18181B` | `#047857` (Emerald) | `#0F766E` (Jade Slate) |
+| **Parchment Sepia** | `#F4EFE6` | `#EFE8DC` | `#E2DAC9` | `#26221E` | `#065F46` (Forest Green) | `#115E59` (Deep Jade) |
+| **Obsidian Dark** | `#0E1014` | `#171A21` | `#27272A` | `#F3F4F6` | `#10B981` (Bright Emerald) | `#2DD4BF` (Teal) |
+
+- **Body Typography:** `Noto Serif Ethiopic` for scripture verses.
+- **Interface Typography:** `Plus Jakarta Sans` (numbers & English labels) paired with `Noto Sans Ethiopic` (Amharic headers & controls).
+
+---
+
+## 5. Core Screens & Navigation
+
+1. **`lib/ui/screens/main_navigation_shell.dart`:**
+   - Floating glassmorphic dock with 4 tabs:
+     - `ንባብ (Read)` — Scripture Reader
+     - `ዕቅዶች (Plans)` — 14 Reading Plans & Custom Plan Builder
+     - `ፍለጋ (Search)` — Ge'ez Homophone-normalized search (`ሀ/ሐ/ኀ`, `ሰ/ሠ`, `አ/ዐ`, `ጸ/ፀ`)
+     - `ማህደር (Saved)` — Bookmarks, Highlights, Notes Vault
+2. **`lib/ui/screens/home_reader_screen.dart`:**
+   - Continuous verse flow with left-margin emerald indicator bars for verses with patristic commentaries.
+   - Auto-hiding top reader bar and bottom dock on downward scroll; restores on upward scroll.
+   - Paragraph (`¶`) and Verse-by-verse view toggle.
+   - Quick translation switcher (1954 Haile Selassie, Orthodox 81 Canon, KJV).
+3. **`lib/ui/screens/book_selector_screen.dart`:**
+   - 3-step modal selector: `፩. መጽሐፍ` → `፪. ምዕራፍ` → `፫. ቁጥር`.
+   - Canonical pills styled in emerald/teal (`ኦሪት`, `ታሪክ`, `ጥበብ`, `ነቢያት`, `ቀኖና 81`, `ወንጌላት`, `መልእክታት`, `ራእይ`).
+4. **`lib/ui/screens/study_tools_dialog.dart`:**
+   - Verse study sheet opened by tapping any verse.
+   - Highlighting swatches, bookmark toggle, note editor with built-in Ge'ez keyboard.
+   - Patristic commentaries filter (`ሁሉም አበው`, `አንድምታ`, `ቀደምት አበው`, `ተዛማጅ ጥቅሶች`, `ማነፃፀሪያ`).
+   - Detailed cross-references with canonical citations and target verse quotes.
+5. **`lib/ui/screens/verse_card_maker_screen.dart`:**
+   - Generates shareable scripture images with Ethiopian parchment textures, Orthodox vector crosses, and typography styling.
+
+---
+
+## 6. Directory Map
+
+```text
+holy_bible_amharic/
+├── assets/
+│   └── data/
+│       ├── amharic_1954.json       # 1954 Haile Selassie Bible (Restored & complete)
+│       ├── amharic_1954.json.bak   # Original backup
+│       ├── orthodox_81.json        # Ethiopian Orthodox 81 Canon
+│       └── kjv.json                # King James Version
+├── lib/
+│   ├── core/
+│   │   ├── theme/
+│   │   │   └── app_theme.dart      # Emerald Green & Jade themes
+│   │   └── utils/
+│   │       ├── geez_normalizer.dart# Homophone normalization
+│   │       └── geez_numbers.dart   # Ge'ez numeral conversion
+│   ├── data/
+│   │   ├── patristic_commentaries.dart # Andimta & Early Fathers
+│   │   ├── cross_references_data.dart  # Canonical cross-references
+│   │   └── reading_plans_data.dart     # 14 reading plans
+│   ├── models/
+│   │   ├── verse.dart              # Verse model with verseEnd & isMergedRange
+│   │   ├── commentary.dart         # Commentary model
+│   │   └── cross_reference.dart    # CrossReferenceItem model
+│   ├── providers/
+│   │   ├── bible_state.dart
+│   │   ├── reading_plan_session_provider.dart
+│   │   ├── search_provider.dart
+│   │   └── theme_provider.dart
+│   ├── services/
+│   │   └── bible_repository.dart   # Smart range merging & annotation indexing
+│   └── ui/
+│       ├── screens/
+│       │   ├── home_reader_screen.dart
+│       │   ├── book_selector_screen.dart
+│       │   ├── study_tools_dialog.dart
+│       │   ├── verse_card_maker_screen.dart
+│       │   ├── reading_plans_screen.dart
+│       │   ├── search_screen.dart
+│       │   ├── annotations_screen.dart
+│       │   └── parallel_reader_screen.dart
+│       └── widgets/
+│           ├── ethiopian_cross_painter.dart # Custom vector Orthodox cross
+│           └── built_in_geez_keyboard.dart  # Virtual Ge'ez keyboard
+└── HANDOFF.md                       # This handoff context file
+```
+
+---
+
+## 7. Current Verification & Build Status
+- **`flutter analyze --no-fatal-infos`:** **Passed (0 Errors, 0 Warnings)**.
+- **`flutter build web --no-tree-shake-icons`:** **Passed (Exit code 0)**.
+- **Git Working Tree:** Clean and staged/modified files ready for the user to review and push manually.
