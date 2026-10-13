@@ -105,7 +105,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: maxCount,
-      separatorBuilder: (_, __) => const Divider(height: 24),
+      separatorBuilder: (_, _) => const Divider(height: 24),
       itemBuilder: (context, index) {
         final pVerse = index < primary.length ? primary[index] : null;
         final sVerse = index < secondary.length ? secondary[index] : null;
@@ -120,7 +120,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: themeConfig.accentColor.withOpacity(0.15),
+                  color: themeConfig.accentColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -155,9 +155,9 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: themeConfig.surfaceColor.withOpacity(0.7),
+                  color: themeConfig.surfaceColor.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.black.withOpacity(0.05)),
+                  border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
                 ),
                 child: Text(
                   sVerse.text,

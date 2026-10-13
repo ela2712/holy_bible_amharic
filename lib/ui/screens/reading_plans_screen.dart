@@ -6,6 +6,7 @@ import '../../models/reading_plan.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/reading_plan_session_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/bahire_hasab_service.dart';
 
 class ReadingPlansScreen extends ConsumerStatefulWidget {
   final Function(int tabIndex)? onNavigateToReader;
@@ -276,6 +277,218 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     );
   }
 
+  void _showLiturgicalCalendarModal(
+    BuildContext context,
+    ReaderThemeConfig themeConfig,
+    EthiopianDate ethDate,
+    List<LiturgicalEvent> movableEvents,
+    String evangelist,
+    List<ReadingPlan> allPlans,
+  ) {
+    final ameteAlem = ethDate.year + 5500;
+    final abektie = (ameteAlem % 19 * 11) % 30;
+    final metqe = (abektie == 0) ? 30 : 30 - abektie;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.88,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: themeConfig.backgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: themeConfig.cardBorderColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 16, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'BAHIRE HASAB LITURGICAL CALENDAR',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
+                                  color: themeConfig.goldAccent,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'የባሕረ ሐሳብ አጽዋማትና በዓላት',
+                                style: GoogleFonts.notoSansEthiopic(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: themeConfig.textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${ethDate.year} ዓ.ም. • $evangelist • አበቅቴ፡ $abektie • መጥቅዕ፡ $metqe',
+                                style: GoogleFonts.notoSansEthiopic(
+                                  fontSize: 11.5,
+                                  color: themeConfig.secondaryTextColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(18),
+                      itemCount: movableEvents.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, idx) {
+                        final event = movableEvents[idx];
+                        final isFast = event.category == 'ጾም';
+                        final matchingPlan = event.matchingPlanId != null
+                            ? allPlans.where((p) => p.id == event.matchingPlanId).firstOrNull
+                            : null;
+
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: themeConfig.surfaceColor,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isFast
+                                  ? const Color(0xFF8B5CF6).withValues(alpha: 0.35)
+                                  : themeConfig.goldAccent.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: isFast
+                                          ? const Color(0xFF8B5CF6).withValues(alpha: 0.15)
+                                          : themeConfig.goldAccent.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      event.category,
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: isFast
+                                            ? const Color(0xFF8B5CF6)
+                                            : themeConfig.goldAccent,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      event.title,
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: themeConfig.textColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.event_outlined, size: 14, color: themeConfig.accentColor),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    event.date.format(),
+                                    style: GoogleFonts.notoSansEthiopic(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: themeConfig.accentColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                event.description,
+                                style: GoogleFonts.notoSansEthiopic(
+                                  fontSize: 12,
+                                  color: themeConfig.secondaryTextColor,
+                                  height: 1.4,
+                                ),
+                              ),
+                              if (matchingPlan != null) ...[
+                                const SizedBox(height: 10),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: themeConfig.accentColor.withValues(alpha: 0.1),
+                                      foregroundColor: themeConfig.accentColor,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      _openPlanDetailModal(context, matchingPlan, themeConfig);
+                                    },
+                                    icon: const Icon(Icons.menu_book_rounded, size: 15),
+                                    label: Text(
+                                      'የ${matchingPlan.title} ዕቅድ ክፈት',
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeConfigProvider);
@@ -283,9 +496,26 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
 
     final allPlans = sessionState.allAvailablePlans;
-    final filteredPlans = _selectedCategory == 'ሁሉም'
-        ? allPlans
+    final liturgicalStatus = BahireHasabService.getCurrentLiturgicalStatus(DateTime.now());
+    final EthiopianDate ethDate = liturgicalStatus['ethDate'];
+    final String evangelist = liturgicalStatus['evangelist'];
+    final String seasonTitle = liturgicalStatus['seasonTitle'];
+    final String seasonCategory = liturgicalStatus['seasonCategory'];
+    final String seasonDescription = liturgicalStatus['seasonDescription'];
+    final String? recommendedPlanId = liturgicalStatus['recommendedPlanId'];
+    final List<LiturgicalEvent> movableEvents = List<LiturgicalEvent>.from(liturgicalStatus['movableEvents']);
+
+    var filteredPlans = _selectedCategory == 'ሁሉም'
+        ? List<ReadingPlan>.from(allPlans)
         : allPlans.where((p) => p.category == _selectedCategory).toList();
+
+    if (recommendedPlanId != null) {
+      filteredPlans.sort((a, b) {
+        if (a.id == recommendedPlanId) return -1;
+        if (b.id == recommendedPlanId) return 1;
+        return 0;
+      });
+    }
 
     int totalCompletedDays = 0;
     int activePlansCount = 0;
@@ -355,7 +585,153 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     ),
                   ),
 
-                  // 2. Progress Summary Card
+                  // 2. Bahire Hasab Liturgical Banner
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(22),
+                        onTap: () => _showLiturgicalCalendarModal(
+                          context,
+                          themeConfig,
+                          ethDate,
+                          movableEvents,
+                          evangelist,
+                          allPlans,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: themeConfig.surfaceColor,
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(
+                              color: themeConfig.goldAccent.withValues(alpha: 0.35),
+                            ),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                themeConfig.goldAccent.withValues(alpha: isDark ? 0.16 : 0.08),
+                                themeConfig.surfaceColor,
+                              ],
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: themeConfig.goldAccent.withValues(alpha: 0.18),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_month_rounded,
+                                          size: 13,
+                                          color: themeConfig.goldAccent,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          'የባሕረ ሐሳብ ዘመን ቀመር',
+                                          style: GoogleFonts.notoSansEthiopic(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: themeConfig.goldAccent,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: themeConfig.accentColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      evangelist,
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: themeConfig.accentColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          ethDate.format(),
+                                          style: GoogleFonts.notoSansEthiopic(
+                                            fontSize: 16.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: themeConfig.textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$seasonTitle ($seasonCategory) • $seasonDescription',
+                                          style: GoogleFonts.notoSansEthiopic(
+                                            fontSize: 12,
+                                            color: themeConfig.secondaryTextColor,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: themeConfig.goldAccent,
+                                      side: BorderSide(
+                                        color: themeConfig.goldAccent.withValues(alpha: 0.5),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () => _showLiturgicalCalendarModal(
+                                      context,
+                                      themeConfig,
+                                      ethDate,
+                                      movableEvents,
+                                      evangelist,
+                                      allPlans,
+                                    ),
+                                    icon: const Icon(Icons.auto_stories_outlined, size: 15),
+                                    label: Text(
+                                      'አጽዋማት',
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // 3. Progress Summary Card
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -486,6 +862,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                               ? (completedSet.length / plan.totalDays).clamp(0.0, 1.0)
                               : 0.0;
 
+                          final isLiturgicalMatch = plan.id == recommendedPlanId;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _buildPlanCard(
@@ -495,6 +872,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                               progress,
                               themeConfig,
                               isDark,
+                              isLiturgicalMatch: isLiturgicalMatch,
                             ),
                           );
                         },
@@ -514,8 +892,9 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     Set<int> completedSet,
     double progress,
     ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
+    bool isDark, {
+    bool isLiturgicalMatch = false,
+  }) {
     int nextDay = 1;
     for (int d = 1; d <= plan.totalDays; d++) {
       if (!completedSet.contains(d)) {
@@ -534,7 +913,12 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
         decoration: BoxDecoration(
           color: themeConfig.surfaceColor,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: themeConfig.cardBorderColor),
+          border: Border.all(
+            color: isLiturgicalMatch
+                ? themeConfig.goldAccent
+                : themeConfig.cardBorderColor,
+            width: isLiturgicalMatch ? 1.6 : 1.0,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,6 +946,31 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     children: [
                       Row(
                         children: [
+                          if (isLiturgicalMatch) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              margin: const EdgeInsets.only(right: 6),
+                              decoration: BoxDecoration(
+                                color: themeConfig.goldAccent.withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.stars_rounded, size: 12, color: themeConfig.goldAccent),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'ወቅታዊ ዕቅድ',
+                                    style: GoogleFonts.notoSansEthiopic(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: themeConfig.goldAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(

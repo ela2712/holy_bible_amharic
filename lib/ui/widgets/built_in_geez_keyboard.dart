@@ -176,7 +176,7 @@ class _BuiltInGeezKeyboardState extends State<BuiltInGeezKeyboard> {
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 1,
                             offset: const Offset(0, 1),
                           )

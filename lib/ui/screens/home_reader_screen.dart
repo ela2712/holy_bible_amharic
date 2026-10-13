@@ -448,24 +448,63 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               ),
 
               // Audio Narration
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  audioState.isPlaying ? Icons.pause_circle_filled_rounded : Icons.headphones_rounded,
-                  size: 19,
-                  color: audioState.isPlaying
-                      ? themeConfig.accentColor
-                      : themeConfig.secondaryTextColor,
-                ),
-                tooltip: 'በድምፅ አዳምጥ (Audio)',
-                onPressed: () {
+              Builder(
+                builder: (context) {
                   final book = bibleState.currentBook;
-                  if (book == null) return;
-                  ref.read(audioPlayerServiceProvider.notifier).playChapterAudio(
-                        bookNumber: book.bookNumber,
-                        chapter: bibleState.currentChapter,
-                        bookName: book.name,
-                      );
+                  final isCached = book != null &&
+                      ref.read(audioPlayerServiceProvider.notifier).isChapterCached(
+                            book.bookNumber,
+                            bibleState.currentChapter,
+                          );
+                  final isThisTrackPlaying = audioState.isPlaying &&
+                      audioState.currentBookNumber == book?.bookNumber &&
+                      audioState.currentChapter == bibleState.currentChapter;
+
+                  return IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          isThisTrackPlaying
+                              ? Icons.pause_circle_filled_rounded
+                              : Icons.headphones_rounded,
+                          size: 19,
+                          color: isThisTrackPlaying
+                              ? themeConfig.accentColor
+                              : themeConfig.secondaryTextColor,
+                        ),
+                        if (isCached)
+                          Positioned(
+                            right: -2,
+                            bottom: -2,
+                            child: Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    tooltip: isCached
+                        ? 'በድምፅ አዳምጥ (ከመስመር ውጭ ተቀምጧል)'
+                        : 'በድምፅ አዳምጥ (Audio)',
+                    onPressed: () {
+                      if (book == null) return;
+                      if (isThisTrackPlaying) {
+                        ref.read(audioPlayerServiceProvider.notifier).togglePlayPause();
+                      } else {
+                        ref.read(audioPlayerServiceProvider.notifier).playChapterAudio(
+                              bookNumber: book.bookNumber,
+                              chapter: bibleState.currentChapter,
+                              bookName: book.name,
+                            );
+                      }
+                    },
+                  );
                 },
               ),
 
