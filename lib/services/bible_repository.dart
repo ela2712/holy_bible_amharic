@@ -108,32 +108,45 @@ class BibleRepository {
         final rawVerses = chObj['verses'] as List<dynamic>? ?? [];
         final verseList = <Verse>[];
 
+        int? pendingRangeStart;
+
         for (int vIdx = 0; vIdx < rawVerses.length; vIdx++) {
-          final vText = rawVerses[vIdx]?.toString().trim() ?? '';
-          if (vText.isNotEmpty) {
-            final vNum = vIdx + 1;
-            final normalized = GeezNormalizer.normalize(vText);
+          final rawText = rawVerses[vIdx]?.toString().trim() ?? '';
+          final vNum = vIdx + 1;
 
-            verseList.add(Verse(
-              id: bookId * 100000 + chNum * 1000 + vNum,
-              bookId: bookId,
-              chapter: chNum,
-              verse: vNum,
-              text: vText,
-              textNormalized: normalized,
-            ));
-
-            searchList.add({
-              'id': bookId * 100000 + chNum * 1000 + vNum,
-              'book_id': bookId,
-              'book_number': bookNum,
-              'book_name': book.name,
-              'chapter': chNum,
-              'verse': vNum,
-              'text': vText,
-              'text_normalized': normalized,
-            });
+          // Placeholder slots (empty or '-' indicating merged translation with successor verse)
+          if (rawText.isEmpty || rawText == '-') {
+            pendingRangeStart ??= vNum;
+            continue;
           }
+
+          final startVerse = pendingRangeStart ?? vNum;
+          final endVerse = (pendingRangeStart != null) ? vNum : null;
+          pendingRangeStart = null;
+
+          final normalized = GeezNormalizer.normalize(rawText);
+
+          verseList.add(Verse(
+            id: bookId * 100000 + chNum * 1000 + startVerse,
+            bookId: bookId,
+            chapter: chNum,
+            verse: startVerse,
+            verseEnd: endVerse,
+            text: rawText,
+            textNormalized: normalized,
+          ));
+
+          searchList.add({
+            'id': bookId * 100000 + chNum * 1000 + startVerse,
+            'book_id': bookId,
+            'book_number': bookNum,
+            'book_name': book.name,
+            'chapter': chNum,
+            'verse': startVerse,
+            'verse_end': endVerse,
+            'text': rawText,
+            'text_normalized': normalized,
+          });
         }
         _versesCache['${bookId}_$chNum'] = verseList;
       }
@@ -347,11 +360,23 @@ class BibleRepository {
     final notes = await _getStoredNotes();
 
     return baseVerses.map((v) {
-      final key = '${v.bookId}_${v.chapter}_${v.verse}';
+      bool isBookmarked = false;
+      String? highlightColor;
+      String? note;
+
+      final startV = v.verse;
+      final endV = v.verseEnd ?? v.verse;
+      for (int vn = startV; vn <= endV; vn++) {
+        final key = '${v.bookId}_${v.chapter}_$vn';
+        if (bookmarks.containsKey(key)) isBookmarked = true;
+        if (highlights.containsKey(key)) highlightColor = highlights[key];
+        if (notes.containsKey(key)) note = notes[key];
+      }
+
       return v.copyWith(
-        isBookmarked: bookmarks.containsKey(key),
-        highlightColor: highlights[key],
-        note: notes[key],
+        isBookmarked: isBookmarked,
+        highlightColor: highlightColor,
+        note: note,
       );
     }).toList();
   }
@@ -415,7 +440,9 @@ class BibleRepository {
       final book = await getBookByNumber(trans.id, bookNumber);
       if (book != null) {
         final verses = await getVerses(bookId: book.id, chapter: chapter);
-        final match = verses.where((v) => v.verse == verse).firstOrNull;
+        final match = verses.where((v) =>
+            v.verse == verse ||
+            (v.verseEnd != null && verse >= v.verse && verse <= v.verseEnd!)).firstOrNull;
         if (match != null && match.text.trim().isNotEmpty) {
           results[trans.name] = match.text;
         }
@@ -525,7 +552,9 @@ class BibleRepository {
 
         final book = await getBookById(bId);
         final verses = _versesCache['${bId}_$ch'] ?? [];
-        final v = verses.firstWhere((x) => x.verse == vNum, orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
+        final v = verses.firstWhere(
+            (x) => x.verse == vNum || (x.verseEnd != null && vNum >= x.verse && vNum <= x.verseEnd!),
+            orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
 
         if (book != null) {
           list.add(BookmarkItem(
@@ -558,7 +587,9 @@ class BibleRepository {
 
         final book = await getBookById(bId);
         final verses = _versesCache['${bId}_$ch'] ?? [];
-        final v = verses.firstWhere((x) => x.verse == vNum, orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
+        final v = verses.firstWhere(
+            (x) => x.verse == vNum || (x.verseEnd != null && vNum >= x.verse && vNum <= x.verseEnd!),
+            orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
 
         if (book != null) {
           list.add(HighlightItem(
@@ -591,7 +622,9 @@ class BibleRepository {
 
         final book = await getBookById(bId);
         final verses = _versesCache['${bId}_$ch'] ?? [];
-        final v = verses.firstWhere((x) => x.verse == vNum, orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
+        final v = verses.firstWhere(
+            (x) => x.verse == vNum || (x.verseEnd != null && vNum >= x.verse && vNum <= x.verseEnd!),
+            orElse: () => Verse(id: 0, bookId: bId, chapter: ch, verse: vNum, text: ''));
 
         if (book != null) {
           list.add(NoteItem(

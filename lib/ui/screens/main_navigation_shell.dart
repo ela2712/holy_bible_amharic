@@ -17,7 +17,7 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
-  int _currentIndex = 0; // Opens directly into the Scripture Reader (Catena UX)
+  int _currentIndex = 0; // Opens directly into the Scripture Reader
   bool _isReaderChromeVisible = true;
 
   void _onTabSelected(int index) {

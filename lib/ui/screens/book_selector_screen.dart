@@ -74,7 +74,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     final n = book.bookNumber;
     if (book.isNewTestament) {
       if (n >= 40 && n <= 43) {
-        return {'label': 'ወንጌላት (Gospels)', 'color': const Color(0xFFB45309)};
+        return {'label': 'ወንጌላት (Gospels)', 'color': const Color(0xFF047857)};
       }
       if (n == 44) {
         return {'label': 'ታሪክ (Acts)', 'color': const Color(0xFF0D9488)};
@@ -88,7 +88,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
       return {'label': 'ቀኖና 81 (Canon)', 'color': const Color(0xFFE11D48)};
     } else {
       if (n >= 1 && n <= 5) {
-        return {'label': 'ኦሪት (Pentateuch)', 'color': const Color(0xFFD97706)};
+        return {'label': 'ኦሪት (Pentateuch)', 'color': const Color(0xFF0F766E)};
       }
       if (n >= 6 && n <= 17) {
         return {'label': 'ታሪክ (History)', 'color': const Color(0xFF0D9488)};

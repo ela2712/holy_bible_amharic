@@ -20,7 +20,7 @@ class HolyBibleApp extends ConsumerWidget {
     final themeConfig = ref.watch(themeConfigProvider);
 
     return MaterialApp(
-      title: 'መጽሐፍ ቅዱስ - Catena Bible',
+      title: 'መጽሐፍ ቅዱስ (Holy Bible Amharic)',
       debugShowCheckedModeBanner: false,
       theme: themeConfig.toThemeData(),
       home: const MainNavigationShell(),

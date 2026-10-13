@@ -65,7 +65,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         _buildCanonQuickStrip(context, ref, themeConfig, isDark),
                         const SizedBox(height: 28),
 
-                        // Catena Church Fathers Spotlight Carousel
+                        // Church Fathers & Patristic Spotlight Carousel
                         _buildPatristicSpotlight(context, ref, themeConfig, isDark),
                         const SizedBox(height: 28),
 
@@ -147,7 +147,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'CATENA',
+                        'አንድምታ',
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
@@ -257,7 +257,7 @@ class HomeDashboardScreen extends ConsumerWidget {
             ? verseData['text'] as String
             : 'በመጀመሪያ ቃል ነበረ፥ ቃልም በእግዚአብሔር ዘንድ ነበረ፥ ቃልም እግዚአብሔር ነበረ።';
 
-        final featuredCatena = PatristicCommentariesData.getFeaturedCommentary();
+        final featuredCommentary = PatristicCommentariesData.getFeaturedCommentary();
 
         return Container(
           decoration: BoxDecoration(
@@ -419,7 +419,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                     ),
 
                     // Frosted Glass Church Father Insight Box
-                    if (featuredCatena != null) ...[
+                    if (featuredCommentary != null) ...[
                       const SizedBox(height: 18),
                       Container(
                         padding: const EdgeInsets.all(14),
@@ -451,7 +451,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    featuredCatena.authorName,
+                                    featuredCommentary.authorName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.notoSansEthiopic(
@@ -465,7 +465,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              featuredCatena.content,
+                              featuredCommentary.content,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.notoSansEthiopic(
@@ -726,7 +726,7 @@ class HomeDashboardScreen extends ConsumerWidget {
         'sub': 'Torah',
         'icon': Icons.menu_book_rounded,
         'bookNum': 1,
-        'grad': [const Color(0xFFD97706), const Color(0xFFF59E0B)],
+        'grad': [const Color(0xFF047857), const Color(0xFF10B981)],
       },
       {
         'label': 'ጥበብ',
@@ -864,7 +864,7 @@ class HomeDashboardScreen extends ConsumerWidget {
         'ref': 'ማቴዎስ 1:23',
         'bookNum': 40,
         'chapter': 1,
-        'color': const Color(0xFFD97706),
+        'color': const Color(0xFF047857),
       },
       {
         'name': 'ቅዱስ ኤፍሬም ሶርያዊ',
@@ -1021,7 +1021,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     final gradients = [
       [const Color(0xFF4F46E5), const Color(0xFF3730A3)],
       [const Color(0xFF0D9488), const Color(0xFF115E59)],
-      [const Color(0xFFD97706), const Color(0xFF92400E)],
+      [const Color(0xFF047857), const Color(0xFF065F46)],
       [const Color(0xFFE11D48), const Color(0xFF9F1239)],
       [const Color(0xFF7C3AED), const Color(0xFF5B21B6)],
       [const Color(0xFF2563EB), const Color(0xFF1E40AF)],
@@ -1169,7 +1169,7 @@ class HomeDashboardScreen extends ConsumerWidget {
         'bookNum': 20,
         'chapter': 1,
         'icon': Icons.workspace_premium_outlined,
-        'color': const Color(0xFFD97706),
+        'color': const Color(0xFF047857),
       },
       {
         'title': 'የፍቅር መዝሙር',

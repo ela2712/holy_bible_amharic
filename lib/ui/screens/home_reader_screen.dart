@@ -7,12 +7,13 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/geez_numbers.dart';
 import '../../data/patristic_commentaries.dart';
 import '../../data/cross_references_data.dart';
+import '../../models/commentary.dart';
+import '../../models/cross_reference.dart';
 import '../../models/verse.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
-import '../../services/audio_player_service.dart';
 import '../../providers/reading_plan_session_provider.dart';
-import '../widgets/audio_player_bar.dart';
+import '../widgets/ethiopian_cross_painter.dart';
 import 'book_selector_screen.dart';
 import 'parallel_reader_screen.dart';
 import 'settings_screen.dart';
@@ -99,6 +100,15 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     return useGeez ? GeezNumbers.toGeez(number) : '$number';
   }
 
+  String _formatVerseLabel(Verse verse, bool useGeez) {
+    if (verse.isMergedRange) {
+      final start = useGeez ? GeezNumbers.toGeez(verse.verse) : '${verse.verse}';
+      final end = useGeez ? GeezNumbers.toGeez(verse.verseEnd!) : '${verse.verseEnd}';
+      return '$start–$end';
+    }
+    return _formatNumber(verse.verse, useGeez);
+  }
+
   void _openVerseStudySheet(
     BuildContext context,
     Verse verse,
@@ -135,7 +145,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   Widget build(BuildContext context) {
     final bibleState = ref.watch(bibleStateProvider);
     final themeConfig = ref.watch(themeConfigProvider);
-    final audioState = ref.watch(audioPlayerServiceProvider);
     final planSession = ref.watch(readingPlanSessionProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
 
@@ -209,7 +218,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                                   else
                                     ...bibleState.verses.map((verse) {
                                       final verseHeadings = headingsByVerse[verse.verse] ?? [];
-                                      return _buildCatenaVerseRow(
+                                      return _buildScriptureVerseRow(
                                         context,
                                         verse,
                                         verseHeadings,
@@ -246,7 +255,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     chapterStr,
                     bibleState,
                     themeConfig,
-                    audioState,
                     isDark,
                   ),
                 ),
@@ -274,20 +282,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   ),
                 ),
               ),
-
-            // 4. Audio Player Bar (when active)
-            if (audioState.currentTrackTitle != null)
-              Positioned(
-                bottom: _isChromeVisible ? 88 : 16,
-                left: 16,
-                right: 16,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 680),
-                    child: const AudioPlayerBar(),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -300,7 +294,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     String chapterStr,
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
-    AudioState audioState,
     bool isDark,
   ) {
     return ClipRRect(
@@ -444,67 +437,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           ? ReaderThemeMode.dark
                           : ReaderThemeMode.light;
                   ref.read(themeConfigProvider.notifier).setThemeMode(next);
-                },
-              ),
-
-              // Audio Narration
-              Builder(
-                builder: (context) {
-                  final book = bibleState.currentBook;
-                  final isCached = book != null &&
-                      ref.read(audioPlayerServiceProvider.notifier).isChapterCached(
-                            book.bookNumber,
-                            bibleState.currentChapter,
-                          );
-                  final isThisTrackPlaying = audioState.isPlaying &&
-                      audioState.currentBookNumber == book?.bookNumber &&
-                      audioState.currentChapter == bibleState.currentChapter;
-
-                  return IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Icon(
-                          isThisTrackPlaying
-                              ? Icons.pause_circle_filled_rounded
-                              : Icons.headphones_rounded,
-                          size: 19,
-                          color: isThisTrackPlaying
-                              ? themeConfig.accentColor
-                              : themeConfig.secondaryTextColor,
-                        ),
-                        if (isCached)
-                          Positioned(
-                            right: -2,
-                            bottom: -2,
-                            child: Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF10B981),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    tooltip: isCached
-                        ? 'በድምፅ አዳምጥ (ከመስመር ውጭ ተቀምጧል)'
-                        : 'በድምፅ አዳምጥ (Audio)',
-                    onPressed: () {
-                      if (book == null) return;
-                      if (isThisTrackPlaying) {
-                        ref.read(audioPlayerServiceProvider.notifier).togglePlayPause();
-                      } else {
-                        ref.read(audioPlayerServiceProvider.notifier).playChapterAudio(
-                              bookNumber: book.bookNumber,
-                              chapter: bibleState.currentChapter,
-                              bookName: book.name,
-                            );
-                      }
-                    },
-                  );
                 },
               ),
 
@@ -793,12 +725,18 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           runSpacing: 8,
           children: bibleState.verses.map((verse) {
             final isSelected = _selectedVerseNumber == verse.verse;
-            final verseNumStr = _formatNumber(verse.verse, themeConfig.useGeezNumerals);
-            final directCommentaries = PatristicCommentariesData.getCommentariesForVerse(
-              bibleState.currentBook?.bookNumber ?? 1,
-              verse.chapter,
-              verse.verse,
-            );
+            final verseNumStr = _formatVerseLabel(verse, themeConfig.useGeezNumerals);
+            final directCommentaries = <Commentary>[];
+            final endV = verse.verseEnd ?? verse.verse;
+            for (int v = verse.verse; v <= endV; v++) {
+              directCommentaries.addAll(
+                PatristicCommentariesData.getCommentariesForVerse(
+                  bibleState.currentBook?.bookNumber ?? 1,
+                  verse.chapter,
+                  v,
+                ),
+              );
+            }
 
             Color? bgHighlight;
             if (isSelected) {
@@ -840,12 +778,14 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                         ),
                       ),
                       if (directCommentaries.isNotEmpty)
-                        TextSpan(
-                          text: ' ✝',
-                          style: TextStyle(
-                            fontSize: themeConfig.fontSize * 0.65,
-                            fontWeight: FontWeight.bold,
-                            color: themeConfig.accentColor,
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 3),
+                            child: OrthodoxCrossIcon(
+                              size: 11,
+                              color: themeConfig.accentColor,
+                            ),
                           ),
                         ),
                     ],
@@ -859,8 +799,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     );
   }
 
-  /// Minimalist Catena-inspired continuous verse flow with Left-Margin Accent Bars
-  Widget _buildCatenaVerseRow(
+  /// Minimalist continuous scripture verse flow with Left-Margin Accent Bars
+  Widget _buildScriptureVerseRow(
     BuildContext context,
     Verse verse,
     List<SectionHeading> headings,
@@ -870,17 +810,26 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   ) {
     final isSelected = _selectedVerseNumber == verse.verse;
     final bookNumber = bibleState.currentBook?.bookNumber ?? 1;
-    final directCommentaries = PatristicCommentariesData.getCommentariesForVerse(
-      bookNumber,
-      verse.chapter,
-      verse.verse,
-    );
+    final directCommentaries = <Commentary>[];
+    final crossRefs = <CrossReferenceItem>[];
+    final endV = verse.verseEnd ?? verse.verse;
+    for (int v = verse.verse; v <= endV; v++) {
+      directCommentaries.addAll(
+        PatristicCommentariesData.getCommentariesForVerse(
+          bookNumber,
+          verse.chapter,
+          v,
+        ),
+      );
+      crossRefs.addAll(
+        CrossReferencesData.getCrossReferencesForVerse(
+          bookNumber,
+          verse.chapter,
+          v,
+        ),
+      );
+    }
     final hasDirectCommentary = directCommentaries.isNotEmpty;
-    final crossRefs = CrossReferencesData.getCrossReferencesForVerse(
-      bookNumber,
-      verse.chapter,
-      verse.verse,
-    );
 
     Color? customHighlight;
     if (verse.highlightColor != null && verse.highlightColor!.isNotEmpty) {
@@ -890,7 +839,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       } catch (_) {}
     }
 
-    final verseNumStr = _formatNumber(verse.verse, themeConfig.useGeezNumerals);
+    final verseNumStr = _formatVerseLabel(verse, themeConfig.useGeezNumerals);
     final baseFont = themeConfig.fontFamily == 'Serif'
         ? GoogleFonts.notoSerifEthiopic
         : GoogleFonts.notoSansEthiopic;
@@ -984,13 +933,23 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               color: themeConfig.accentColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Text(
-                              '✝ ${directCommentaries.length} የአበው ትርጓሜ • ${crossRefs.length} ማጣቀሻ',
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: themeConfig.accentColor,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                OrthodoxCrossIcon(
+                                  size: 11,
+                                  color: themeConfig.accentColor,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${directCommentaries.length} የአበው ትርጓሜ • ${crossRefs.length} ማጣቀሻ',
+                                  style: GoogleFonts.notoSansEthiopic(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: themeConfig.accentColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         if (verse.isBookmarked)

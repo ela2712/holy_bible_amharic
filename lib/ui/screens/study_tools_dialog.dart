@@ -13,6 +13,7 @@ import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/bible_repository.dart';
 import '../widgets/built_in_geez_keyboard.dart';
+import '../widgets/ethiopian_cross_painter.dart';
 import 'verse_card_maker_screen.dart';
 
 class StudyToolsSheet extends ConsumerStatefulWidget {
@@ -160,23 +161,34 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
   Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeConfigProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
-    final reference = '${widget.bookName} ${widget.verse.chapter}:${widget.verse.verse}';
+    final vSpan = widget.verse.isMergedRange
+        ? '${widget.verse.verse}–${widget.verse.verseEnd}'
+        : '${widget.verse.verse}';
+    final reference = '${widget.bookName} ${widget.verse.chapter}:$vSpan';
 
-    final allCommentaries = PatristicCommentariesData.getCommentariesOrContextualForVerse(
-      widget.bookNumber,
-      widget.verse.chapter,
-      widget.verse.verse,
-    );
+    final allCommentaries = <Commentary>[];
+    final crossReferences = <CrossReferenceItem>[];
+    final endV = widget.verse.verseEnd ?? widget.verse.verse;
+    for (int v = widget.verse.verse; v <= endV; v++) {
+      allCommentaries.addAll(
+        PatristicCommentariesData.getCommentariesOrContextualForVerse(
+          widget.bookNumber,
+          widget.verse.chapter,
+          v,
+        ),
+      );
+      crossReferences.addAll(
+        CrossReferencesData.getCrossReferencesForVerse(
+          widget.bookNumber,
+          widget.verse.chapter,
+          v,
+        ),
+      );
+    }
     final andimtaCommentaries =
         allCommentaries.where(PatristicCommentariesData.isEthiopianTradition).toList();
     final earlyFatherCommentaries =
         allCommentaries.where((c) => !PatristicCommentariesData.isEthiopianTradition(c)).toList();
-
-    final crossReferences = CrossReferencesData.getCrossReferencesForVerse(
-      widget.bookNumber,
-      widget.verse.chapter,
-      widget.verse.verse,
-    );
 
     return DraggableScrollableSheet(
       initialChildSize: 0.72,
@@ -619,14 +631,19 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                       color: badgeColor.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      isAndimta ? 'አ' : '✝',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: badgeColor,
-                      ),
-                    ),
+                    child: isAndimta
+                        ? Text(
+                            'አ',
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: badgeColor,
+                            ),
+                          )
+                        : OrthodoxCrossIcon(
+                            size: 18,
+                            color: badgeColor,
+                          ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

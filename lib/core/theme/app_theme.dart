@@ -107,27 +107,27 @@ class ReaderThemeConfig {
     }
   }
 
-  /// Primary Brand & Commentary Accent (Warm Terracotta-Gold / Bronze)
+  /// Primary Brand & Commentary Accent (Emerald Green Theme)
   Color get accentColor {
     switch (mode) {
       case ReaderThemeMode.light:
-        return const Color(0xFFB45309); // Warm Amber-Terracotta
+        return const Color(0xFF047857); // Deep Emerald Forest Green
       case ReaderThemeMode.sepia:
-        return const Color(0xFF9A4E12); // Deep Burnished Bronze
+        return const Color(0xFF065F46); // Archival Dark Emerald
       case ReaderThemeMode.dark:
-        return const Color(0xFFE09F5A); // Luminous Warm Gold-Coral
+        return const Color(0xFF10B981); // Luminous Mint Emerald
     }
   }
 
-  /// Secondary Accent (Deep Teal-Slate for Cross-References & Plans)
+  /// Secondary Accent (Liturgical Jade / Teal)
   Color get goldAccent {
     switch (mode) {
       case ReaderThemeMode.light:
-        return const Color(0xFF0F766E);
+        return const Color(0xFF0D9488); // Liturgical Teal-Jade
       case ReaderThemeMode.sepia:
-        return const Color(0xFF115E59);
+        return const Color(0xFF0F766E); // Deep Archival Teal
       case ReaderThemeMode.dark:
-        return const Color(0xFF2DD4BF);
+        return const Color(0xFF34D399); // Luminous Jade
     }
   }
 }

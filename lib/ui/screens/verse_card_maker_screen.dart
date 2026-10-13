@@ -71,10 +71,10 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
       name: 'የጥንት ብራና (Parchment)',
       backgroundColors: [Color(0xFFF7F2E7), Color(0xFFEBE0CC)],
       textColor: Color(0xFF1F1A14),
-      accentColor: Color(0xFF9A4E12),
-      watermarkColor: Color(0xFF8B4513),
-      haragPrimary: Color(0xFF8B4513),
-      haragSecondary: Color(0xFFC5A059),
+      accentColor: Color(0xFF065F46),
+      watermarkColor: Color(0xFF047857),
+      haragPrimary: Color(0xFF047857),
+      haragSecondary: Color(0xFF0D9488),
     ),
     // 2. Lalibela Rock-Hewn Sandstone & Gold (ላሊበላ)
     CardThemePreset(
@@ -146,7 +146,7 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
 
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: '${widget.reference}\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ (Catena Amharic Bible)',
+        text: '${widget.reference}\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ',
       );
     } catch (e) {
       if (mounted) {
@@ -302,13 +302,12 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                                       shape: BoxShape.circle,
                                     ),
                                     child: Center(
-                                      child: Text(
-                                        '✝',
-                                        style: TextStyle(
-                                          color: preset.accentColor,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w900,
-                                        ),
+                                      child: OrthodoxCrossIcon(
+                                        size: 18,
+                                        color: preset.accentColor,
+                                        style: _crossStyle == EthiopianCrossStyle.none
+                                            ? EthiopianCrossStyle.lalibela
+                                            : _crossStyle,
                                       ),
                                     ),
                                   ),
@@ -354,7 +353,7 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'መጽሐፍ ቅዱስ • CATENA AMHARIC',
+                                      'መጽሐፍ ቅዱስ • HOLY BIBLE',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 9,
@@ -623,14 +622,20 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                style == EthiopianCrossStyle.none ? '—' : '✝',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : null,
-                ),
-              ),
+              style == EthiopianCrossStyle.none
+                  ? Text(
+                      '—',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : null,
+                      ),
+                    )
+                  : OrthodoxCrossIcon(
+                      size: 16,
+                      color: isSelected ? Colors.white : theme.colorScheme.primary,
+                      style: style,
+                    ),
               const SizedBox(height: 2),
               Text(
                 label,

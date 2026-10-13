@@ -3,6 +3,7 @@ class Verse {
   final int bookId;
   final int chapter;
   final int verse;
+  final int? verseEnd;
   final String text;
   final String? textNormalized;
 
@@ -16,6 +17,7 @@ class Verse {
     required this.bookId,
     required this.chapter,
     required this.verse,
+    this.verseEnd,
     required this.text,
     this.textNormalized,
     this.highlightColor,
@@ -23,7 +25,10 @@ class Verse {
     this.note,
   });
 
+  bool get isMergedRange => verseEnd != null && verseEnd! > verse;
+
   Verse copyWith({
+    int? verseEnd,
     String? highlightColor,
     bool? isBookmarked,
     String? note,
@@ -33,6 +38,7 @@ class Verse {
       bookId: bookId,
       chapter: chapter,
       verse: verse,
+      verseEnd: verseEnd ?? this.verseEnd,
       text: text,
       textNormalized: textNormalized,
       highlightColor: highlightColor ?? this.highlightColor,
@@ -47,6 +53,7 @@ class Verse {
       bookId: map['book_id'] as int,
       chapter: map['chapter'] as int,
       verse: map['verse'] as int,
+      verseEnd: map['verse_end'] as int?,
       text: map['text'] as String,
       textNormalized: map['text_normalized'] as String?,
       highlightColor: map['highlight_color'] as String?,

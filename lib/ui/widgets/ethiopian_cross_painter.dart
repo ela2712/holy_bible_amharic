@@ -313,3 +313,37 @@ class EthiopianHaragBorderPainter extends CustomPainter {
         oldDelegate.borderWidth != borderWidth;
   }
 }
+
+/// Compact vector widget for rendering an authentic Ethiopian Orthodox cross anywhere in UI/text
+class OrthodoxCrossIcon extends StatelessWidget {
+  final double size;
+  final Color? color;
+  final EthiopianCrossStyle style;
+
+  const OrthodoxCrossIcon({
+    super.key,
+    this.size = 14.0,
+    this.color,
+    this.style = EthiopianCrossStyle.lalibela,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
+    final effectiveStyle = style == EthiopianCrossStyle.none ? EthiopianCrossStyle.lalibela : style;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(
+        size: Size(size, size),
+        painter: EthiopianCrossPainter(
+          style: effectiveStyle,
+          color: effectiveColor,
+          strokeWidth: size < 18 ? 1.4 : 2.0,
+        ),
+      ),
+    );
+  }
+}
+
