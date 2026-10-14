@@ -1,10 +1,12 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/theme_provider.dart';
+import '../widgets/modern_bible_icons.dart';
 import 'home_reader_screen.dart';
+import 'home_dashboard_screen.dart';
 import 'reading_plans_screen.dart';
 import 'search_screen.dart';
 import 'annotations_screen.dart';
@@ -17,22 +19,32 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
-  int _currentIndex = 0; // Opens directly into the Scripture Reader
+  int _currentIndex = 0; // 0: ንባብ (Bible), 1: አንድምታ (Library), 2: ዕቅዶች (Lectionary), 3: ማህደር (Highlights)
   bool _isReaderChromeVisible = true;
 
   void _onTabSelected(int index) {
-    setState(() {
-      _currentIndex = index;
-      _isReaderChromeVisible = true;
-    });
+    if (_currentIndex != index) {
+      HapticFeedback.selectionClick();
+      setState(() {
+        _currentIndex = index;
+        _isReaderChromeVisible = true;
+      });
+    }
   }
 
-  static const List<Map<String, dynamic>> _navItems = [
-    {'icon': Icons.auto_stories_outlined, 'activeIcon': Icons.auto_stories_rounded, 'label': 'ንባብ (Read)'},
-    {'icon': Icons.explore_outlined, 'activeIcon': Icons.explore_rounded, 'label': 'ዕቅዶች (Plans)'},
-    {'icon': Icons.search_rounded, 'activeIcon': Icons.search_rounded, 'label': 'ፍለጋ (Search)'},
-    {'icon': Icons.bookmarks_outlined, 'activeIcon': Icons.bookmarks_rounded, 'label': 'ማህደር (Saved)'},
-  ];
+  void _openSearch(BuildContext context) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SearchScreen(
+          onNavigateToReader: (tab) {
+            Navigator.of(context).pop();
+            _onTabSelected(0);
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,115 +59,206 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
           }
         },
         onNavigateTab: _onTabSelected,
+        onOpenSearch: () => _openSearch(context),
       ),
+      HomeDashboardScreen(onNavigateTab: _onTabSelected),
       ReadingPlansScreen(onNavigateToReader: _onTabSelected),
-      SearchScreen(onNavigateToReader: _onTabSelected),
       AnnotationsScreen(onNavigateToReader: _onTabSelected),
     ];
 
     final showBottomBar = _currentIndex != 0 || _isReaderChromeVisible;
 
+    // Catena-style active pill capsule color
+    final activePillColor = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : themeConfig.accentColor.withValues(alpha: 0.12);
+
+    final activeColor = isDark ? Colors.white : themeConfig.accentColor;
+    final inactiveColor = isDark
+        ? const Color(0xFF8E95A3)
+        : const Color(0xFF64748B);
+
     return Scaffold(
       backgroundColor: themeConfig.backgroundColor,
-      extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: AnimatedSlide(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-        offset: showBottomBar ? Offset.zero : const Offset(0, 1.4),
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: showBottomBar ? 1.0 : 0.0,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Center(
-                heightFactor: 1.0,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: Container(
-                        height: 58,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: themeConfig.surfaceColor.withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: themeConfig.cardBorderColor,
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.06),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: List.generate(_navItems.length, (idx) {
-                            final item = _navItems[idx];
-                            final isSelected = _currentIndex == idx;
+      body: Stack(
+        children: [
+          // 1. Screen Body
+          IndexedStack(
+            index: _currentIndex,
+            children: screens,
+          ),
 
-                            return GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => _onTabSelected(idx),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 220),
-                                curve: Curves.easeOutCubic,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isSelected ? 16 : 12,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? themeConfig.textColor
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isSelected
-                                          ? item['activeIcon'] as IconData
-                                          : item['icon'] as IconData,
-                                      size: 20,
-                                      color: isSelected
-                                          ? themeConfig.backgroundColor
-                                          : themeConfig.secondaryTextColor,
-                                    ),
-                                    if (isSelected) ...[
-                                      const SizedBox(width: 7),
-                                      Text(
-                                        (item['label'] as String).split(' ')[0],
-                                        style: GoogleFonts.notoSansEthiopic(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          color: themeConfig.backgroundColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            );
-                          }),
-                        ),
-                      ),
+          // 2. Floating Search Button for Tabs 1, 2, 3 (Matching Catena Screenshots 2, 3, 4)
+          if (_currentIndex != 0)
+            Positioned(
+              bottom: 80,
+              right: 18,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: 1.0,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E2128) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark
+                          ? const Color(0xFF2E333D)
+                          : const Color(0xFFE2E8F0),
+                      width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: ModernSearchIcon(
+                      size: 20,
+                      color: themeConfig.textColor,
+                    ),
+                    onPressed: () => _openSearch(context),
                   ),
                 ),
               ),
             ),
+        ],
+      ),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+        offset: showBottomBar ? Offset.zero : const Offset(0, 1.2),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: showBottomBar ? 1.0 : 0.0,
+          child: Container(
+            decoration: BoxDecoration(
+              color: themeConfig.surfaceColor.withValues(alpha: 0.98),
+              border: Border(
+                top: BorderSide(
+                  color: themeConfig.cardBorderColor.withValues(alpha: 0.6),
+                  width: 0.8,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 58,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Tab 0: ንባብ (Bible)
+                    _buildNavItem(
+                      index: 0,
+                      label: 'ንባብ',
+                      activePillColor: activePillColor,
+                      iconBuilder: (isActive) => ModernBibleIcon(
+                        size: 21,
+                        color: isActive ? activeColor : inactiveColor,
+                        isFilled: isActive,
+                      ),
+                      activeColor: activeColor,
+                      inactiveColor: inactiveColor,
+                    ),
+
+                    // Tab 1: አንድምታ (Library / Commentaries)
+                    _buildNavItem(
+                      index: 1,
+                      label: 'አንድምታ',
+                      activePillColor: activePillColor,
+                      iconBuilder: (isActive) => ModernLibraryIcon(
+                        size: 21,
+                        color: isActive ? activeColor : inactiveColor,
+                        isFilled: isActive,
+                      ),
+                      activeColor: activeColor,
+                      inactiveColor: inactiveColor,
+                    ),
+
+                    // Tab 2: ዕቅዶች (Lectionary / Plans)
+                    _buildNavItem(
+                      index: 2,
+                      label: 'ዕቅዶች',
+                      activePillColor: activePillColor,
+                      iconBuilder: (isActive) => ModernLectionaryIcon(
+                        size: 21,
+                        color: isActive ? activeColor : inactiveColor,
+                        isFilled: isActive,
+                      ),
+                      activeColor: activeColor,
+                      inactiveColor: inactiveColor,
+                    ),
+
+                    // Tab 3: ማህደር (Highlights / Saved)
+                    _buildNavItem(
+                      index: 3,
+                      label: 'ማህደር',
+                      activePillColor: activePillColor,
+                      iconBuilder: (isActive) => ModernHighlightsIcon(
+                        size: 21,
+                        color: isActive ? activeColor : inactiveColor,
+                        isFilled: isActive,
+                      ),
+                      activeColor: activeColor,
+                      inactiveColor: inactiveColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required String label,
+    required Color activePillColor,
+    required Widget Function(bool isActive) iconBuilder,
+    required Color activeColor,
+    required Color inactiveColor,
+  }) {
+    final isSelected = _currentIndex == index;
+
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _onTabSelected(index),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              width: 52,
+              height: 28,
+              decoration: BoxDecoration(
+                color: isSelected ? activePillColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: iconBuilder(isSelected),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? activeColor : inactiveColor,
+                letterSpacing: 0.15,
+              ),
+            ),
+          ],
         ),
       ),
     );

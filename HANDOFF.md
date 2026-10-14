@@ -24,7 +24,56 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
 
 ---
 
-## 3. Today's Critical Upgrades & Refinements (October 13, 2026)
+## 3. Today's Critical Upgrades & Refinements (October 14, 2026)
+
+### A. Bespoke Modern Vector Iconography (`lib/ui/widgets/modern_bible_icons.dart`)
+- **The Problem:** The app previously relied on generic Material/Android Studio stock icons, giving a legacy/utilitarian aesthetic.
+- **The Modern Solution:** Created a custom high-precision CustomPainter vector icon library:
+  - `ModernBibleIcon`: Symmetrical open book with gently curved pages and a central spine crease.
+  - `ModernLibraryIcon`: 3 books on a baseline shelf (two upright with spine ribbing, one casually tilted).
+  - `ModernLectionaryIcon`: Rounded squircle calendar with dual binder loops and a clean 3x2 grid of day dots.
+  - `ModernHighlightsIcon`: Modern vertical ribbon with swallowtail V-notch cutout.
+  - `ModernSearchIcon`: 45-degree angled precision circular lens with sleek handle.
+
+### B. Modern Navigation Shell with Active Capsule Pill (`lib/ui/screens/main_navigation_shell.dart`)
+- **Docked Bar with Capsule Highlighting:**
+  - Modern bottom navigation bar with 4 clear, focused tabs:
+    - Tab 0: `ንባብ` (Bible Reader)
+    - Tab 1: `አንድምታ` (Patristic Library & Dashboard)
+    - Tab 2: `ዕቅዶች` (Lectionary & Reading Plans)
+    - Tab 3: `ማህደር` (Highlights, Notes & Bookmarks)
+  - Active tab uses a soft translucent capsule pill (`borderRadius: 14`) around the icon for a tactile, contemporary feel matching the user's phone screenshots.
+- **Dedicated Floating Search Button (`[ 🔍 ]`):**
+  - Positioned floating at the bottom-right on Tabs 1, 2, and 3, granting instant 1-tap search access anywhere in the app.
+
+### C. Catena Reader Interaction Paradigm (`lib/ui/screens/home_reader_screen.dart`)
+- **Unobstructed Reading Flow:**
+  - Removed the crowded floating top bar and reduced ListView top padding from 82 to 18.
+- **Thumb-Zone Floating Bottom Interaction Capsule:**
+  - Floating centered above the bottom tab bar at `bottom: 76`:
+    - **Dual Capsule:** `[ ‹   ማቴዎስ 2   › ]`
+      - `‹` / `›`: Instant 1-tap chapter transitions with haptic feedback.
+      - Center pill: Displays current book & chapter with chevron; opens `BookSelectorScreen`.
+    - **Neighbor Squircle:** `[ 🔍 ]` opens search in 1 tap.
+  - Automatically hides downward on scroll for distraction-free reading; glides back into view when scrolling upward.
+- **Top Editorial Header with Cupertino Gear (`⚙`):**
+  - Clean top row displaying canonical category, English transliteration, and chapter title.
+  - Top-right `⚙` button opens the unified **Reader Settings Modal**.
+
+### D. Comprehensive Reader Settings Modal Sheet
+- Replaces scattered top toolbar buttons with a clean, cohesive bottom sheet:
+  1. **Translation Switcher Cards:** 1-tap selection between `1954 ቀዳማዊ ኃ.ሥ.`, `81 ቀኖና`, and `KJV`.
+  2. **Theme Mode Swatches:** Visual interactive previews for `ብርሃን (Light)`, `ወረቀት (Sepia)`, and `ጨለማ (Dark)`.
+  3. **Layout & Numeral Toggles:** Paragraph mode switch (`¶`) and Ge'ez numerals switch (`፩, ፪, ፫`).
+  4. **Typography Size & Spacing:** Real-time font size slider with live `pt` readout and `A-` / `A+` buttons.
+  5. **Quick Shortcuts:** Instant jumps to `ማነፃፀሪያ (Parallel Reader)` and full `SettingsScreen`.
+
+### E. Brand Consistency & Color Palette
+- Harmonized all dashboard brand marks to signature Emerald Green / Jade Teal gradients and vector icons.
+
+---
+
+## 4. Previous Milestones (October 13, 2026)
 
 ### A. 1954 Emperor Haile Selassie Edition: Smart Verse Range Merging (`፩-፪` / `1–2`)
 - **The Issue:**
