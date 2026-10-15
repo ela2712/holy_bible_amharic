@@ -49,7 +49,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
     }
   }
 
-  Future<void> _navigateToVerse(int bookId, int chapter) async {
+  Future<void> _navigateToVerse(int bookId, int chapter, [int? verse]) async {
     final bibleState = ref.read(bibleStateProvider);
     if (bibleState.books.isEmpty) return;
     final targetBook = bibleState.books.firstWhere(
@@ -57,6 +57,9 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
       orElse: () => bibleState.books.first,
     );
     await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+    if (verse != null) {
+      ref.read(bibleStateProvider.notifier).setTargetVerse(verse);
+    }
     if (!mounted) return;
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
@@ -289,7 +292,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
         final b = _bookmarks[index];
         return InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => _navigateToVerse(b.bookId, b.chapter),
+          onTap: () => _navigateToVerse(b.bookId, b.chapter, b.verse),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -386,7 +389,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
         final swatchColor = Color(int.parse(h.colorHex.replaceFirst('#', '0xFF')));
         return InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => _navigateToVerse(h.bookId, h.chapter),
+          onTap: () => _navigateToVerse(h.bookId, h.chapter, h.verse),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -475,7 +478,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
         final n = _notes[index];
         return InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => _navigateToVerse(n.bookId, n.chapter),
+          onTap: () => _navigateToVerse(n.bookId, n.chapter, n.verse),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(

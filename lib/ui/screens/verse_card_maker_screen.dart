@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../widgets/ethiopian_cross_painter.dart';
 
@@ -140,12 +138,14 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
       if (byteData == null) return;
 
       final bytes = byteData.buffer.asUint8List();
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/verse_card_${DateTime.now().millisecondsSinceEpoch}.png');
-      await file.writeAsBytes(bytes);
+      final xFile = XFile.fromData(
+        bytes,
+        mimeType: 'image/png',
+        name: 'verse_card_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
 
       await Share.shareXFiles(
-        [XFile(file.path)],
+        [xFile],
         text: '${widget.reference}\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ',
       );
     } catch (e) {

@@ -306,6 +306,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         targetBook,
                         chapter: chapter,
                       );
+                  ref.read(bibleStateProvider.notifier).setTargetVerse(verse);
                   if (!context.mounted) return;
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
@@ -345,14 +346,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        text,
-                        style: GoogleFonts.notoSerifEthiopic(
-                          fontSize: 15,
-                          height: 1.6,
-                          color: themeConfig.textColor,
-                        ),
-                      ),
+                      _buildHighlightedVerseText(text, _queryController.text, themeConfig, isDark),
                     ],
                   ),
                 ),
@@ -361,6 +355,71 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHighlightedVerseText(
+    String text,
+    String query,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+  ) {
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) {
+      return Text(
+        text,
+        style: GoogleFonts.notoSerifEthiopic(
+          fontSize: 15,
+          height: 1.6,
+          color: themeConfig.textColor,
+        ),
+      );
+    }
+
+    final spans = <TextSpan>[];
+    final baseStyle = GoogleFonts.notoSerifEthiopic(
+      fontSize: 15,
+      height: 1.6,
+      color: themeConfig.textColor,
+    );
+    final highlightStyle = GoogleFonts.notoSerifEthiopic(
+      fontSize: 15,
+      height: 1.6,
+      fontWeight: FontWeight.w800,
+      color: themeConfig.accentColor,
+      backgroundColor: themeConfig.accentColor.withValues(alpha: isDark ? 0.28 : 0.16),
+    );
+
+    final lowerText = text.toLowerCase();
+    final lowerQuery = trimmedQuery.toLowerCase();
+    int start = 0;
+
+    while (true) {
+      final index = lowerText.indexOf(lowerQuery, start);
+      if (index == -1) {
+        if (start < text.length) {
+          spans.add(TextSpan(text: text.substring(start)));
+        }
+        break;
+      }
+
+      if (index > start) {
+        spans.add(TextSpan(text: text.substring(start, index)));
+      }
+
+      spans.add(TextSpan(
+        text: text.substring(index, index + trimmedQuery.length),
+        style: highlightStyle,
+      ));
+
+      start = index + trimmedQuery.length;
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: baseStyle,
+        children: spans,
+      ),
     );
   }
 

@@ -154,6 +154,16 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final planSession = ref.watch(readingPlanSessionProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
 
+    ref.listen<int?>(bibleStateProvider.select((s) => s.targetVerse), (previous, targetVerse) {
+      if (targetVerse != null) {
+        _restoreChrome();
+        _scrollToApproximateVerse(targetVerse, bibleState.verses.length);
+        Future.microtask(() {
+          ref.read(bibleStateProvider.notifier).clearTargetVerse();
+        });
+      }
+    });
+
     final currentBook = bibleState.currentBook;
     final currentChapter = bibleState.currentChapter;
     final chapterStr = _formatNumber(currentChapter, themeConfig.useGeezNumerals);

@@ -61,9 +61,16 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
    - Updated `_verseCountForChapter` calculation to compute `max(verseEnd ?? verse)` so all verses in merged chapters are fully accessible in Step 3.
 4. **Parallel Verses Canonical Matching (`lib/services/bible_repository.dart` & `lib/ui/screens/study_tools_dialog.dart`):**
    - Enhanced `getParallelVerseTexts` with `sourceTranslationId` and `CanonicalBookMap` lookup so comparing 81 Canon verses with 1954 and KJV matches the identical book rather than offset book numbers.
-5. **Codebase Cleanliness:**
-   - Removed all leftover "Catena" mentions in code comments.
-   - Zero occurrences of "protestant" in application UI or code.
+6. **Canonical Resolution across Reading Plans & Dashboard (`CanonicalBookMap.resolveBook`):**
+   - Added `CanonicalBookMap.resolveBook(...)` to seamlessly map traditional 66-book numbers (`40` Matthew, `19` Psalms, `20` Proverbs, `46` 1 Corinthians) to their corresponding 81 Canon book positions (`55`, `28`, `29`, `61`).
+   - Integrated into `ReadingPlansScreen` passage launcher, Canon Quick-Strip, Patristic Spotlight, and Thematic Guides so all links open the correct biblical book regardless of active translation.
+7. **Direct Verse Navigation & Highlight (`targetVerse`):**
+   - Added `targetVerse` state to `BibleViewState` with reactive listener in `HomeReaderScreen`.
+   - Tapping search results, bookmarks, highlights, notes, or cross-references now automatically scrolls directly to the verse and highlights it with an emerald glow.
+8. **In-Text Search Keyword Highlighting:**
+   - Search results in `SearchScreen` now render rich text with the query term highlighted in soft emerald/jade ink and bold weight.
+9. **Cross-Platform Verse Card Export:**
+   - Migrated `VerseCardMakerScreen` from `dart:io` `File` to `XFile.fromData`, enabling 100% crash-free card export on Web, Desktop, and Mobile.
 
 ---
 

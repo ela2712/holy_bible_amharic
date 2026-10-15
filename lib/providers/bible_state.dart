@@ -20,6 +20,7 @@ class BibleViewState {
   final List<SectionHeading> headings;
   final bool isLoading;
   final String? errorMessage;
+  final int? targetVerse;
 
   const BibleViewState({
     this.translations = const [],
@@ -31,6 +32,7 @@ class BibleViewState {
     this.headings = const [],
     this.isLoading = true,
     this.errorMessage,
+    this.targetVerse,
   });
 
   BibleViewState copyWith({
@@ -43,6 +45,8 @@ class BibleViewState {
     List<SectionHeading>? headings,
     bool? isLoading,
     String? errorMessage,
+    int? targetVerse,
+    bool clearTargetVerse = false,
   }) {
     return BibleViewState(
       translations: translations ?? this.translations,
@@ -54,6 +58,7 @@ class BibleViewState {
       headings: headings ?? this.headings,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      targetVerse: clearTargetVerse ? null : (targetVerse ?? this.targetVerse),
     );
   }
 }
@@ -264,5 +269,15 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
       chapter: state.currentChapter,
     );
     state = state.copyWith(verses: verses);
+  }
+
+  void setTargetVerse(int? verse) {
+    state = state.copyWith(targetVerse: verse);
+  }
+
+  void clearTargetVerse() {
+    if (state.targetVerse != null) {
+      state = state.copyWith(clearTargetVerse: true);
+    }
   }
 }

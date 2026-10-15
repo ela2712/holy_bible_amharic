@@ -81,5 +81,41 @@ void main() {
       expect(CanonicalBookMap.getBookNumber(3, enochCanon), isNull);
       expect(CanonicalBookMap.is81Exclusive(16), true);
     });
+
+    test('CanonicalBookMap.resolveBook seamlessly maps traditional numbers to 81 Canon', () async {
+      final repo = BibleRepository();
+      await repo.ensureInitialized();
+      final books81 = await repo.getBooks(translationId: 2);
+
+      // Traditional Matthew 40 -> 81 Canon Matthew 55
+      final matResolved = CanonicalBookMap.resolveBook(
+        books: books81,
+        currentTranslationId: 2,
+        traditionalBookNumber: 40,
+      );
+      expect(matResolved, isNotNull);
+      expect(matResolved!.bookNumber, 55);
+      expect(matResolved.name.contains('ማቴዎስ'), true);
+
+      // Traditional Psalms 19 -> 81 Canon Psalms 28
+      final psalmsResolved = CanonicalBookMap.resolveBook(
+        books: books81,
+        currentTranslationId: 2,
+        traditionalBookNumber: 19,
+      );
+      expect(psalmsResolved, isNotNull);
+      expect(psalmsResolved!.bookNumber, 28);
+      expect(psalmsResolved.name.contains('ዳዊት'), true);
+
+      // Traditional 1 Corinthians 46 -> 81 Canon 1 Corinthians 61
+      final corResolved = CanonicalBookMap.resolveBook(
+        books: books81,
+        currentTranslationId: 2,
+        traditionalBookNumber: 46,
+      );
+      expect(corResolved, isNotNull);
+      expect(corResolved!.bookNumber, 61);
+      expect(corResolved.name.contains('ቆሮንቶስ'), true);
+    });
   });
 }

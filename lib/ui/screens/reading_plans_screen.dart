@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/canonical_book_map.dart';
 import '../../models/reading_plan.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/reading_plan_session_provider.dart';
@@ -64,11 +65,14 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     ref.read(readingPlanSessionProvider.notifier).startReadingSession(plan, passage.day);
 
     final bibleState = ref.read(bibleStateProvider);
-    if (bibleState.books.isNotEmpty) {
-      final targetBook = bibleState.books.firstWhere(
-        (b) => b.bookNumber == passage.bookNumber,
-        orElse: () => bibleState.books.first,
-      );
+    final targetBook = CanonicalBookMap.resolveBook(
+      books: bibleState.books,
+      currentTranslationId: bibleState.currentTranslation?.id ?? 2,
+      traditionalBookNumber: passage.bookNumber,
+      bookName: passage.bookName,
+    );
+
+    if (targetBook != null) {
       await ref.read(bibleStateProvider.notifier).selectBook(
             targetBook,
             chapter: passage.startChapter,

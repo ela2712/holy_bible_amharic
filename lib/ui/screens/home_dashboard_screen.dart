@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/canonical_book_map.dart';
 import '../../data/patristic_commentaries.dart';
 import '../../data/reading_plans_data.dart';
 import '../../providers/bible_state.dart';
@@ -782,11 +783,15 @@ class HomeDashboardScreen extends ConsumerWidget {
                       await ref.read(bibleStateProvider.notifier).selectTranslation(t);
                     }
                     final bookNum = item['bookNum'] as int? ?? 1;
-                    final targetBook = ref.read(bibleStateProvider).books.firstWhere(
-                          (b) => b.bookNumber == bookNum,
-                          orElse: () => ref.read(bibleStateProvider).books.first,
-                        );
-                    await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: 1);
+                    final activeTrans = ref.read(bibleStateProvider);
+                    final targetBook = CanonicalBookMap.resolveBook(
+                      books: activeTrans.books,
+                      currentTranslationId: activeTrans.currentTranslation?.id ?? 2,
+                      traditionalBookNumber: bookNum,
+                    );
+                    if (targetBook != null) {
+                      await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: 1);
+                    }
                     onNavigateTab(0);
                   }
                 },
@@ -901,11 +906,15 @@ class HomeDashboardScreen extends ConsumerWidget {
                   final bookNum = f['bookNum'] as int;
                   final chapter = f['chapter'] as int;
                   final bibleState = ref.read(bibleStateProvider);
-                  final targetBook = bibleState.books.firstWhere(
-                    (b) => b.bookNumber == bookNum,
-                    orElse: () => bibleState.books.first,
+                  final targetBook = CanonicalBookMap.resolveBook(
+                    books: bibleState.books,
+                    currentTranslationId: bibleState.currentTranslation?.id ?? 2,
+                    traditionalBookNumber: bookNum,
+                    bookName: f['ref'] as String?,
                   );
-                  await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                  if (targetBook != null) {
+                    await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                  }
                   onNavigateTab(0);
                 },
                 child: Container(
@@ -1206,11 +1215,16 @@ class HomeDashboardScreen extends ConsumerWidget {
               onTap: () async {
                 final bookNum = g['bookNum'] as int;
                 final chapter = g['chapter'] as int;
-                final targetBook = ref.read(bibleStateProvider).books.firstWhere(
-                      (b) => b.bookNumber == bookNum,
-                      orElse: () => ref.read(bibleStateProvider).books.first,
-                    );
-                await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                final bibleState = ref.read(bibleStateProvider);
+                final targetBook = CanonicalBookMap.resolveBook(
+                  books: bibleState.books,
+                  currentTranslationId: bibleState.currentTranslation?.id ?? 2,
+                  traditionalBookNumber: bookNum,
+                  bookName: g['title'] as String?,
+                );
+                if (targetBook != null) {
+                  await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                }
                 onNavigateTab(0);
               },
               child: Container(

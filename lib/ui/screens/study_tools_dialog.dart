@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/canonical_book_map.dart';
 import '../../models/verse.dart';
 import '../../models/commentary.dart';
 import '../../models/cross_reference.dart';
@@ -865,14 +866,18 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                   ),
                   onPressed: () async {
                     final bibleState = ref.read(bibleStateProvider);
-                    final targetBook = bibleState.books.firstWhere(
-                      (b) => b.bookNumber == refItem.targetBookNumber,
-                      orElse: () => bibleState.books.first,
+                    final targetBook = CanonicalBookMap.resolveBook(
+                      books: bibleState.books,
+                      currentTranslationId: bibleState.currentTranslation?.id ?? 2,
+                      traditionalBookNumber: refItem.targetBookNumber,
                     );
-                    await ref.read(bibleStateProvider.notifier).selectBook(
-                          targetBook,
-                          chapter: refItem.targetChapter,
-                        );
+                    if (targetBook != null) {
+                      await ref.read(bibleStateProvider.notifier).selectBook(
+                            targetBook,
+                            chapter: refItem.targetChapter,
+                          );
+                      ref.read(bibleStateProvider.notifier).setTargetVerse(refItem.targetVerse);
+                    }
                     widget.onJumpToReference?.call(
                       refItem.targetBookNumber,
                       refItem.targetChapter,

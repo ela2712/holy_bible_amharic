@@ -1,3 +1,5 @@
+import '../../models/book.dart';
+
 /// Canonical Bible Book Identifiers & Cross-Translation Mapping
 /// Maps between Ethiopian Orthodox 81 Canon, Traditional 1954 (66), and KJV (66).
 class CanonicalBookMap {
@@ -161,4 +163,55 @@ class CanonicalBookMap {
     57: 'Philemon', 58: 'Hebrews', 59: 'James', 60: '1 Peter', 61: '2 Peter',
     62: '1 John', 63: '2 John', 64: '3 John', 65: 'Jude', 66: 'Revelation',
   };
+
+  /// Resolves a book from a traditional 66-book index (1-66), canonical ID, or book name
+  /// to the matching [Book] in the user's active translation.
+  static Book? resolveBook({
+    required List<Book> books,
+    required int currentTranslationId,
+    int? traditionalBookNumber,
+    String? canonicalId,
+    String? bookName,
+  }) {
+    if (books.isEmpty) return null;
+
+    // 1. Try canonical ID if provided
+    String? targetCanon = canonicalId;
+    if (targetCanon == null && traditionalBookNumber != null) {
+      targetCanon = getCanonicalId(1, traditionalBookNumber);
+    }
+
+    if (targetCanon != null && targetCanon.isNotEmpty) {
+      final targetBookNum = getBookNumber(currentTranslationId, targetCanon);
+      if (targetBookNum != null) {
+        for (final b in books) {
+          if (b.bookNumber == targetBookNum) return b;
+        }
+      }
+    }
+
+    // 2. Try matching by book name
+    if (bookName != null && bookName.isNotEmpty) {
+      final cleanName = bookName
+          .replaceAll('ኦሪት ', '')
+          .replaceAll('መጽሐፈ ', '')
+          .replaceAll('ትንቢተ ', '')
+          .replaceAll('የ', '')
+          .trim();
+      for (final b in books) {
+        if (b.name == bookName || b.name.contains(cleanName) || cleanName.contains(b.name)) {
+          return b;
+        }
+      }
+    }
+
+    // 3. Fallback to direct book number match
+    if (traditionalBookNumber != null) {
+      for (final b in books) {
+        if (b.bookNumber == traditionalBookNumber) return b;
+      }
+    }
+
+    return books.first;
+  }
 }
