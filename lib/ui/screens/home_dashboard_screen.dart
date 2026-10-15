@@ -95,7 +95,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final shortTrans = _shortTransLabel(bibleState.currentTranslation?.name ?? '1954');
+    final shortTrans = _shortTransLabel(bibleState.currentTranslation?.name ?? '81 ቀኖና');
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -248,7 +248,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     ReaderThemeConfig themeConfig,
   ) {
     return FutureBuilder<Map<String, dynamic>?>(
-      future: repo.getDailyVerse(ref.watch(bibleStateProvider).currentTranslation?.id ?? 1),
+      future: repo.getDailyVerse(ref.watch(bibleStateProvider).currentTranslation?.id ?? 2),
       builder: (context, snapshot) {
         final verseData = snapshot.data;
         final reference = verseData != null
@@ -411,7 +411,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                               );
                               ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
                             }
-                            onNavigateTab(1);
+                            onNavigateTab(0);
                           },
                           icon: const Icon(Icons.menu_book_rounded, size: 15),
                           label: const Text('ምዕራፉን አንብብ', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
@@ -507,7 +507,7 @@ class HomeDashboardScreen extends ConsumerWidget {
         Expanded(
           child: InkWell(
             borderRadius: BorderRadius.circular(24),
-            onTap: () => onNavigateTab(1),
+            onTap: () => onNavigateTab(0),
             child: Container(
               height: 156,
               padding: const EdgeInsets.all(18),
@@ -609,7 +609,7 @@ class HomeDashboardScreen extends ConsumerWidget {
         Expanded(
           child: InkWell(
             borderRadius: BorderRadius.circular(24),
-            onTap: () => onNavigateTab(3),
+            onTap: () => onNavigateTab(2),
             child: Container(
               height: 156,
               padding: const EdgeInsets.all(18),
@@ -787,7 +787,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                           orElse: () => ref.read(bibleStateProvider).books.first,
                         );
                     await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: 1);
-                    onNavigateTab(1);
+                    onNavigateTab(0);
                   }
                 },
                 child: Container(
@@ -906,7 +906,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                     orElse: () => bibleState.books.first,
                   );
                   await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                  onNavigateTab(1);
+                  onNavigateTab(0);
                 },
                 child: Container(
                   width: 268,
@@ -1036,7 +1036,7 @@ class HomeDashboardScreen extends ConsumerWidget {
           children: [
             _buildSectionTitle('የንባብ ዕቅዶች', 'DEVOTIONAL PLANS', themeConfig),
             TextButton(
-              onPressed: () => onNavigateTab(3),
+              onPressed: () => onNavigateTab(2),
               child: Text(
                 'ሁሉንም እይ (10) →',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: themeConfig.accentColor),
@@ -1058,7 +1058,7 @@ class HomeDashboardScreen extends ConsumerWidget {
 
               return InkWell(
                 borderRadius: BorderRadius.circular(22),
-                onTap: () => onNavigateTab(3),
+                onTap: () => onNavigateTab(2),
                 child: Container(
                   width: 230,
                   padding: const EdgeInsets.all(18),
@@ -1211,7 +1211,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                       orElse: () => ref.read(bibleStateProvider).books.first,
                     );
                 await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                onNavigateTab(1);
+                onNavigateTab(0);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1352,8 +1352,15 @@ class HomeDashboardScreen extends ConsumerWidget {
                     ),
                   ),
                   subtitle: Text(
-                    '${t.canon} • ${t.language}',
-                    style: TextStyle(fontSize: 12, color: themeConfig.secondaryTextColor),
+                    t.id == 2
+                        ? 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና'
+                        : (t.id == 1
+                            ? 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)'
+                            : 'Authorized King James Version (Classic English)'),
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 12,
+                      color: themeConfig.secondaryTextColor,
+                    ),
                   ),
                   trailing: selected
                       ? Icon(Icons.check_circle_rounded, color: themeConfig.accentColor)

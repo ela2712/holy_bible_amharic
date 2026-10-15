@@ -39,7 +39,7 @@ final searchProvider =
     StateNotifierProvider<SearchNotifier, SearchState>((ref) {
   final repo = ref.watch(bibleRepositoryProvider);
   final bibleState = ref.watch(bibleStateProvider);
-  return SearchNotifier(repo, bibleState.currentTranslation?.id ?? 1);
+  return SearchNotifier(repo, bibleState.currentTranslation?.id ?? 2);
 });
 
 class SearchNotifier extends StateNotifier<SearchState> {

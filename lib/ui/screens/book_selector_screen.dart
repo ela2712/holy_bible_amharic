@@ -148,8 +148,13 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     final repo = ref.read(bibleRepositoryProvider);
     final verses = await repo.getVerses(bookId: book.id, chapter: chapter);
     if (mounted) {
+      int maxVerse = 0;
+      for (final v in verses) {
+        final end = v.verseEnd ?? v.verse;
+        if (end > maxVerse) maxVerse = end;
+      }
       setState(() {
-        _verseCountForChapter = verses.isNotEmpty ? verses.length : 30;
+        _verseCountForChapter = maxVerse > 0 ? maxVerse : (verses.isNotEmpty ? verses.length : 30);
         _loadingVerseCount = false;
       });
     }

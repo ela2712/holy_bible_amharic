@@ -269,7 +269,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 ),
               ),
 
-            // 3. Auto-Hiding Floating Bottom Interaction Bar (Catena-Style)
+            // 3. Auto-Hiding Floating Bottom Interaction Bar
             AnimatedPositioned(
               duration: const Duration(milliseconds: 240),
               curve: Curves.easeOutCubic,
@@ -422,7 +422,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
         const SizedBox(width: 10),
 
-        // 2. Floating Search Squircle Button [ 🔍 ] (Matching Catena Screenshot 1)
+        // 2. Floating Search Squircle Button [ 🔍 ]
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
@@ -573,22 +573,22 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       Row(
                         children: [
                           _buildTranslationOptionChip(
-                            label: '1954 ቀዳማዊ ኃ.ሥ.',
-                            subLabel: '66 መጻሕፍት',
-                            isSelected: currentBible.currentTranslation?.id == 1,
+                            label: '81 ቀኖና',
+                            subLabel: 'ኦርቶዶክሳዊ',
+                            isSelected: currentBible.currentTranslation?.id == 2,
                             onTap: () {
-                              final t = currentBible.translations.firstWhere((x) => x.id == 1, orElse: () => currentBible.translations.first);
+                              final t = currentBible.translations.firstWhere((x) => x.id == 2, orElse: () => currentBible.translations.first);
                               ref.read(bibleStateProvider.notifier).selectTranslation(t);
                             },
                             theme: currentTheme,
                           ),
                           const SizedBox(width: 8),
                           _buildTranslationOptionChip(
-                            label: '81 ቀኖና',
-                            subLabel: 'ኦርቶዶክሳዊ',
-                            isSelected: currentBible.currentTranslation?.id == 2,
+                            label: '1954 ቀዳማዊ ኃ.ሥ.',
+                            subLabel: '66 መጻሕፍት',
+                            isSelected: currentBible.currentTranslation?.id == 1,
                             onTap: () {
-                              final t = currentBible.translations.firstWhere((x) => x.id == 2, orElse: () => currentBible.translations.first);
+                              final t = currentBible.translations.firstWhere((x) => x.id == 1, orElse: () => currentBible.translations.first);
                               ref.read(bibleStateProvider.notifier).selectTranslation(t);
                             },
                             theme: currentTheme,
@@ -1141,7 +1141,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               ),
             ],
             const Spacer(),
-            // Sleek Gear Settings Button (Catena-style top action)
+            // Sleek Gear Settings Button
             IconButton(
               visualDensity: VisualDensity.compact,
               icon: Icon(
@@ -1247,7 +1247,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           spacing: 4,
           runSpacing: 8,
           children: bibleState.verses.map((verse) {
-            final isSelected = _selectedVerseNumber == verse.verse;
+            final isSelected = _selectedVerseNumber != null &&
+                _selectedVerseNumber! >= verse.verse &&
+                _selectedVerseNumber! <= (verse.verseEnd ?? verse.verse);
             final verseNumStr = _formatVerseLabel(verse, themeConfig.useGeezNumerals);
             final directCommentaries = <Commentary>[];
             final endV = verse.verseEnd ?? verse.verse;
@@ -1331,7 +1333,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final isSelected = _selectedVerseNumber == verse.verse;
+    final isSelected = _selectedVerseNumber != null &&
+        _selectedVerseNumber! >= verse.verse &&
+        _selectedVerseNumber! <= (verse.verseEnd ?? verse.verse);
     final bookNumber = bibleState.currentBook?.bookNumber ?? 1;
     final directCommentaries = <Commentary>[];
     final crossRefs = <CrossReferenceItem>[];

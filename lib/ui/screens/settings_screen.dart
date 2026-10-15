@@ -88,6 +88,12 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: bibleState.translations.map((t) {
                 final isSelected = bibleState.currentTranslation?.id == t.id;
+                final subtitleText = t.id == 2
+                    ? 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና'
+                    : (t.id == 1
+                        ? 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)'
+                        : 'Authorized King James Version (Classic English)');
+
                 return RadioListTile<int>(
                   value: t.id,
                   groupValue: bibleState.currentTranslation?.id,
@@ -96,7 +102,10 @@ class SettingsScreen extends ConsumerWidget {
                     t.name,
                     style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text('${t.canon} • ${t.shortName}'),
+                  subtitle: Text(
+                    subtitleText,
+                    style: GoogleFonts.notoSansEthiopic(fontSize: 12),
+                  ),
                   onChanged: (_) {
                     ref.read(bibleStateProvider.notifier).selectTranslation(t);
                   },

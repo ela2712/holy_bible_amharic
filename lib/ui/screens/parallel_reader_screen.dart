@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/utils/canonical_book_map.dart';
 import '../../models/verse.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
@@ -13,13 +14,16 @@ class ParallelReaderScreen extends ConsumerStatefulWidget {
 }
 
 class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
-  int _secondaryTranslationId = 3; // Defaults to KJV (or 81)
+  int _secondaryTranslationId = 1; // Defaults to 1954 (or KJV if 1954 is primary)
   List<Verse> _secondaryVerses = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    final currentTransId = ref.read(bibleStateProvider).currentTranslation?.id ?? 2;
+    // Default secondary to 1954 if primary is 81, or 81 if primary is 1954/KJV
+    _secondaryTranslationId = currentTransId == 2 ? 1 : 2;
     _loadSecondaryVerses();
   }
 
@@ -29,21 +33,27 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
     final repo = ref.read(bibleRepositoryProvider);
 
     if (bibleState.currentBook != null) {
-      final secondaryBook = await repo.getBookByNumber(
-        _secondaryTranslationId,
-        bibleState.currentBook!.bookNumber,
-      );
+      final currentTransId = bibleState.currentTranslation?.id ?? 2;
+      final canonId = CanonicalBookMap.getCanonicalId(currentTransId, bibleState.currentBook!.bookNumber);
+      final targetBookNum = CanonicalBookMap.getBookNumber(_secondaryTranslationId, canonId);
 
-      if (secondaryBook != null) {
-        final verses = await repo.getVerses(
-          bookId: secondaryBook.id,
-          chapter: bibleState.currentChapter,
+      if (targetBookNum != null) {
+        final secondaryBook = await repo.getBookByNumber(
+          _secondaryTranslationId,
+          targetBookNum,
         );
-        setState(() {
-          _secondaryVerses = verses;
-          _isLoading = false;
-        });
-        return;
+
+        if (secondaryBook != null) {
+          final verses = await repo.getVerses(
+            bookId: secondaryBook.id,
+            chapter: bibleState.currentChapter.clamp(1, secondaryBook.totalChapters),
+          );
+          setState(() {
+            _secondaryVerses = verses;
+            _isLoading = false;
+          });
+          return;
+        }
       }
     }
     setState(() {

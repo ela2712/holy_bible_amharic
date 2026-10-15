@@ -56,10 +56,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     // Filter results by testament if selected
     final filteredResults = searchState.results.where((item) {
       if (_testamentFilter == 'ALL') return true;
-      final bookNum = item['book_number'] as int? ?? 1;
-      if (_testamentFilter == 'OT') return bookNum <= 39 || (bookNum > 66);
-      if (_testamentFilter == 'NT') return bookNum >= 40 && bookNum <= 66;
-      return true;
+      final testament = item['testament'] as String? ?? 'OT';
+      return testament == _testamentFilter;
     }).toList();
 
     return Scaffold(

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/utils/canonical_book_map.dart';
 import '../core/utils/geez_normalizer.dart';
 import '../models/translation.dart';
 import '../models/book.dart';
@@ -18,21 +19,21 @@ class BibleRepository {
   // In-memory data structures for fast access across all platforms (Web, Mobile, Desktop)
   final List<Translation> _translations = [
     const Translation(
-      id: 1,
-      code: 'amh_1954',
-      name: 'የቀዳማዊ ኃይለ ሥላሴ 1954/1962 ትርጉም',
-      shortName: '1954',
+      id: 2,
+      code: 'eotc_81',
+      name: 'ሰማንያ ወአሐዱ (የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 ቀኖና)',
+      shortName: '81 ቀኖና',
       language: 'am',
-      canon: 'traditional_66',
+      canon: 'orthodox_81',
       isDefault: true,
     ),
     const Translation(
-      id: 2,
-      code: 'eotc_81',
-      name: 'ሰማንያ ወአሐዱ (81 Books Orthodox Canon)',
-      shortName: '81',
+      id: 1,
+      code: 'amh_1954',
+      name: 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም',
+      shortName: '1954',
       language: 'am',
-      canon: 'orthodox_81',
+      canon: 'traditional_1954',
       isDefault: false,
     ),
     const Translation(
@@ -41,7 +42,7 @@ class BibleRepository {
       name: 'King James Version',
       shortName: 'KJV',
       language: 'en',
-      canon: 'protestant_66',
+      canon: 'standard_kjv',
       isDefault: false,
     ),
   ];
@@ -141,6 +142,7 @@ class BibleRepository {
             'book_id': bookId,
             'book_number': bookNum,
             'book_name': book.name,
+            'testament': book.testament,
             'chapter': chNum,
             'verse': startVerse,
             'verse_end': endVerse,
@@ -224,6 +226,7 @@ class BibleRepository {
                 'book_id': bookId,
                 'book_number': bookNum,
                 'book_name': book.name,
+                'testament': book.testament,
                 'chapter': chNum,
                 'verse': vNum,
                 'text': vText,
@@ -258,14 +261,15 @@ class BibleRepository {
       final testament = bookNum <= 39 ? 'OT' : 'NT';
       final chapters = b['chapters'] as List<dynamic>? ?? [];
       final bookId = bookIdCounter++;
+      final englishName = CanonicalBookMap.kjvEnglishNames[bookNum] ?? (b['name'] as String? ?? 'Book $bookNum');
 
       final book = Book(
         id: bookId,
         translationId: 3,
         bookNumber: bookNum,
-        name: b['name'] as String? ?? 'Book $bookNum',
+        name: englishName,
         shortName: b['abbrev'] as String? ?? '',
-        nameEn: b['name'] as String? ?? '',
+        nameEn: englishName,
         testament: testament,
         orderIndex: bookNum,
         totalChapters: chapters.length,
@@ -295,6 +299,7 @@ class BibleRepository {
               'book_id': bookId,
               'book_number': bookNum,
               'book_name': book.name,
+              'testament': book.testament,
               'chapter': chNum,
               'verse': vNum,
               'text': vText,
@@ -432,14 +437,24 @@ class BibleRepository {
     required int bookNumber,
     required int chapter,
     required int verse,
+    int? sourceTranslationId,
   }) async {
     await ensureInitialized();
     final results = <String, String>{};
+    final srcId = sourceTranslationId ?? 2;
+    final canonId = CanonicalBookMap.getCanonicalId(srcId, bookNumber);
 
     for (final trans in _translations) {
-      final book = await getBookByNumber(trans.id, bookNumber);
+      int? targetBookNum = bookNumber;
+      if (canonId.isNotEmpty) {
+        targetBookNum = CanonicalBookMap.getBookNumber(trans.id, canonId);
+      }
+      if (targetBookNum == null) continue;
+
+      final book = await getBookByNumber(trans.id, targetBookNum);
       if (book != null) {
-        final verses = await getVerses(bookId: book.id, chapter: chapter);
+        final safeChapter = chapter.clamp(1, book.totalChapters);
+        final verses = await getVerses(bookId: book.id, chapter: safeChapter);
         final match = verses.where((v) =>
             v.verse == verse ||
             (v.verseEnd != null && verse >= v.verse && verse <= v.verseEnd!)).firstOrNull;

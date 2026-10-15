@@ -906,6 +906,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
         bookNumber: widget.bookNumber,
         chapter: widget.verse.chapter,
         verse: widget.verse.verse,
+        sourceTranslationId: ref.read(bibleStateProvider).currentTranslation?.id ?? 2,
       ),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {

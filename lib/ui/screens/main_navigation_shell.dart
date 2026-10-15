@@ -68,7 +68,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
     final showBottomBar = _currentIndex != 0 || _isReaderChromeVisible;
 
-    // Catena-style active pill capsule color
+    // Active pill capsule color
     final activePillColor = isDark
         ? Colors.white.withValues(alpha: 0.14)
         : themeConfig.accentColor.withValues(alpha: 0.12);
@@ -88,7 +88,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             children: screens,
           ),
 
-          // 2. Floating Search Button for Tabs 1, 2, 3 (Matching Catena Screenshots 2, 3, 4)
+          // 2. Floating Search Button for Tabs 1, 2, 3
           if (_currentIndex != 0)
             Positioned(
               bottom: 80,

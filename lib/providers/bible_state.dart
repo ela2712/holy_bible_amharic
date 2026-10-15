@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/utils/canonical_book_map.dart';
 import '../models/translation.dart';
 import '../models/book.dart';
 import '../models/verse.dart';
@@ -76,7 +77,9 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
       await _repo.ensureInitialized();
       final translations = await _repo.getTranslations();
       final prefs = await SharedPreferences.getInstance();
-      final savedTransId = prefs.getInt('active_translation_id') ?? 1;
+
+      // Default to Orthodox 81 Canon (id: 2) as the main translation
+      final savedTransId = prefs.getInt('active_translation_id') ?? 2;
       final savedBookNum = prefs.getInt('active_book_number') ?? 1;
       final savedChapter = prefs.getInt('active_chapter') ?? 1;
 
@@ -91,13 +94,14 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
         orElse: () => books.first,
       );
 
+      final safeChapter = savedChapter.clamp(1, activeBook.totalChapters);
       final verses = await _repo.getVerses(
         bookId: activeBook.id,
-        chapter: savedChapter.clamp(1, activeBook.totalChapters),
+        chapter: safeChapter,
       );
       final headings = await _repo.getSectionHeadings(
         bookId: activeBook.id,
-        chapter: savedChapter.clamp(1, activeBook.totalChapters),
+        chapter: safeChapter,
       );
 
       state = state.copyWith(
@@ -105,7 +109,7 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
         currentTranslation: activeTrans,
         books: books,
         currentBook: activeBook,
-        currentChapter: savedChapter.clamp(1, activeBook.totalChapters),
+        currentChapter: safeChapter,
         verses: verses,
         headings: headings,
         isLoading: false,
@@ -124,15 +128,36 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
 
     try {
       final books = await _repo.getBooks(translationId: translation.id);
-      final currentBookNum = state.currentBook?.bookNumber ?? 1;
+      final currentBook = state.currentBook;
+      final currentTransId = state.currentTranslation?.id ?? 2;
+      final currentChapter = state.currentChapter;
 
-      // Find matching book in new translation or fallback to first
-      Book targetBook = books.firstWhere(
-        (b) => b.bookNumber == currentBookNum,
+      Book? targetBook;
+      if (currentBook != null) {
+        // Resolve canonical 3-letter book ID (e.g., 'MAT', 'GEN', 'ROM')
+        final canonId = CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber);
+        if (canonId.isNotEmpty) {
+          final targetBookNum = CanonicalBookMap.getBookNumber(translation.id, canonId);
+          if (targetBookNum != null) {
+            for (final b in books) {
+              if (b.bookNumber == targetBookNum) {
+                targetBook = b;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // Fallback: If current book only exists in 81 (e.g., Enoch, Jubilees, Meqabyan),
+      // we can't force it to exist in 66-book editions, so land gracefully on the first book
+      // in the same testament, or the first book of the translation.
+      targetBook ??= books.firstWhere(
+        (b) => currentBook != null && b.testament == currentBook.testament,
         orElse: () => books.first,
       );
 
-      final targetChapter = state.currentChapter.clamp(1, targetBook.totalChapters);
+      final targetChapter = currentChapter.clamp(1, targetBook.totalChapters);
       final verses = await _repo.getVerses(bookId: targetBook.id, chapter: targetChapter);
       final headings = await _repo.getSectionHeadings(bookId: targetBook.id, chapter: targetChapter);
 
