@@ -19,7 +19,7 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
-  int _currentIndex = 0; // 0: ንባብ (Bible), 1: አንድምታ (Library), 2: ዕቅዶች (Lectionary), 3: ማህደር (Highlights)
+  int _currentIndex = 0; // 0: ንባብ (Bible), 1: መነሻ (Home), 2: ዕቅዶች (Plans), 3: ማህደር (Saved)
   bool _isReaderChromeVisible = true;
 
   void _onTabSelected(int index) {
@@ -166,10 +166,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       inactiveColor: inactiveColor,
                     ),
 
-                    // Tab 1: አንድምታ (Library / Commentaries)
+                    // Tab 1: መነሻ (Home / Library)
                     _buildNavItem(
                       index: 1,
-                      label: 'አንድምታ',
+                      label: 'መነሻ',
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernLibraryIcon(
                         size: 21,

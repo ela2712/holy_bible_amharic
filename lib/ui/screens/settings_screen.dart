@@ -94,8 +94,10 @@ class SettingsScreen extends ConsumerWidget {
                         ? 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)'
                         : 'Authorized King James Version (Classic English)');
 
+                // ignore: deprecated_member_use
                 return RadioListTile<int>(
                   value: t.id,
+                  // ignore: deprecated_member_use
                   groupValue: bibleState.currentTranslation?.id,
                   selected: isSelected,
                   title: Text(
@@ -106,6 +108,7 @@ class SettingsScreen extends ConsumerWidget {
                     subtitleText,
                     style: GoogleFonts.notoSansEthiopic(fontSize: 12),
                   ),
+                  // ignore: deprecated_member_use
                   onChanged: (_) {
                     ref.read(bibleStateProvider.notifier).selectTranslation(t);
                   },

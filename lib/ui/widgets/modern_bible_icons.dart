@@ -73,7 +73,7 @@ class _ModernBiblePainter extends CustomPainter {
       oldDelegate.color != color || oldDelegate.isFilled != isFilled;
 }
 
-/// 2. Modern Library / Commentaries Icon (Bookshelf / አንድምታ)
+/// 2. Modern Library / Home Icon (መጻሕፍት / Library)
 class ModernLibraryIcon extends StatelessWidget {
   final double size;
   final Color color;

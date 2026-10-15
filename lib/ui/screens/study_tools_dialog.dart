@@ -6,15 +6,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../models/verse.dart';
-import '../../models/commentary.dart';
 import '../../models/cross_reference.dart';
-import '../../data/patristic_commentaries.dart';
 import '../../data/cross_references_data.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/bible_repository.dart';
 import '../widgets/built_in_geez_keyboard.dart';
-import '../widgets/ethiopian_cross_painter.dart';
 import 'verse_card_maker_screen.dart';
 
 class StudyToolsSheet extends ConsumerStatefulWidget {
@@ -73,8 +70,8 @@ class StudyToolsSheet extends ConsumerStatefulWidget {
 }
 
 class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
-  // Filter pills: 'ALL', 'ANDIMTA', 'EARLY_FATHERS', 'CROSS_REF', 'PARALLEL'
-  String _selectedFilter = 'ALL';
+  // Filter pills: 'CROSS_REF', 'PARALLEL'
+  String _selectedFilter = 'CROSS_REF';
   late bool _isBookmarked;
   String? _currentHighlight;
   bool _showNoteEditor = false;
@@ -102,6 +99,8 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
       _selectedFilter = 'PARALLEL';
     } else if (widget.initialTabIndex == 2) {
       _showNoteEditor = true;
+    } else {
+      _selectedFilter = 'CROSS_REF';
     }
   }
 
@@ -167,17 +166,9 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
         : '${widget.verse.verse}';
     final reference = '${widget.bookName} ${widget.verse.chapter}:$vSpan';
 
-    final allCommentaries = <Commentary>[];
     final crossReferences = <CrossReferenceItem>[];
     final endV = widget.verse.verseEnd ?? widget.verse.verse;
     for (int v = widget.verse.verse; v <= endV; v++) {
-      allCommentaries.addAll(
-        PatristicCommentariesData.getCommentariesOrContextualForVerse(
-          widget.bookNumber,
-          widget.verse.chapter,
-          v,
-        ),
-      );
       crossReferences.addAll(
         CrossReferencesData.getCrossReferencesForVerse(
           widget.bookNumber,
@@ -186,10 +177,6 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
         ),
       );
     }
-    final andimtaCommentaries =
-        allCommentaries.where(PatristicCommentariesData.isEthiopianTradition).toList();
-    final earlyFatherCommentaries =
-        allCommentaries.where((c) => !PatristicCommentariesData.isEthiopianTradition(c)).toList();
 
     return DraggableScrollableSheet(
       initialChildSize: 0.72,
@@ -474,40 +461,17 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                 ),
 
               // 5. Tradition & Study Filter Pills
-              SizedBox(
-                height: 46,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Row(
                   children: [
-                    _buildFilterPill(
-                      id: 'ALL',
-                      label: 'ሁሉም አበው (${allCommentaries.length})',
-                      icon: Icons.auto_awesome_rounded,
-                      themeConfig: themeConfig,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterPill(
-                      id: 'ANDIMTA',
-                      label: 'አንድምታ (${andimtaCommentaries.length})',
-                      icon: Icons.menu_book_rounded,
-                      themeConfig: themeConfig,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildFilterPill(
-                      id: 'EARLY_FATHERS',
-                      label: 'ቀደምት አበው (${earlyFatherCommentaries.length})',
-                      icon: Icons.history_edu_rounded,
-                      themeConfig: themeConfig,
-                    ),
-                    const SizedBox(width: 8),
                     _buildFilterPill(
                       id: 'CROSS_REF',
                       label: 'ተዛማጅ ጥቅሶች (${crossReferences.length})',
                       icon: Icons.hub_outlined,
                       themeConfig: themeConfig,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     _buildFilterPill(
                       id: 'PARALLEL',
                       label: 'ማነፃፀሪያ (3 ትርጉም)',
@@ -522,14 +486,9 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
 
               // 6. Filtered Content Stream
               Expanded(
-                child: _buildActiveContentView(
-                  scrollController: scrollController,
-                  themeConfig: themeConfig,
-                  allCommentaries: allCommentaries,
-                  andimtaCommentaries: andimtaCommentaries,
-                  earlyFatherCommentaries: earlyFatherCommentaries,
-                  crossReferences: crossReferences,
-                ),
+                child: _selectedFilter == 'PARALLEL'
+                    ? _buildParallelTranslationsList(scrollController, themeConfig)
+                    : _buildCrossReferencesList(scrollController, crossReferences, themeConfig),
               ),
             ],
           ),
@@ -549,7 +508,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
       onTap: () => setState(() => _selectedFilter = id),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? themeConfig.accentColor : themeConfig.surfaceColor,
           borderRadius: BorderRadius.circular(20),
@@ -562,7 +521,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
           children: [
             Icon(
               icon,
-              size: 14,
+              size: 15,
               color: isSelected ? Colors.white : themeConfig.accentColor,
             ),
             const SizedBox(width: 6),
@@ -577,156 +536,6 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildActiveContentView({
-    required ScrollController scrollController,
-    required ReaderThemeConfig themeConfig,
-    required List<Commentary> allCommentaries,
-    required List<Commentary> andimtaCommentaries,
-    required List<Commentary> earlyFatherCommentaries,
-    required List<CrossReferenceItem> crossReferences,
-  }) {
-    if (_selectedFilter == 'CROSS_REF') {
-      return _buildCrossReferencesList(scrollController, crossReferences, themeConfig);
-    }
-    if (_selectedFilter == 'PARALLEL') {
-      return _buildParallelTranslationsList(scrollController, themeConfig);
-    }
-
-    final commentariesToShow = _selectedFilter == 'ANDIMTA'
-        ? andimtaCommentaries
-        : _selectedFilter == 'EARLY_FATHERS'
-            ? earlyFatherCommentaries
-            : allCommentaries;
-
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-      itemCount: commentariesToShow.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, idx) {
-        final item = commentariesToShow[idx];
-        final isAndimta = PatristicCommentariesData.isEthiopianTradition(item);
-        final badgeColor = isAndimta ? themeConfig.goldAccent : themeConfig.accentColor;
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: themeConfig.surfaceColor,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: themeConfig.cardBorderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: isAndimta
-                        ? Text(
-                            'አ',
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: badgeColor,
-                            ),
-                          )
-                        : OrthodoxCrossIcon(
-                            size: 18,
-                            color: badgeColor,
-                          ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: badgeColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                isAndimta ? 'የኢትዮጵያ አንድምታ' : 'ቀደምት አበው',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: badgeColor,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                item.authorEra,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 11, color: themeConfig.secondaryTextColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.authorName,
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w800,
-                            color: themeConfig.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'ምንጭ፦ ${item.sourceWork}',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: themeConfig.secondaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(Icons.copy_rounded, size: 17, color: themeConfig.secondaryTextColor),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(
-                        text: '${item.authorName} (${item.sourceWork}):\n"${item.content}"',
-                      ));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('ትርጓሜው ተገልብጧል (Commentary copied)')),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                item.content,
-                style: GoogleFonts.notoSerifEthiopic(
-                  fontSize: 15,
-                  height: 1.7,
-                  color: themeConfig.textColor,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 

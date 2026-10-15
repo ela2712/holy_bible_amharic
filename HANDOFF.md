@@ -9,10 +9,10 @@
 ---
 
 ## 1. Project Vision & Architecture
-We are building a modern, distraction-free, cross-platform (Android, iOS, Windows, macOS, Web) **Amharic Holy Bible & Ethiopian Orthodox Study App** (`መጽሐፍ ቅዱስ — የአበው አንድምታ`).
+We are building a modern, distraction-free, cross-platform (Android, iOS, Windows, macOS, Web) **Amharic Holy Bible & Ethiopian Orthodox Study App** (`መጽሐፍ ቅዱስ — 81 ቀኖና`).
 - **Origin:** Inspired by the classic Fyn Systems Amharic Bible (`com.fynsystem.amharic_bible`), which stopped receiving updates and crashes on modern devices.
-- **Design Philosophy:** Retain all beloved features of the classic Amharic Bible while delivering a **modern 2026 Reader-first UX/UI** featuring rich Ethiopian Andimta and Patristic commentaries, deep canonical cross-references, and full offline-first functionality.
-- **Branding Directive:** Do NOT call or reference "Catena". The app is branded as **መጽሐፍ ቅዱስ (Holy Bible Amharic)** with **የአበው አንድምታ (Patristic & Andimta Commentaries)**.
+- **Design Philosophy:** Retain all beloved features of the classic Amharic Bible while delivering a **modern 2026 Reader-first UX/UI** featuring the authentic 81 Orthodox Canon, canonical cross-references, parallel 3-way translation comparison, reading plans with Bahire Hasab, and full offline-first functionality.
+- **Branding Directive:** Do NOT call or reference "Catena". The app is branded as **መጽሐፍ ቅዱስ (Holy Bible Amharic — 81 ቀኖና)**. Incomplete commentary snippets have been eliminated to preserve sacred tradition integrity.
 
 ---
 
@@ -71,6 +71,35 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
    - Search results in `SearchScreen` now render rich text with the query term highlighted in soft emerald/jade ink and bold weight.
 9. **Cross-Platform Verse Card Export:**
    - Migrated `VerseCardMakerScreen` from `dart:io` `File` to `XFile.fromData`, enabling 100% crash-free card export on Web, Desktop, and Mobile.
+74: 
+10. **Scripture Digitizer Glitch Audit & Text Restoration (`assets/data/orthodox_81.json`):**
+    - **Diagnosis from Snapshot:**
+      - **Matthew 5:3:** Clipped first 2 letters (`በመ` eaten by `“`): `“ንፈስ ድሆች...` $\rightarrow$ restored to **`በመንፈስ ድሆች የሆኑ ብፁዓን ናቸው፤ መንግሥተ ሰማያት የእነርሱ ናትና።`**
+      - **Matthew 5:11:** Clipped first 2 letters (`ሲነ` eaten by `“`): `“ቅፉአችሁና...` $\rightarrow$ restored to **`ሲነቅፉአችሁና ሲያሳድዱአችሁ በእኔም ምክንያት ክፉውን ሁሉ በውሸት ሲናገሩባችሁ ብፁዓን ናችሁ።`**
+      - **Matthew 5:13:** Clipped letters (`የም` eaten by `“`): `እናንተ “ድር ጨው...` $\rightarrow$ restored to **`እናንተ የምድር ጨው ናችሁ፤...`**
+      - **Matthew 5:14:** Clipped letters (`እና` eaten by `“`): `“ንተ የዓለም...` $\rightarrow$ restored to **`እናንተ የዓለም ብርሃን ናችሁ。...`**
+      - **Matthew 5:27:** Typo fix: `ዝንደተባለ` $\rightarrow$ **`እንደተባለ`**.
+      - **Matthew 12:43:** Clipped letter (`እ` eaten by `“`): `“ርኩስ መንፈስ...` $\rightarrow$ restored to **`እርኩስ መንፈስ ግን...`**.
+      - **Dangling Quotes & Spacing:** Removed stranded unclosed quotation marks and added proper spaces after Ethiopic semicolons (`፤ `) across Matthew 5:3–43 (24 verses total repaired).
+    - **Whole-Canon Audit:** Scanned all 81 books for occurrences of `“` directly attached to clipped Ethiopic words; confirmed all other 80 books are authentic and uncorrupted.
+
+### D. Authentic Tradition Integrity — Complete Removal of Incomplete "አንድምታ" (Commentary)
+- **Rationale:** The authentic Ethiopian Orthodox Andimta is a vast, monumental oral and written exegetical library spanning all 81 canonical books. Displaying an "አንድምታ" label and spotlight while having only ~18 hardcoded snippet entries in `patristic_commentaries.dart` (which only lit up on Matthew 5:2–3 in 1954 due to book numbering divergence, and was empty everywhere else) was misleading and misrepresented sacred tradition.
+- **Completed Changes:**
+  1. **Removed Dead Commentary Files:** Deleted `lib/data/patristic_commentaries.dart` and `lib/models/commentary.dart`.
+  2. **Reader Screen (`lib/ui/screens/home_reader_screen.dart`):**
+     - Removed commentary imports, queries, left-margin indicator borders, and inline commentary badge chips from both paragraph and list view.
+     - Bookmarks, highlights, personal notes, and tap gestures remain 100% active.
+  3. **Study Tools Sheet (`lib/ui/screens/study_tools_dialog.dart`):**
+     - Removed commentary tab and mock cards.
+     - Streamlined dialog to two high-value study tabs: **`ተዛማጅ ጥቅሶች` (Canonical Cross-References)** and **`ማነፃፀሪያ` (Parallel 3 Translations: 81 Canon vs 1954 vs KJV)**.
+  4. **Home Dashboard (`lib/ui/screens/home_dashboard_screen.dart`):**
+     - Removed Patristic Spotlight horizontal carousel (`_buildPatristicSpotlight`).
+     - Removed Church Father frosted glass box from the Daily Verse Hero.
+     - Replaced `'አንድምታ'` badge with **`81 ቀኖና`** and updated subtitle to **`'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍትና ትርጉሞች'`**.
+  5. **Navigation Shell (`lib/ui/screens/main_navigation_shell.dart`):**
+     - Renamed Tab 1 from `'አንድምታ'` to **`'መነሻ'`** (Home / Library).
+     - Modern library icon retained and clarified.
 
 ---
 
@@ -90,8 +119,8 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
 
 ## 5. Navigation Shell Structure
 
-- **Tab 0: `ንባብ` (Bible Reader)** — Auto-hiding floating interaction capsule, paragraph/verse modes, patristic commentary indicators, quick translation switcher.
-- **Tab 1: `አንድምታ` (Library & Dashboard)** — Daily verse hero, reading progress, canon quick-access strip, patristic spotlight carousel, thematic collections.
+- **Tab 0: `ንባብ` (Bible Reader)** — Auto-hiding floating interaction capsule, paragraph/verse modes, quick translation switcher, verse selection with highlighting, bookmarks, notes, and parallel study.
+- **Tab 1: `መነሻ` (Home / Library Dashboard)** — Daily verse hero, reading progress bento, canon quick-access strip, visual reading plans carousel, thematic scripture collections.
 - **Tab 2: `ዕቅዶች` (Lectionary & Reading Plans)** — 14 liturgical & devotional reading plans, Bahire Hasab movable feasts/fasts auto-calculation, custom plan generator.
 - **Tab 3: `ማህደር` (Annotations Vault)** — Saved bookmarks, highlights by color, and personal notes with virtual Ge'ez keyboard.
 - **Floating `[ 🔍 ]` Search Button:** Floating on Tabs 1, 2, and 3 for instant search access.
@@ -100,6 +129,7 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
 
 ## 6. Verification Status
 
-- **`flutter test`:** **All passed (smoke tests & canonical cross-navigation tests)**.
-- **`flutter analyze --no-fatal-infos`:** **0 Errors, 0 Warnings**.
+- **`flutter test`:** **All passed (5/5 tests)**.
+- **`flutter analyze`:** **0 Errors, 0 Warnings, 0 Issues** (`No issues found!`).
 - **Working Tree:** All modifications verified and ready for manual user commit & push.
+

@@ -7,15 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/geez_numbers.dart';
-import '../../data/patristic_commentaries.dart';
-import '../../data/cross_references_data.dart';
-import '../../models/commentary.dart';
-import '../../models/cross_reference.dart';
 import '../../models/verse.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_plan_session_provider.dart';
-import '../widgets/ethiopian_cross_painter.dart';
 import '../widgets/modern_bible_icons.dart';
 import 'book_selector_screen.dart';
 import 'parallel_reader_screen.dart';
@@ -1120,9 +1115,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final chapterCommentaries =
-        PatristicCommentariesData.getCommentariesForChapter(bookNumber, chapter);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1205,9 +1197,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   Icon(Icons.touch_app_rounded, size: 13, color: themeConfig.accentColor),
                   const SizedBox(width: 5),
                   Text(
-                    chapterCommentaries.isNotEmpty
-                        ? '${chapterCommentaries.length} ቀጥተኛ የአበው ትርጓሜ • ማንኛውንም ጥቅስ ይጫኑ'
-                        : 'ለአንድምታ፣ ለአበው ትርጓሜና ለተዛማጅ ጥቅሶች ማንኛውንም ጥቅስ ይጫኑ',
+                    'ለማድመቅ፣ ለዕልባት፣ ለማስታወሻና ለማነፃፀር ማንኛውንም ጥቅስ ይጫኑ',
                     style: GoogleFonts.notoSansEthiopic(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -1261,17 +1251,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 _selectedVerseNumber! >= verse.verse &&
                 _selectedVerseNumber! <= (verse.verseEnd ?? verse.verse);
             final verseNumStr = _formatVerseLabel(verse, themeConfig.useGeezNumerals);
-            final directCommentaries = <Commentary>[];
-            final endV = verse.verseEnd ?? verse.verse;
-            for (int v = verse.verse; v <= endV; v++) {
-              directCommentaries.addAll(
-                PatristicCommentariesData.getCommentariesForVerse(
-                  bibleState.currentBook?.bookNumber ?? 1,
-                  verse.chapter,
-                  v,
-                ),
-              );
-            }
 
             Color? bgHighlight;
             if (isSelected) {
@@ -1299,7 +1278,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: themeConfig.fontSize * 0.65,
                           fontWeight: FontWeight.w800,
-                          color: directCommentaries.isNotEmpty
+                          color: isSelected
                               ? themeConfig.accentColor
                               : themeConfig.secondaryTextColor,
                         ),
@@ -1312,17 +1291,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           color: themeConfig.textColor,
                         ),
                       ),
-                      if (directCommentaries.isNotEmpty)
-                        WidgetSpan(
-                          alignment: PlaceholderAlignment.middle,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 3),
-                            child: OrthodoxCrossIcon(
-                              size: 11,
-                              color: themeConfig.accentColor,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -1346,28 +1314,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final isSelected = _selectedVerseNumber != null &&
         _selectedVerseNumber! >= verse.verse &&
         _selectedVerseNumber! <= (verse.verseEnd ?? verse.verse);
-    final bookNumber = bibleState.currentBook?.bookNumber ?? 1;
-    final directCommentaries = <Commentary>[];
-    final crossRefs = <CrossReferenceItem>[];
-    final endV = verse.verseEnd ?? verse.verse;
-    for (int v = verse.verse; v <= endV; v++) {
-      directCommentaries.addAll(
-        PatristicCommentariesData.getCommentariesForVerse(
-          bookNumber,
-          verse.chapter,
-          v,
-        ),
-      );
-      crossRefs.addAll(
-        CrossReferencesData.getCrossReferencesForVerse(
-          bookNumber,
-          verse.chapter,
-          v,
-        ),
-      );
-    }
-    final hasDirectCommentary = directCommentaries.isNotEmpty;
-
     Color? customHighlight;
     if (verse.highlightColor != null && verse.highlightColor!.isNotEmpty) {
       try {
@@ -1413,14 +1359,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 left: BorderSide(
                   color: isSelected
                       ? themeConfig.accentColor
-                      : hasDirectCommentary
-                          ? themeConfig.accentColor.withValues(alpha: 0.75)
-                          : themeConfig.cardBorderColor.withValues(alpha: 0.65),
-                  width: isSelected
-                      ? 4.0
-                      : hasDirectCommentary
-                          ? 3.2
-                          : 1.5,
+                      : themeConfig.cardBorderColor.withValues(alpha: 0.65),
+                  width: isSelected ? 4.0 : 1.5,
                 ),
               ),
             ),
@@ -1435,7 +1375,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: themeConfig.fontSize * 0.68,
                           fontWeight: FontWeight.w800,
-                          color: hasDirectCommentary
+                          color: isSelected
                               ? themeConfig.accentColor
                               : themeConfig.secondaryTextColor,
                         ),
@@ -1452,9 +1392,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   ),
                 ),
 
-                // Subtle inline metadata row (Commentary count / Bookmark / Personal Note)
-                if (hasDirectCommentary ||
-                    verse.isBookmarked ||
+                // Inline metadata row (Bookmark / Personal Note)
+                if (verse.isBookmarked ||
                     (verse.note != null && verse.note!.isNotEmpty))
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -1463,32 +1402,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (hasDirectCommentary)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: themeConfig.accentColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                OrthodoxCrossIcon(
-                                  size: 11,
-                                  color: themeConfig.accentColor,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${directCommentaries.length} የአበው ትርጓሜ • ${crossRefs.length} ማጣቀሻ',
-                                  style: GoogleFonts.notoSansEthiopic(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: themeConfig.accentColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
                         if (verse.isBookmarked)
                           Icon(Icons.bookmark_rounded, size: 14, color: themeConfig.accentColor),
                         if (verse.note != null && verse.note!.isNotEmpty)

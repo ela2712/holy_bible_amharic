@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
-import '../../data/patristic_commentaries.dart';
 import '../../data/reading_plans_data.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
@@ -55,7 +54,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        // Hero: Editorial Daily Verse + Patristic Glass Card
+                        // Hero: Editorial Daily Verse Card
                         _buildDailyVerseHero(context, ref, repo, themeConfig),
                         const SizedBox(height: 20),
 
@@ -65,10 +64,6 @@ class HomeDashboardScreen extends ConsumerWidget {
 
                         // Modern Canon Quick-Access Strip
                         _buildCanonQuickStrip(context, ref, themeConfig, isDark),
-                        const SizedBox(height: 28),
-
-                        // Church Fathers & Patristic Spotlight Carousel
-                        _buildPatristicSpotlight(context, ref, themeConfig, isDark),
                         const SizedBox(height: 28),
 
                         // Visual Reading Plans Carousel
@@ -149,7 +144,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'አንድምታ',
+                        '81 ቀኖና',
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
@@ -162,7 +157,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'የቀደምት አበው ትርጓሜና የጥናት መጽሐፍ ቅዱስ',
+                  'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍትና ትርጉሞች',
                   style: GoogleFonts.notoSansEthiopic(
                     fontSize: 11.5,
                     color: themeConfig.secondaryTextColor,
@@ -258,8 +253,6 @@ class HomeDashboardScreen extends ConsumerWidget {
         final verseText = verseData != null
             ? verseData['text'] as String
             : 'በመጀመሪያ ቃል ነበረ፥ ቃልም በእግዚአብሔር ዘንድ ነበረ፥ ቃልም እግዚአብሔር ነበረ።';
-
-        final featuredCommentary = PatristicCommentariesData.getFeaturedCommentary();
 
         return Container(
           decoration: BoxDecoration(
@@ -419,67 +412,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-
-                    // Frosted Glass Church Father Insight Box
-                    if (featuredCommentary != null) ...[
-                      const SizedBox(height: 18),
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF818CF8).withValues(alpha: 0.25),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Text(
-                                    'የአበው ትርጓሜ',
-                                    style: TextStyle(
-                                      color: Color(0xFFC7D2FE),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    featuredCommentary.authorName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.notoSansEthiopic(
-                                      color: Colors.white.withValues(alpha: 0.95),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              featuredCommentary.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.notoSansEthiopic(
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontSize: 12.5,
-                                height: 1.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -823,192 +755,6 @@ class HomeDashboardScreen extends ConsumerWidget {
                           fontWeight: FontWeight.w800,
                           color: themeConfig.textColor,
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPatristicSpotlight(
-    BuildContext context,
-    WidgetRef ref,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    final fathers = [
-      {
-        'name': 'ቅዱስ ዮሐንስ አፈወርቅ',
-        'en': 'St. John Chrysostom',
-        'era': '349–407 ዓ.ም.',
-        'quote': '«ትሕትና የሰማያዊ ሕይወት መሠረትና የመንግሥተ ሰማያት መግቢያ ናት።»',
-        'ref': 'ማቴዎስ 5:3',
-        'bookNum': 40,
-        'chapter': 5,
-        'color': const Color(0xFF4F46E5),
-      },
-      {
-        'name': 'ቅዱስ ባስልዮስ ዘቂሣርያ',
-        'en': 'St. Basil the Great',
-        'era': '330–379 ዓ.ም.',
-        'quote': '«ዓለም በድንገት ያልተገኘች፣ ነገር ግን በእግዚአብሔር ጥበብ የተፈጠረች ናት።»',
-        'ref': 'ዘፍጥረት 1:1',
-        'bookNum': 1,
-        'chapter': 1,
-        'color': const Color(0xFF0D9488),
-      },
-      {
-        'name': 'ቅዱስ ቄርሎስ ዘእስክንድርያ',
-        'en': 'St. Cyril of Alexandria',
-        'era': '376–444 ዓ.ም.',
-        'quote': '«አማኑኤል መባሉ እውነተኛ አምላክ ከእኛ ጋር ሥጋ ለብሶ መገለጡን ይመሰክራል።»',
-        'ref': 'ማቴዎስ 1:23',
-        'bookNum': 40,
-        'chapter': 1,
-        'color': const Color(0xFF047857),
-      },
-      {
-        'name': 'ቅዱስ ኤፍሬም ሶርያዊ',
-        'en': 'St. Ephrem the Syrian',
-        'era': '306–373 ዓ.ም.',
-        'quote': '«መንፈስ ቅዱስ በውኃ ላይ ሰፍፎ ለዓለም አዲስ ሕይወትና ልደት ሰጠ።»',
-        'ref': 'ዘፍጥረት 1:2',
-        'bookNum': 1,
-        'chapter': 1,
-        'color': const Color(0xFF7C3AED),
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('የቀደምት አበው ትርጓሜ', 'PATRISTIC COMMENTARIES', themeConfig),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 158,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: fathers.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 14),
-            itemBuilder: (context, idx) {
-              final f = fathers[idx];
-              final color = f['color'] as Color;
-
-              return InkWell(
-                borderRadius: BorderRadius.circular(22),
-                onTap: () async {
-                  final bookNum = f['bookNum'] as int;
-                  final chapter = f['chapter'] as int;
-                  final bibleState = ref.read(bibleStateProvider);
-                  final targetBook = CanonicalBookMap.resolveBook(
-                    books: bibleState.books,
-                    currentTranslationId: bibleState.currentTranslation?.id ?? 2,
-                    traditionalBookNumber: bookNum,
-                    bookName: f['ref'] as String?,
-                  );
-                  if (targetBook != null) {
-                    await ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                  }
-                  onNavigateTab(0);
-                },
-                child: Container(
-                  width: 268,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: themeConfig.surfaceColor,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: themeConfig.cardBorderColor),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: Icon(Icons.format_quote_rounded, color: color, size: 20),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  f['name'] as String,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.notoSansEthiopic(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: themeConfig.textColor,
-                                  ),
-                                ),
-                                Text(
-                                  '${f['en']} • ${f['era']}',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: themeConfig.secondaryTextColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(
-                        child: Text(
-                          f['quote'] as String,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 12.5,
-                            height: 1.45,
-                            color: themeConfig.textColor.withValues(alpha: 0.85),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              f['ref'] as String,
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: color,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            'ትርጓሜውን ክፈት →',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
