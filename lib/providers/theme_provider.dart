@@ -18,13 +18,23 @@ class ThemeConfigNotifier extends StateNotifier<ReaderThemeConfig> {
     final fontSize = prefs.getDouble('reader_font_size') ?? 19.0;
     final lineSpacing = prefs.getDouble('reader_line_spacing') ?? 1.75;
     final useGeezNumerals = prefs.getBool('reader_use_geez_numerals') ?? false;
+    final isParagraphMode = prefs.getBool('reader_is_paragraph_mode') ?? false;
+    final fontFamily = prefs.getString('reader_font_family') ?? 'Serif';
 
     state = ReaderThemeConfig(
       mode: ReaderThemeMode.values[modeIndex.clamp(0, 2)],
       fontSize: fontSize,
       lineSpacing: lineSpacing,
       useGeezNumerals: useGeezNumerals,
+      fontFamily: fontFamily,
+      isParagraphMode: isParagraphMode,
     );
+  }
+
+  Future<void> setFontFamily(String family) async {
+    state = state.copyWith(fontFamily: family);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('reader_font_family', family);
   }
 
   Future<void> setMode(ReaderThemeMode mode) async {

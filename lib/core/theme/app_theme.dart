@@ -137,9 +137,32 @@ class AppTheme {
     final isDark = config.mode == ReaderThemeMode.dark;
     final baseTheme = isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
 
-    final textTheme = config.fontFamily == 'Serif'
-        ? GoogleFonts.notoSerifEthiopicTextTheme(baseTheme.textTheme)
-        : GoogleFonts.notoSansEthiopicTextTheme(baseTheme.textTheme);
+    TextTheme textTheme;
+    switch (config.fontFamily) {
+      case 'Abyssinica':
+        textTheme = GoogleFonts.abyssinicaSilTextTheme(baseTheme.textTheme);
+        break;
+      case 'Sans':
+        textTheme = GoogleFonts.notoSansEthiopicTextTheme(baseTheme.textTheme);
+        break;
+      case 'PowerGeez':
+        textTheme = baseTheme.textTheme.apply(
+          fontFamily: 'Power Ge\'ez Unicode',
+          fontFamilyFallback: const [
+            'PowerGeez',
+            'Power Ge\'ez',
+            'Nyala',
+            'WashRa',
+            'Abyssinica SIL',
+            'Noto Serif Ethiopic',
+          ],
+        );
+        break;
+      case 'Serif':
+      default:
+        textTheme = GoogleFonts.notoSerifEthiopicTextTheme(baseTheme.textTheme);
+        break;
+    }
 
     return baseTheme.copyWith(
       scaffoldBackgroundColor: config.backgroundColor,

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 /// Modern bespoke icon set inspired by high-end typography and mobile study bibles.
@@ -348,4 +349,86 @@ class _ModernSearchPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ModernSearchPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// 6. Modern Settings Icon (ማስተካከያዎች / Settings)
+class ModernSettingsIcon extends StatelessWidget {
+  final double size;
+  final Color color;
+  final bool isFilled;
+
+  const ModernSettingsIcon({
+    super.key,
+    this.size = 22,
+    required this.color,
+    this.isFilled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _ModernSettingsPainter(color: color, isFilled: isFilled),
+    );
+  }
+}
+
+class _ModernSettingsPainter extends CustomPainter {
+  final Color color;
+  final bool isFilled;
+
+  _ModernSettingsPainter({required this.color, required this.isFilled});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final paint = Paint()
+      ..color = color
+      ..style = isFilled ? PaintingStyle.fill : PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final center = Offset(w * 0.5, h * 0.5);
+    final outerR = w * 0.42;
+    final innerR = w * 0.30;
+    final holeR = w * 0.14;
+
+    final path = Path();
+    const teeth = 6;
+    for (int i = 0; i < teeth; i++) {
+      final angle = (i * 2 * math.pi) / teeth;
+      final halfStep = math.pi / teeth;
+      final a1 = angle - halfStep * 0.35;
+      final a2 = angle + halfStep * 0.35;
+      final aNext = angle + halfStep;
+
+      if (i == 0) {
+        path.moveTo(center.dx + innerR * math.cos(a1), center.dy + innerR * math.sin(a1));
+      } else {
+        path.lineTo(center.dx + innerR * math.cos(a1), center.dy + innerR * math.sin(a1));
+      }
+      path.lineTo(center.dx + outerR * math.cos(a1), center.dy + outerR * math.sin(a1));
+      path.lineTo(center.dx + outerR * math.cos(a2), center.dy + outerR * math.sin(a2));
+      path.lineTo(center.dx + innerR * math.cos(a2), center.dy + innerR * math.sin(a2));
+      path.lineTo(center.dx + innerR * math.cos(aNext), center.dy + innerR * math.sin(aNext));
+    }
+    path.close();
+    canvas.drawPath(path, paint);
+
+    if (isFilled) {
+      final clearHolePaint = Paint()
+        ..color = Colors.transparent
+        ..blendMode = BlendMode.clear;
+      canvas.drawCircle(center, holeR, clearHolePaint);
+    } else {
+      canvas.drawCircle(center, holeR, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ModernSettingsPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.isFilled != isFilled;
 }

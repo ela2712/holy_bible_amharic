@@ -10,6 +10,7 @@ import 'home_dashboard_screen.dart';
 import 'reading_plans_screen.dart';
 import 'search_screen.dart';
 import 'annotations_screen.dart';
+import 'settings_screen.dart';
 
 class MainNavigationShell extends ConsumerStatefulWidget {
   const MainNavigationShell({super.key});
@@ -64,6 +65,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       HomeDashboardScreen(onNavigateTab: _onTabSelected),
       ReadingPlansScreen(onNavigateToReader: _onTabSelected),
       AnnotationsScreen(onNavigateToReader: _onTabSelected),
+      const SettingsScreen(),
     ];
 
     final showBottomBar = _currentIndex != 0 || _isReaderChromeVisible;
@@ -89,7 +91,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
           ),
 
           // 2. Floating Search Button for Tabs 1, 2, 3
-          if (_currentIndex != 0)
+          if (_currentIndex != 0 && _currentIndex != 4)
             Positioned(
               bottom: 80,
               right: 18,
@@ -200,6 +202,20 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       label: 'ማህደር',
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernHighlightsIcon(
+                        size: 21,
+                        color: isActive ? activeColor : inactiveColor,
+                        isFilled: isActive,
+                      ),
+                      activeColor: activeColor,
+                      inactiveColor: inactiveColor,
+                    ),
+
+                    // Tab 4: ቅንብሮች (Settings)
+                    _buildNavItem(
+                      index: 4,
+                      label: 'ቅንብሮች',
+                      activePillColor: activePillColor,
+                      iconBuilder: (isActive) => ModernSettingsIcon(
                         size: 21,
                         color: isActive ? activeColor : inactiveColor,
                         isFilled: isActive,

@@ -9,15 +9,18 @@ import '../../providers/theme_provider.dart';
 
 class BookSelectorScreen extends ConsumerStatefulWidget {
   final ValueChanged<int>? onVerseSelected;
+  final int initialStep;
 
   const BookSelectorScreen({
     super.key,
     this.onVerseSelected,
+    this.initialStep = 0,
   });
 
   static Future<void> show(
     BuildContext context, {
     ValueChanged<int>? onVerseSelected,
+    int initialStep = 0,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -27,7 +30,10 @@ class BookSelectorScreen extends ConsumerStatefulWidget {
         heightFactor: 0.90,
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BookSelectorScreen(onVerseSelected: onVerseSelected),
+          child: BookSelectorScreen(
+            onVerseSelected: onVerseSelected,
+            initialStep: initialStep,
+          ),
         ),
       ),
     );
@@ -53,13 +59,24 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
   @override
   void initState() {
     super.initState();
+    _currentStep = widget.initialStep;
+    final bibleState = ref.read(bibleStateProvider);
+    if (bibleState.currentBook != null) {
+      _selectedBook = bibleState.currentBook;
+      _selectedChapter = bibleState.currentChapter;
+    } else {
+      _currentStep = 0;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bibleState = ref.read(bibleStateProvider);
-      if (bibleState.currentBook != null) {
-        setState(() {
-          _selectedBook = bibleState.currentBook;
-          _selectedChapter = bibleState.currentChapter;
-        });
+      if (mounted) {
+        final currentBibleState = ref.read(bibleStateProvider);
+        if (currentBibleState.currentBook != null && _selectedBook == null) {
+          setState(() {
+            _selectedBook = currentBibleState.currentBook;
+            _selectedChapter = currentBibleState.currentChapter;
+          });
+        }
       }
     });
   }

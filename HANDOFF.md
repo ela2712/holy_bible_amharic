@@ -119,10 +119,54 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
      - **New Testament:** 27 of 27 books verified with **0 missing verses** and **0 truncations**.
      - **Old Testament:** 54 of 54 books verified intact.
      - **Matthew 2:** Verified verses 1 through 23 in complete sequence, including verses 2, 5, 6, 14, 15.
+
+### F. Merged Verses Restoration & Continuous Paragraph Mode Integrity (`assets/data/amharic_1954.json` & `home_reader_screen.dart`)
+- **Matthew 3:1–2 Merged Range Restored (`amharic_1954.json`):**
+  - Re-unified the awkwardly split sentence into the authentic 1954 merged verse structure:
+    `1–2 (፩-፪) በዚያም ወራት መጥምቁ ዮሐንስ፦ መንግሥተ ሰማያት ቀርባለችና ንስሐ ግቡ ብሎ በይሁዳ ምድረ በዳ እየሰበከ መጣ።`
+  - Replaced stray English `[see v2]` tags in Exodus 10:1, Exodus 33:1, and Isaiah 10:1 with standard `-` placeholder tokens so they automatically resolve to proper merged ranges (`1–2`).
+- **Continuous Paragraph Mode (`home_reader_screen.dart`):**
+  - Re-architected `_buildParagraphModeFlow` to group verses into natural section chunks according to `headingsByVerse`. All mid-chapter section titles (e.g. `የኢየሱስ መጠመቅ` at Matthew 3:13) now properly appear above their respective paragraph flows.
+  - Enhanced numeral rendering: Ge'ez numerals (`themeConfig.useGeezNumerals`) render using `notoSansEthiopic` to eliminate font fallback issues, while standard numerals use `plusJakartaSans`.
+  - Both Paragraph Mode and Minimalist Verse Mode now seamlessly preserve merged verse labels (`1–2` / `፩-፪`), gesture taps, highlighting, and study tool sheets.
 - **Verification Status:**
   - `flutter analyze`: **0 Errors, 0 Warnings, 0 Issues** (`No issues found!`).
   - `flutter test`: **All 5 tests pass**.
   - All changes reside in the working directory ready for manual user review and commit.
+
+### G. Reader Typography Varieties, Header Dropdown & Quick Navigation (October 20, 2026)
+- **4 Distinct Ethiopic Font Varieties (`app_theme.dart`, `theme_provider.dart`, `home_reader_screen.dart`):**
+  1. **ሴሪፍ (Noto Serif Ethiopic):** Classical literary serif typeface.
+  2. **ሳንስ (Noto Sans Ethiopic):** Clean modern sans-serif with high legibility.
+  3. **አቢሲኒካ (Abyssinica SIL):** Distinguished scholarly SIL Ethiopic typeface.
+  4. **ፓወር ግዕዝ (Power Ge'ez Unicode):** Standard Ethiopian desktop publishing typeface with fallback hierarchy (`['PowerGeez', 'Power Ge\'ez', 'Nyala', 'WashRa', 'Abyssinica SIL', 'Noto Serif Ethiopic']`).
+  - Added live font-family cards in reader settings modal with real-time preview of `በመጀመሪያ` and persistent state storage in `SharedPreferences` (`'reader_font_family'`).
+  - Universal scripture text routing via `_getScriptureTextStyle(themeConfig, ...)` across verse flow, continuous paragraph mode, and chapter headers.
+- **Zero-Scroll Single-View 4-Dropdown Header (`home_reader_screen.dart`):**
+  - **4 Identical Dropdown Pills Aligned on One Line (No Horizontal Scrolling Required):**
+    1. **Testament:** `[ ሐዲስ ⌵ ]` / `[ ብሉይ ⌵ ]` / `[ ቀኖና 81 ⌵ ]` (instant jump across OT, NT, and Canon 81 Deuterocanon; full names and descriptions displayed in popup menu).
+    2. **Book:** `[ ማቴዎስ ⌵ ]` (compact liturgical name via `_getCompactBookName`, e.g. `ማቴዎስ`, `ዘፍጥረት`, `መዝሙር`, `ሮሜ`, `ራእይ`).
+    3. **Chapter:** `[ ምዕ. 1 ⌵ ]` (compact chapter label opening Chapter Selector).
+    4. **Canon / Translation:** `[ 81 ቀኖና ⌵ ]` / `[ 1954 ⌵ ]` / `[ KJV ⌵ ]`.
+    - Compact micro-padding (`7px horizontal, 4.5px vertical`), font size `11pt`, icon size `16pt`, spacing `4px`.
+    - Wrapped in `FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft)` so that on any standard mobile viewport (360px–412px+) all 4 dropdowns and the theme toggle fit within a single screen view without requiring horizontal scrolling.
+  - **Modern Theme Toggle Button:**
+    - 3-state modern Theme Selector button (`_buildThemeToggleButton`, `28x26px`, icon size `14pt`).
+    - One-tap sequential rotation through the 3 reading themes: **ብርሃን (Light `☀️`) $\rightarrow$ ብራና (Sepia `📜`) $\rightarrow$ ጨለማ (Dark `🌙`)** with tactile haptic feedback. Long-press opens the comprehensive reading settings sheet.
+- **Harmonious Editorial Title Row (`home_reader_screen.dart`):**
+  - Added a dedicated editorial title heading directly beneath the top dropdown bar divider and above verse 1:
+    - **Left:** Current Book Title (e.g. `የሉቃስ ወንጌል` / `የማቴዎስ ወንጌል`).
+    - **Right:** Current Chapter (e.g. `ምዕራፍ 9` / `ምዕራፍ 1`, adapting to Ge'ez numerals when enabled).
+    - **Aesthetics & Sizing:** Balanced `17pt` font size (`FontWeight.w800`, line height `1.25`) for both sides in the app's signature accent color (`themeConfig.accentColor`).
+    - **Interactive:** Tapping the book name opens the Book Selector; tapping the chapter opens the Chapter Selector.
+- **Option B Implementation for Bottom Floating Controls (`home_reader_screen.dart`):**
+  - Central floating capsule (`< የማቴዎስ ወንጌል 1 ⌵ >`) completely removed to avoid obstructing text and redundant interactions.
+  - Retained only the modern corner search squircle button (`_buildCornerSearchButton`, 50x50px, 16px radius) at `bottom: _isChromeVisible ? 80 : -90, right: 18`, perfectly matching the floating search button position and styling across Tabs 1, 2, and 3.
+  - Bottom `ListView` padding optimized to `80px` (`140px` when active reading plan session bar is present), allowing end-of-chapter Next/Prev buttons (`← ምዕራፍ X-1`, `ምዕራፍ X+1 →`) to sit comfortably above the navigation bar.
+- **5-Tab Navigation Shell with Settings (`main_navigation_shell.dart` & `modern_bible_icons.dart`):**
+  - Added Tab 4 `ቅንብሮች` (Settings) to the bottom navigation bar with a matching custom vector `ModernSettingsIcon`.
+- **Eliminated Instruction Banner:**
+  - Removed the `'ለማድመቅ፣ ለዕልባት፣ ለማስታወሻና ለማነፃፀር ማንኛውንም ጥቅስ ይጫኑ'` banner container from the reader header for a clean, distraction-free reading experience.
 
 ---
 
@@ -146,6 +190,7 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
 - **Tab 1: `መነሻ` (Home / Library Dashboard)** — Daily verse hero, reading progress bento, canon quick-access strip, visual reading plans carousel, thematic scripture collections.
 - **Tab 2: `ዕቅዶች` (Lectionary & Reading Plans)** — 14 liturgical & devotional reading plans, Bahire Hasab movable feasts/fasts auto-calculation, custom plan generator.
 - **Tab 3: `ማህደር` (Annotations Vault)** — Saved bookmarks, highlights by color, and personal notes with virtual Ge'ez keyboard.
+- **Tab 4: `ቅንብሮች` (Settings)** — Full settings suite including translations, backup & export/import, reading themes, and font configurations.
 - **Floating `[ 🔍 ]` Search Button:** Floating on Tabs 1, 2, and 3 for instant search access.
 
 ---
