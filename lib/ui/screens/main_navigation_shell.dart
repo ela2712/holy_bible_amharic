@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../widgets/modern_bible_icons.dart';
 import 'home_reader_screen.dart';
@@ -50,7 +51,9 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   @override
   Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeConfigProvider);
+    final bibleState = ref.watch(bibleStateProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
+    final isEnglish = bibleState.currentTranslation?.id == 3;
 
     final screens = [
       HomeReaderScreen(
@@ -157,7 +160,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                     // Tab 0: ንባብ (Bible)
                     _buildNavItem(
                       index: 0,
-                      label: 'ንባብ',
+                      label: isEnglish ? 'Bible' : 'ንባብ',
+                      isEnglish: isEnglish,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernBibleIcon(
                         size: 21,
@@ -171,7 +175,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                     // Tab 1: መነሻ (Home / Library)
                     _buildNavItem(
                       index: 1,
-                      label: 'መነሻ',
+                      label: isEnglish ? 'Home' : 'መነሻ',
+                      isEnglish: isEnglish,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernLibraryIcon(
                         size: 21,
@@ -185,7 +190,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                     // Tab 2: ዕቅዶች (Lectionary / Plans)
                     _buildNavItem(
                       index: 2,
-                      label: 'ዕቅዶች',
+                      label: isEnglish ? 'Plans' : 'ዕቅዶች',
+                      isEnglish: isEnglish,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernLectionaryIcon(
                         size: 21,
@@ -199,7 +205,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                     // Tab 3: ማህደር (Highlights / Saved)
                     _buildNavItem(
                       index: 3,
-                      label: 'ማህደር',
+                      label: isEnglish ? 'Saved' : 'ማህደር',
+                      isEnglish: isEnglish,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernHighlightsIcon(
                         size: 21,
@@ -213,7 +220,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                     // Tab 4: ቅንብሮች (Settings)
                     _buildNavItem(
                       index: 4,
-                      label: 'ቅንብሮች',
+                      label: isEnglish ? 'Settings' : 'ቅንብሮች',
+                      isEnglish: isEnglish,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernSettingsIcon(
                         size: 21,
@@ -236,6 +244,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   Widget _buildNavItem({
     required int index,
     required String label,
+    required bool isEnglish,
     required Color activePillColor,
     required Widget Function(bool isActive) iconBuilder,
     required Color activeColor,
@@ -267,12 +276,19 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             const SizedBox(height: 3),
             Text(
               label,
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 10.5,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? activeColor : inactiveColor,
-                letterSpacing: 0.15,
-              ),
+              style: isEnglish
+                  ? GoogleFonts.inter(
+                      fontSize: 10.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? activeColor : inactiveColor,
+                      letterSpacing: 0.15,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 10.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? activeColor : inactiveColor,
+                      letterSpacing: 0.15,
+                    ),
             ),
           ],
         ),

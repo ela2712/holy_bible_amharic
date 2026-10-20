@@ -234,7 +234,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               child: bibleState.isLoading
                   ? Center(child: CircularProgressIndicator(color: themeConfig.accentColor))
                   : bibleState.verses.isEmpty
-                      ? _buildEmptyState(context, themeConfig)
+                      ? _buildEmptyState(context, bibleState, themeConfig)
                       : GestureDetector(
                           behavior: HitTestBehavior.translucent,
                           onHorizontalDragEnd: (details) {
@@ -1053,14 +1053,20 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final isOt = currentBook?.isOldTestament ?? (bookNum <= 39);
     final isCanon81Deut = (bibleState.currentTranslation?.id == 2) &&
         ((isOt && bookNum > 39) || bookNum > 66);
+    final isEnglish = bibleState.currentTranslation?.id == 3;
 
-    String testamentTitle = isOt ? 'ብሉይ' : 'ሐዲስ';
-    if (isCanon81Deut) {
-      testamentTitle = 'ቀኖና 81';
+    String testamentTitle;
+    if (isEnglish) {
+      testamentTitle = isOt ? 'OT' : 'NT';
+    } else {
+      testamentTitle = isOt ? 'ብሉይ' : 'ሐዲስ';
+      if (isCanon81Deut) {
+        testamentTitle = 'ቀኖና 81';
+      }
     }
 
     return PopupMenuButton<String>(
-      tooltip: 'ኪዳን ምረጥ (Select Testament)',
+      tooltip: isEnglish ? 'Select Testament' : 'ኪዳን ምረጥ (Select Testament)',
       offset: const Offset(0, 36),
       color: themeConfig.surfaceColor,
       shape: RoundedRectangleBorder(
@@ -1112,21 +1118,36 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'ብሉይ ኪዳን (Old Testament)',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 13,
-                          fontWeight: (isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
-                          color: (isOt && !isCanon81Deut)
-                              ? themeConfig.accentColor
-                              : themeConfig.textColor,
-                        ),
+                        isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን (Old Testament)',
+                        style: isEnglish
+                            ? GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: (isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
+                                color: (isOt && !isCanon81Deut)
+                                    ? themeConfig.accentColor
+                                    : themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 13,
+                                fontWeight: (isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
+                                color: (isOt && !isCanon81Deut)
+                                    ? themeConfig.accentColor
+                                    : themeConfig.textColor,
+                              ),
                       ),
                       Text(
-                        is81 ? '፶፬ መጻሕፍት • ኦሪት፣ ታሪክ፣ መዝሙርና ነቢያት' : '፴፱ መጻሕፍት • ኦሪት፣ ታሪክ፣ መዝሙርና ነቢያት',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 10,
-                          color: themeConfig.secondaryTextColor,
-                        ),
+                        isEnglish
+                            ? '39 Books • Law, History, Poetry & Prophets'
+                            : (is81 ? '፶፬ መጻሕፍት • ኦሪት፣ ታሪክ፣ መዝሙርና ነቢያት' : '፴፱ መጻሕፍት • ኦሪት፣ ታሪክ፣ መዝሙርና ነቢያት'),
+                        style: isEnglish
+                            ? GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                color: themeConfig.secondaryTextColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 10,
+                                color: themeConfig.secondaryTextColor,
+                              ),
                       ),
                     ],
                   ),
@@ -1154,21 +1175,36 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'ሐዲስ ኪዳን (New Testament)',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 13,
-                          fontWeight: (!isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
-                          color: (!isOt && !isCanon81Deut)
-                              ? themeConfig.accentColor
-                              : themeConfig.textColor,
-                        ),
+                        isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን (New Testament)',
+                        style: isEnglish
+                            ? GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: (!isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
+                                color: (!isOt && !isCanon81Deut)
+                                    ? themeConfig.accentColor
+                                    : themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 13,
+                                fontWeight: (!isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
+                                color: (!isOt && !isCanon81Deut)
+                                    ? themeConfig.accentColor
+                                    : themeConfig.textColor,
+                              ),
                       ),
                       Text(
-                        '፳፯ መጻሕፍት • ወንጌላት፣ ሐዋርያት፣ መልእክታትና ራእይ',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 10,
-                          color: themeConfig.secondaryTextColor,
-                        ),
+                        isEnglish
+                            ? '27 Books • Gospels, Acts, Epistles & Revelation'
+                            : '፳፯ መጻሕፍት • ወንጌላት፣ ሐዋርያት፣ መልእክታትና ራእይ',
+                        style: isEnglish
+                            ? GoogleFonts.plusJakartaSans(
+                                fontSize: 10,
+                                color: themeConfig.secondaryTextColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 10,
+                                color: themeConfig.secondaryTextColor,
+                              ),
                       ),
                     ],
                   ),
@@ -1235,11 +1271,17 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           children: [
             Text(
               testamentTitle,
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: themeConfig.accentColor,
-              ),
+              style: isEnglish
+                  ? GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.accentColor,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.accentColor,
+                    ),
             ),
             const SizedBox(width: 2),
             Icon(
@@ -1261,6 +1303,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   ) {
     final current = bibleState.currentTranslation;
     final currentId = current?.id ?? 2;
+    final isEnglish = currentId == 3;
     String shortTitle = '81 ቀኖና';
     if (currentId == 1) {
       shortTitle = '1954';
@@ -1271,7 +1314,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     }
 
     return PopupMenuButton<int>(
-      tooltip: 'ትርጉም ቀይር (Switch Translation)',
+      tooltip: isEnglish ? 'Switch Translation' : 'ትርጉም ቀይር (Switch Translation)',
       offset: const Offset(0, 36),
       color: themeConfig.surfaceColor,
       shape: RoundedRectangleBorder(
@@ -1325,11 +1368,17 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           children: [
             Text(
               shortTitle,
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: themeConfig.accentColor,
-              ),
+              style: isEnglish
+                  ? GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.accentColor,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.accentColor,
+                    ),
             ),
             const SizedBox(width: 2),
             Icon(
@@ -1395,6 +1444,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
+    final isEnglish = bibleState.currentTranslation?.id == 3;
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () {
@@ -1425,11 +1476,17 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 bookName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: themeConfig.accentColor,
-                ),
+                style: isEnglish
+                    ? GoogleFonts.plusJakartaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: themeConfig.accentColor,
+                      )
+                    : GoogleFonts.notoSansEthiopic(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: themeConfig.accentColor,
+                      ),
               ),
             ),
             const SizedBox(width: 2),
@@ -1451,6 +1508,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
+    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final label = isEnglish ? 'Ch. $chapterStr' : 'ምዕ. $chapterStr';
+
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () {
@@ -1476,12 +1536,18 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'ምዕ. $chapterStr',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: themeConfig.accentColor,
-              ),
+              label,
+              style: isEnglish
+                  ? GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.accentColor,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: themeConfig.accentColor,
+                    ),
             ),
             const SizedBox(width: 2),
             Icon(
@@ -1501,20 +1567,27 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
+    final isEnglish = bibleState.currentTranslation?.id == 3;
     IconData themeIcon;
     String themeTooltip;
     switch (themeConfig.mode) {
       case ReaderThemeMode.light:
         themeIcon = Icons.wb_sunny_outlined;
-        themeTooltip = 'ገጽታ፡ ብርሃን (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
+        themeTooltip = isEnglish
+            ? 'Theme: Light (Tap to switch • Long-press for reader settings)'
+            : 'ገጽታ፡ ብርሃን (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
         break;
       case ReaderThemeMode.sepia:
         themeIcon = Icons.menu_book_rounded;
-        themeTooltip = 'ገጽታ፡ ብራና (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
+        themeTooltip = isEnglish
+            ? 'Theme: Sepia (Tap to switch • Long-press for reader settings)'
+            : 'ገጽታ፡ ብራና (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
         break;
       case ReaderThemeMode.dark:
         themeIcon = Icons.nightlight_round;
-        themeTooltip = 'ገጽታ፡ ጨለማ (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
+        themeTooltip = isEnglish
+            ? 'Theme: Dark (Tap to switch • Long-press for reader settings)'
+            : 'ገጽታ፡ ጨለማ (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
         break;
     }
 
@@ -2060,6 +2133,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final canPrev = bibleState.currentChapter > 1;
     final canNext = bibleState.currentBook != null &&
         bibleState.currentChapter < bibleState.currentBook!.totalChapters;
+    final isEnglish = bibleState.currentTranslation?.id == 3;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2079,8 +2153,12 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             },
             icon: const Icon(Icons.west_rounded, size: 16),
             label: Text(
-              'ምዕራፍ ${bibleState.currentChapter - 1}',
-              style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              isEnglish
+                  ? 'Chapter ${bibleState.currentChapter - 1}'
+                  : 'ምዕራፍ ${bibleState.currentChapter - 1}',
+              style: isEnglish
+                  ? GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)
+                  : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
             ),
           )
         else
@@ -2101,8 +2179,12 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               _scrollToApproximateVerse(1, 30);
             },
             icon: Text(
-              'ምዕራፍ ${bibleState.currentChapter + 1}',
-              style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              isEnglish
+                  ? 'Chapter ${bibleState.currentChapter + 1}'
+                  : 'ምዕራፍ ${bibleState.currentChapter + 1}',
+              style: isEnglish
+                  ? GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)
+                  : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
             ),
             label: const Icon(Icons.east_rounded, size: 16),
           )
@@ -2112,7 +2194,12 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, ReaderThemeConfig themeConfig) {
+  Widget _buildEmptyState(
+    BuildContext context,
+    BibleViewState bibleState,
+    ReaderThemeConfig themeConfig,
+  ) {
+    final isEnglish = bibleState.currentTranslation?.id == 3;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -2120,8 +2207,10 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           Icon(Icons.auto_stories_outlined, size: 48, color: themeConfig.accentColor),
           const SizedBox(height: 12),
           Text(
-            'ምዕራፉን በመጫን ላይ...',
-            style: GoogleFonts.notoSansEthiopic(fontSize: 15, color: themeConfig.textColor),
+            isEnglish ? 'Loading chapter...' : 'ምዕራፉን በመጫን ላይ...',
+            style: isEnglish
+                ? GoogleFonts.plusJakartaSans(fontSize: 15, color: themeConfig.textColor)
+                : GoogleFonts.notoSansEthiopic(fontSize: 15, color: themeConfig.textColor),
           ),
         ],
       ),
