@@ -210,9 +210,99 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
   - Tested Continuous Paragraph Mode and Verse-by-Verse Mode with Ge'ez and standard numerals.
   - Tested Canonical Cross-References and 3-Way Parallel translations.
   - Tested Corner Search button and keyword highlight in results.
-- **Verification Status:**
-  - `flutter analyze`: **No issues found!**
-  - `flutter test`: **5/5 tests passed!**
+### I. Phase 2: Design Harmonization, Parallel Study & App Hygiene (October 21, 2026)
+1. **Asset & Dependency Footprint Optimization:**
+   - Permanently deleted all dead audio services and manifest files (`audio_manifest.json`, `audio_player_service.dart`, `audio_cache_*.dart`, `audio_player_bar.dart`).
+   - Removed `just_audio`, `audio_session`, `just_audio_web`, and `rxdart` from `pubspec.yaml`, eliminating ~30–40 MB of unused binary overhead and native C/C++ audio build steps.
+2. **Tab 4 Settings Screen Modernization (`lib/ui/screens/settings_screen.dart`):**
+   - Transformed Tab 4 into the unified 2026 emerald editorial design language with custom `EthiopianCrossPainter` header and card surfaces.
+   - **Global Font Family Selector:** Integrated 4 live font cards (ሴሪፍ / Noto Serif, ሳንስ / Noto Sans, አቢሲኒካ / Abyssinica SIL, ፓወር ግዕዝ / Power Ge'ez Unicode) with real-time typography preview (`በመጀመሪያ`).
+   - **Bespoke Translation Cards:** Custom option cards for 81 Canon (with primary badge `ዋና ቀኖና`), 1954, and KJV with active border highlight and checkmarks.
+   - **Theme Selector Cards:** Day, Sepia, and Dark cards with sample preview rings.
+   - **Typography & Layout Controls:** Font size slider, Ge'ez numerals switch, and Continuous Paragraph Mode switch.
+   - **Full Backup & Restore Flow:**
+     - **Export Backup:** Exports bookmarks, highlights, and notes to formatted JSON via system share sheet.
+     - **Restore Backup:** Interactive bottom sheet allowing users to paste backup JSON, validates data structure, and calls `BibleRepository.restoreBackup(data)` with count reporting.
+3. **Full Chapter Parallel Reader Connected (`lib/ui/screens/parallel_reader_screen.dart` & `study_tools_dialog.dart`):**
+   - Upgraded `ParallelReaderScreen` with emerald design tokens, responsive typography (Inter for KJV, Noto Sans for Amharic), and compact secondary translation picker.
+   - Added a prominent entry card inside the Study Tools sheet (`StudyToolsSheet`): **`ሙሉ ምዕራፍ ጎን ለጎን አነጻጽር` (Compare Full Chapter in Parallel)** to launch full chapter side-by-side study directly from any verse.
+4. **Complete Elimination of Hybrid English Clutter & Developer Jargon:**
+   - Removed all redundant hybrid uppercase English subtitles (`• RESUME`, `• PLANS`, `• SACRED CANON`, `• DEVOTIONAL PLANS`, `• CURATED PASSAGES`, `• DAILY SCRIPTURE`) across the entire dashboard and screens.
+   - Removed technical "Backup & Restore" feature and JSON export/import dialogs per user directive.
+   - Eradicated all developer jargon (`"multiplatform"`, `"local database"`, `"Multiplatform Native"`), replacing them with reverent church identity (`መጽሐፍ ቅዱስ — 81 ቀኖና`, `የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን`).
+5. **Dedicated Interface Language Option (`AppLanguageMode`):**
+   - Added `lib/providers/app_language_provider.dart` with `AppLanguageMode` (`auto`, `amharic`, `english`) and reactive `isEnglishUiProvider`.
+   - **Auto (Match Translation):** Default mode. Matches the active Bible translation (English for KJV, Amharic for 81 Canon / 1954).
+   - **አማርኛ (Amharic):** Forces 100% Amharic UI across all controls even when reading English KJV.
+   - **English:** Forces 100% English UI across all controls even when reading Amharic 81 Canon or 1954.
+   - Added 3-segment switcher in `SettingsScreen` with persistent `SharedPreferences`.
+6. **Restored Generic App Version Description:**
+   - In Settings footer below church branding: `ስሪት 1.0.0 (ቅጂ 1)` / `Version 1.0.0 (Build 1)`.
+7. **Pure Bilingual Separation for Reading Plans & Bahire Hasab (October 21, 2026):**
+   - **`ReadingPlan` & `DailyReadingPassage` (`lib/models/reading_plan.dart`):**
+     - Added `titleEn`, `subtitleEn`, `categoryEn`, `badgeTextEn` to `ReadingPlan`.
+     - Added `titleEn`, `bookNameEn`, `descriptionEn` to `DailyReadingPassage`.
+     - Implemented `getDisplayTitle(isEnglish)`, `getDisplaySubtitle(isEnglish)`, `getDisplayCategory(isEnglish)`, `getDisplayBadge(isEnglish)`, and `getPassageReference(isEnglish)`.
+   - **`ReadingPlansData` (`lib/data/reading_plans_data.dart`):**
+     - Completely stripped all bracketed hybrid English from Amharic plan titles/subtitles (e.g. `የታሪክ ቅደም ተከተል ዕቅድ (Chronological)` $\rightarrow$ `የታሪክ ቅደም ተከተል ዕቅድ`, `የብሉይና ሐዲስ ኪዳን ጥምር ዕቅድ (M'Cheyne)` $\rightarrow$ `የብሉይና ሐዲስ ኪዳን ጥምር ዕቅድ`, `ሰሞነ ሕማማት (Holy Passion Week)` $\rightarrow$ `ሰሞነ ሕማማት`, `የዐቢይ ጾም ጉዞ (Great Lent - 55 Days)` $\rightarrow$ `የዐቢይ ጾም ጉዞ`, `ጾመ ፍልሰታ (Fast of the Assumption)` $\rightarrow$ `ጾመ ፍልሰታ`).
+     - Added complete English translations for all 14 plans (`titleEn`, `subtitleEn`, `categoryEn`, `badgeTextEn`).
+     - Extended `_BookDef` with `nameEn` so `_distributeBooksAcrossDays` creates fully bilingual daily reading passages.
+     - Added bilingual passages to manual liturgical plans (`passion_week`, `filseta_16`, `proverbs_31`, `psalms_60`, `miracles_21`).
+   - **`BahireHasabService` (`lib/services/bahire_hasab_service.dart`):**
+     - Added `monthNamesEn`, `dayNamesEn`, and `format({bool includeDayName, bool isEnglish})` to `EthiopianDate`.
+     - Added `titleEn`, `categoryEn`, and `descriptionEn` to `LiturgicalEvent`.
+     - `getCurrentLiturgicalStatus` now returns pure Amharic `seasonTitle` (`ዘመነ ጽጌ`, `ጾመ ፍልሰታ`, `ዐቢይ ጾም`) and pure English `seasonTitleEn` (`Season of Flowers`, `Fast of the Assumption`, `Holy Great Lent`), eliminating dual-language bracket clutter.
+   - **`ReadingPlansScreen` (`lib/ui/screens/reading_plans_screen.dart`):**
+     - Category filter pills dynamically display Amharic (`['ሁሉም', 'ጾምና በዓላት', 'ሐዲስ ኪዳን', 'ጥበብና መዝሙር', 'ዓመታዊ']`) or English (`['All', 'Fasts & Feasts', 'New Testament', 'Wisdom & Psalms', 'Annual']`) using index-based tracking.
+     - Liturgical calendar banner, progress summary card, plan cards, action buttons (`ጀምር`/`Start`, `ቀጥል`/`Resume`), and plan detail sheets switch cleanly based on `isEnglish`.
+     - Fixed `RIGHT OVERFLOWED BY 14.8 PIXELS` layout overflow by wrapping the badge container in `Flexible` with `TextOverflow.ellipsis`.
+   - **`HomeDashboardScreen` (`lib/ui/screens/home_dashboard_screen.dart`):**
+     - Reading plan carousel dynamically calls `plan.getDisplayTitle(isEnglish)`, `plan.getDisplaySubtitle(isEnglish)`, `plan.getDisplayCategory(isEnglish)`.
+     - Plan count badges reflect dynamic list length (`${ReadingPlansData.allPlans.length} Plans` / `${ReadingPlansData.allPlans.length} ዕቅዶች`).
+8. **Verification Status:**
+   - `flutter analyze`: **No issues found!**
+   - `flutter test`: **All 13/13 tests passed!**
+
+### J. Four-Track Feature Suite: Homophone Search, Verse Card Studio, Daily Push & Release Packaging (October 21, 2026)
+
+1. **Track 1: Ethiopic Homophone-Aware Search (`lib/core/utils/geez_normalizer.dart` & `search_screen.dart`):**
+   - **Full Homophone Phonetic Collapsing:**
+     - `[ሐኀ]` $\rightarrow$ `ሀ`, `[ሑኁ]` $\rightarrow$ `ሁ`, `[ሒኂ]` $\rightarrow$ `ሂ`, `[ሓኃ]` $\rightarrow$ `ሃ`, `[ሔኄ]` $\rightarrow$ `ሄ`, `[ሕኅ]` $\rightarrow$ `ህ`, `[ሖኆ]` $\rightarrow$ `ሆ`, `ኈ` $\rightarrow$ `ሆ`, `ኊ` $\rightarrow$ `ሂ`, `ኍ` $\rightarrow$ `ሁ`.
+     - `[ሠ]` $\rightarrow$ `ሰ`, `[ሡ]` $\rightarrow$ `ሱ`, `[ሢ]` $\rightarrow$ `ሲ`, `[ሣ]` $\rightarrow$ `ሳ`, `[ሤ]` $\rightarrow$ `ሴ`, `[ሥ]` $\rightarrow$ `ስ`, `[ሦ]` $\rightarrow$ `ሶ`.
+     - `[ዐዓኣ]` $\rightarrow$ `አ` (critically enables typing `አለም` on mobile keyboards to match `ዓለም`, `አመት` to match `ዓመት`), `[ዑ]` $\rightarrow$ `ኡ`, `[ዒ]` $\rightarrow$ `ኢ`, `[ዔ]` $\rightarrow$ `ኤ`, `[ዕ]` $\rightarrow$ `እ`, `[ዖ]` $\rightarrow$ `ኦ`.
+     - `[ፀ]` $\rightarrow$ `ጸ`, `[ፁ]` $\rightarrow$ `ጹ`, `[ፂ]` $\rightarrow$ `ጺ`, `[ፃ]` $\rightarrow$ `ጻ`, `[ፄ]` $\rightarrow$ `ጼ`, `[ፅ]` $\rightarrow$ `ጽ`, `[ፆ]` $\rightarrow$ `ጾ`.
+     - Labiovelar contractions: `ኰ/ኲ/ኴ/ኵ`, `ጐ/ጒ/ጔ/ጕ`, `ቈ/ቊ/ቌ/ቍ`.
+   - **Search Result Highlight Harmonization (`search_screen.dart`):**
+     - Refactored `_buildHighlightedVerseText` to use `GeezNormalizer` word-by-word matching so that homophonically matched words in verses (e.g., `ምሕረት` when searching `ምህረት`, or `ዓለም` when searching `አለም`) highlight in emerald accent and bold font without mutating original rendered sacred scripture typography.
+   - **Unit Tests:** Added `test/geez_normalizer_test.dart` (5/5 tests passing).
+
+2. **Track 2: Verse Card Maker Studio Polish & Bilingual Harmonization (`lib/ui/screens/verse_card_maker_screen.dart`):**
+   - Converted to `ConsumerStatefulWidget` watching `isEnglishUiProvider` and `themeConfigProvider`.
+   - Completely eradicated bracketed hybrid titles in `CardThemePreset`:
+     - Pure Amharic in Amharic mode (`የጥንት ብራና`, `የላሊበላ ድንጋይ`, `የአክሱም ጽላት`, `የጎንደር ሐር`, `ደብረ ዳሞ`, `ዘመናዊ ስሌት`).
+     - Pure English in English mode (`Ancient Parchment`, `Lalibela Rock`, `Axumite Tablet`, `Gondar Velvet`, `Debre Damo`, `Modern Obsidian`).
+   - Cleaned up `CardAspectRatio` with `getDisplayLabel(isEnglish)`.
+   - Translated all card customization UI controls, font sliders, cross style options (`Lalibela`, `Axum`, `Gondar`, `None`), harag border toggles, and typography segments (`Serif` vs `Sans`).
+
+3. **Track 3: Daily Verse Push & Local Notification System (`lib/services/notification_service.dart`, `lib/providers/notification_provider.dart`, & `settings_screen.dart`):**
+   - **Lightweight Offline Notification Service (`NotificationService`):**
+     - Integrates `flutter_local_notifications` (v22.x) and `timezone` for offline, zero-network scheduled daily verse notifications.
+     - Fetches daily scripture directly from the 81 Orthodox Canon (`BibleRepository.instance.getDailyVerse(2)`).
+     - Configures `BigTextStyleInformation` so users can expand the notification directly in the Android status bar and read the full holy verse.
+     - Safe error handling and graceful fallbacks for web, desktop, and test environments.
+   - **Settings Screen Integration (`SettingsScreen`):**
+     - User-facing toggle: `"የዕለት ጥቅስ ማሳወቂያ"` / `"Daily Verse Notification"`.
+     - Delivery time picker: Defaults to `7:00 AM` (`ጥዋት 7:00`), opens native Material TimePicker with theme color scheme.
+     - Live preview button: `"ማሳወቂያውን ሞክር"` / `"Preview Notification"`.
+     - State persistently saved in `SharedPreferences` (`'daily_verse_notif_enabled'`, `'daily_verse_notif_hour'`, `'daily_verse_notif_minute'`).
+   - **Unit Tests:** Added `test/notification_test.dart` (4/4 tests passing).
+
+4. **Track 4: Release Packaging, App Metadata & Build Audit (`android/app/src/main/AndroidManifest.xml` & `build.gradle.kts`):**
+   - **Authentic App Label:** Updated `android:label` in `AndroidManifest.xml` from `holy_bible_amharic` to authentic **`መጽሐፍ ቅዱስ`** (Amharic Holy Bible).
+   - **Permission Hygiene:** Added `RECEIVE_BOOT_COMPLETED`, `VIBRATE`, and `POST_NOTIFICATIONS` permissions. Verified zero stray audio or microphone permissions.
+   - **Broadcast Receivers:** Configured `ActionBroadcastReceiver`, `ScheduledNotificationReceiver`, and `ScheduledNotificationBootReceiver` for reliable post-reboot notification rescheduling.
+   - **Java 17 Desugaring:** Configured `isCoreLibraryDesugaringEnabled = true` and `desugar_jdk_libs:2.1.4` in `android/app/build.gradle.kts` for backwards compatibility.
+   - **Launcher Icons:** Verified launcher icons across all 5 mipmap densities (hdpi, mdpi, xhdpi, xxhdpi, xxxhdpi).
 
 ---
 
@@ -236,15 +326,20 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
 - **Tab 1: `መነሻ` (Home / Library Dashboard)** — Daily verse hero, reading progress bento, canon quick-access strip, visual reading plans carousel, thematic scripture collections.
 - **Tab 2: `ዕቅዶች` (Lectionary & Reading Plans)** — 14 liturgical & devotional reading plans, Bahire Hasab movable feasts/fasts auto-calculation, custom plan generator.
 - **Tab 3: `ማህደር` (Annotations Vault)** — Saved bookmarks, highlights by color, and personal notes with virtual Ge'ez keyboard.
-- **Tab 4: `ቅንብሮች` (Settings)** — Full settings suite including translations, backup & export/import, reading themes, and font configurations.
+- **Tab 4: `ቅንብሮች` (Settings)** — Full settings suite including translations, interface language, daily verse notification & delivery time, reading themes, and font configurations.
 - **Floating `[ 🔍 ]` Search Button:** Floating on Tabs 1, 2, and 3 for instant search access.
 
 ---
 
 ## 6. Verification Status
 
-- **`flutter test`:** **All passed (5/5 tests)**.
+- **`flutter test`:** **All 22/22 tests passed**.
+  - `test/app_language_test.dart` (7 tests)
+  - `test/geez_normalizer_test.dart` (5 tests)
+  - `test/notification_test.dart` (4 tests)
+  - `test/translation_cross_navigation_test.dart` (5 tests)
+  - `test/widget_test.dart` (1 test)
 - **`flutter analyze`:** **0 Errors, 0 Warnings, 0 Issues** (`No issues found!`).
-- **Working Tree:** All modifications verified and ready for manual user commit & push.
+- **Working Tree:** All modifications verified and intact in the working directory for manual user review and commit (strictly no automated git commits).
 
 

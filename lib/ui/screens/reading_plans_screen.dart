@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../models/reading_plan.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/reading_plan_session_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -22,14 +23,22 @@ class ReadingPlansScreen extends ConsumerStatefulWidget {
 }
 
 class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
-  String _selectedCategory = 'ሁሉም';
+  int _selectedCategoryIndex = 0;
 
-  final List<String> _categories = [
+  static const List<String> _categoriesAm = [
     'ሁሉም',
     'ጾምና በዓላት',
     'ሐዲስ ኪዳን',
     'ጥበብና መዝሙር',
     'ዓመታዊ',
+  ];
+
+  static const List<String> _categoriesEn = [
+    'All',
+    'Fasts & Feasts',
+    'New Testament',
+    'Wisdom & Psalms',
+    'Annual',
   ];
 
   IconData _getIconForName(String name) {
@@ -87,18 +96,40 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     widget.onNavigateToReader?.call(0);
   }
 
-  void _showCustomPlanBuilderSheet(BuildContext context, ReaderThemeConfig themeConfig) {
+  void _showCustomPlanBuilderSheet(
+    BuildContext context,
+    ReaderThemeConfig themeConfig,
+    bool isEnglish,
+  ) {
     final titleController = TextEditingController();
     String selectedScope = 'GOSPELS';
     int selectedDays = 30;
 
     final scopes = [
-      {'key': 'GOSPELS', 'label': 'አራቱ ወንጌላት (4 Gospels)'},
-      {'key': 'NT', 'label': 'መላው ሐዲስ ኪዳን (New Testament)'},
-      {'key': 'PSALMS_WISDOM', 'label': 'መዝሙርና ጥበብ (Psalms & Wisdom)'},
-      {'key': 'PENTATEUCH', 'label': 'አምስቱ ብሔረ ኦሪት (Pentateuch)'},
-      {'key': 'OT', 'label': 'ብሉይ ኪዳን (Old Testament)'},
-      {'key': 'FULL', 'label': 'ሙሉ መጽሐፍ ቅዱስ (Full Bible)'},
+      {
+        'key': 'GOSPELS',
+        'label': isEnglish ? 'Four Gospels' : 'አራቱ ወንጌላት',
+      },
+      {
+        'key': 'NT',
+        'label': isEnglish ? 'New Testament' : 'መላው ሐዲስ ኪዳን',
+      },
+      {
+        'key': 'PSALMS_WISDOM',
+        'label': isEnglish ? 'Psalms & Wisdom' : 'መዝሙርና ጥበብ',
+      },
+      {
+        'key': 'PENTATEUCH',
+        'label': isEnglish ? 'Pentateuch (Torah)' : 'አምስቱ ብሔረ ኦሪት',
+      },
+      {
+        'key': 'OT',
+        'label': isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን',
+      },
+      {
+        'key': 'FULL',
+        'label': isEnglish ? 'Full Bible' : 'ሙሉ መጽሐፍ ቅዱስ',
+      },
     ];
     final dayOptions = [7, 14, 21, 30, 60, 90, 180, 365];
 
@@ -135,7 +166,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'CUSTOM PLAN BUILDER',
+                    isEnglish ? 'CUSTOM PLAN BUILDER' : 'የግል ዕቅድ አዘጋጅ',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -145,20 +176,28 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'የራስዎን የንባብ ዕቅድ ይፍጠሩ',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      color: themeConfig.textColor,
-                    ),
+                    isEnglish ? 'Create Your Reading Plan' : 'የራስዎን የንባብ ዕቅድ ይፍጠሩ',
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: titleController,
-                    style: GoogleFonts.notoSansEthiopic(fontSize: 14, color: themeConfig.textColor),
+                    style: isEnglish
+                        ? GoogleFonts.inter(fontSize: 14, color: themeConfig.textColor)
+                        : GoogleFonts.notoSansEthiopic(fontSize: 14, color: themeConfig.textColor),
                     decoration: InputDecoration(
-                      labelText: 'የዕቅዱ ስም (Plan Title)',
-                      hintText: 'ምሳሌ፦ የጠዋት የወንጌል ንባብ',
+                      labelText: isEnglish ? 'Plan Title' : 'የዕቅዱ ስም',
+                      hintText: isEnglish ? 'e.g., Morning Gospels Reading' : 'ምሳሌ፦ የጠዋት የወንጌል ንባብ',
                       filled: true,
                       fillColor: themeConfig.surfaceColor,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
@@ -166,12 +205,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'የመጻሕፍት ክፍል ይምረጡ (Select Scope)፦',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                    ),
+                    isEnglish ? 'Select Scope:' : 'የመጻሕፍት ክፍል ይምረጡ፦',
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -192,11 +237,17 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                           ),
                           child: Text(
                             s['label']!,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: isSelected ? Colors.white : themeConfig.textColor,
-                            ),
+                            style: isEnglish
+                                ? GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isSelected ? Colors.white : themeConfig.textColor,
+                                  )
+                                : GoogleFonts.notoSansEthiopic(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isSelected ? Colors.white : themeConfig.textColor,
+                                  ),
                           ),
                         ),
                       );
@@ -204,12 +255,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'የቀናት ብዛት ይምረጡ (Duration in Days)፦',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                    ),
+                    isEnglish ? 'Duration in Days:' : 'የቀናት ብዛት ይምረጡ፦',
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -229,12 +286,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                             ),
                           ),
                           child: Text(
-                            '$d ቀናት',
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w800,
-                              color: isSelected ? Colors.white : themeConfig.textColor,
-                            ),
+                            isEnglish ? '$d Days' : '$d ቀናት',
+                            style: isEnglish
+                                ? GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isSelected ? Colors.white : themeConfig.textColor,
+                                  )
+                                : GoogleFonts.notoSansEthiopic(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isSelected ? Colors.white : themeConfig.textColor,
+                                  ),
                           ),
                         ),
                       );
@@ -253,7 +316,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                       final scopeLabel =
                           scopes.firstWhere((e) => e['key'] == selectedScope)['label']!;
                       final title = titleController.text.trim().isEmpty
-                          ? '${scopeLabel.split(' (')[0]} በ$selectedDays ቀናት'
+                          ? (isEnglish ? '$scopeLabel in $selectedDays Days' : '$scopeLabel በ$selectedDays ቀናት')
                           : titleController.text.trim();
 
                       await ref.read(readingPlanSessionProvider.notifier).createCustomPlan(
@@ -265,11 +328,16 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     },
                     icon: const Icon(Icons.add_task_rounded, size: 18),
                     label: Text(
-                      'ዕቅዱን ፍጠርና ጀምር',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      isEnglish ? 'Create & Start Plan' : 'ዕቅዱን ፍጠርና ጀምር',
+                      style: isEnglish
+                          ? GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            )
+                          : GoogleFonts.notoSansEthiopic(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
                     ),
                   ),
                 ],
@@ -287,7 +355,9 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     EthiopianDate ethDate,
     List<LiturgicalEvent> movableEvents,
     String evangelist,
+    String evangelistEn,
     List<ReadingPlan> allPlans,
+    bool isEnglish,
   ) {
     final ameteAlem = ethDate.year + 5500;
     final abektie = (ameteAlem % 19 * 11) % 30;
@@ -331,7 +401,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'BAHIRE HASAB LITURGICAL CALENDAR',
+                                isEnglish ? 'BAHIRE HASAB LITURGICAL CALENDAR' : 'የባሕረ ሐሳብ ዘመን ቀመር',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
@@ -341,20 +411,33 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'የባሕረ ሐሳብ አጽዋማትና በዓላት',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: themeConfig.textColor,
-                                ),
+                                isEnglish ? 'Liturgical Feasts & Fasts' : 'የባሕረ ሐሳብ አጽዋማትና በዓላት',
+                                style: isEnglish
+                                    ? GoogleFonts.inter(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: themeConfig.textColor,
+                                      )
+                                    : GoogleFonts.notoSansEthiopic(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: themeConfig.textColor,
+                                      ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${ethDate.year} ዓ.ም. • $evangelist • አበቅቴ፡ $abektie • መጥቅዕ፡ $metqe',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 11.5,
-                                  color: themeConfig.secondaryTextColor,
-                                ),
+                                isEnglish
+                                    ? '${ethDate.year} E.C. • $evangelistEn • Abektie: $abektie • Metqe: $metqe'
+                                    : '${ethDate.year} ዓ.ም. • $evangelist • አበቅቴ፡ $abektie • መጥቅዕ፡ $metqe',
+                                style: isEnglish
+                                    ? GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        color: themeConfig.secondaryTextColor,
+                                      )
+                                    : GoogleFonts.notoSansEthiopic(
+                                        fontSize: 11.5,
+                                        color: themeConfig.secondaryTextColor,
+                                      ),
                               ),
                             ],
                           ),
@@ -405,25 +488,39 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      event.category,
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: isFast
-                                            ? const Color(0xFF8B5CF6)
-                                            : themeConfig.goldAccent,
-                                      ),
+                                      event.getDisplayCategory(isEnglish),
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: isFast
+                                                  ? const Color(0xFF8B5CF6)
+                                                  : themeConfig.goldAccent,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: isFast
+                                                  ? const Color(0xFF8B5CF6)
+                                                  : themeConfig.goldAccent,
+                                            ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      event.title,
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: themeConfig.textColor,
-                                      ),
+                                      event.getDisplayTitle(isEnglish),
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: themeConfig.textColor,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: themeConfig.textColor,
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -434,23 +531,35 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                   Icon(Icons.event_outlined, size: 14, color: themeConfig.accentColor),
                                   const SizedBox(width: 5),
                                   Text(
-                                    event.date.format(),
-                                    style: GoogleFonts.notoSansEthiopic(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: themeConfig.accentColor,
-                                    ),
+                                    event.date.format(isEnglish: isEnglish),
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: themeConfig.accentColor,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: themeConfig.accentColor,
+                                          ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                event.description,
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 12,
-                                  color: themeConfig.secondaryTextColor,
-                                  height: 1.4,
-                                ),
+                                event.getDisplayDescription(isEnglish),
+                                style: isEnglish
+                                    ? GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: themeConfig.secondaryTextColor,
+                                        height: 1.4,
+                                      )
+                                    : GoogleFonts.notoSansEthiopic(
+                                        fontSize: 12,
+                                        color: themeConfig.secondaryTextColor,
+                                        height: 1.4,
+                                      ),
                               ),
                               if (matchingPlan != null) ...[
                                 const SizedBox(height: 10),
@@ -465,15 +574,22 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                     ),
                                     onPressed: () {
                                       Navigator.pop(ctx);
-                                      _openPlanDetailModal(context, matchingPlan, themeConfig);
+                                      _openPlanDetailModal(context, matchingPlan, themeConfig, isEnglish);
                                     },
                                     icon: const Icon(Icons.menu_book_rounded, size: 15),
                                     label: Text(
-                                      'የ${matchingPlan.title} ዕቅድ ክፈት',
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                      isEnglish
+                                          ? 'Open ${matchingPlan.getDisplayTitle(true)}'
+                                          : 'የ${matchingPlan.getDisplayTitle(false)} ዕቅድ ክፈት',
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                            ),
                                     ),
                                   ),
                                 ),
@@ -498,20 +614,41 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     final themeConfig = ref.watch(themeConfigProvider);
     final sessionState = ref.watch(readingPlanSessionProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     final allPlans = sessionState.allAvailablePlans;
     final liturgicalStatus = BahireHasabService.getCurrentLiturgicalStatus(DateTime.now());
-    final EthiopianDate ethDate = liturgicalStatus['ethDate'];
-    final String evangelist = liturgicalStatus['evangelist'];
-    final String seasonTitle = liturgicalStatus['seasonTitle'];
-    final String seasonCategory = liturgicalStatus['seasonCategory'];
-    final String seasonDescription = liturgicalStatus['seasonDescription'];
-    final String? recommendedPlanId = liturgicalStatus['recommendedPlanId'];
-    final List<LiturgicalEvent> movableEvents = List<LiturgicalEvent>.from(liturgicalStatus['movableEvents']);
+    final EthiopianDate ethDate = (liturgicalStatus['ethDate'] as EthiopianDate?) ??
+        BahireHasabService.fromGregorian(DateTime.now());
+    final String evangelist = (liturgicalStatus['evangelist'] as String?) ?? 'ዘመነ ማቴዎስ';
+    final String evangelistEn = (liturgicalStatus['evangelistEn'] as String?) ?? evangelist;
+    final String seasonTitle = (liturgicalStatus['seasonTitle'] as String?) ?? 'ዘመነ ጽጌ';
+    final String seasonTitleEn = (liturgicalStatus['seasonTitleEn'] as String?) ?? seasonTitle;
+    final String seasonCategory = (liturgicalStatus['seasonCategory'] as String?) ?? 'ወቅት';
+    final String seasonCategoryEn = (liturgicalStatus['seasonCategoryEn'] as String?) ?? 'Season';
+    final String seasonDescription = (liturgicalStatus['seasonDescription'] as String?) ?? '';
+    final String seasonDescriptionEn = (liturgicalStatus['seasonDescriptionEn'] as String?) ?? seasonDescription;
+    final String? recommendedPlanId = liturgicalStatus['recommendedPlanId'] as String?;
+    final List<LiturgicalEvent> movableEvents = liturgicalStatus['movableEvents'] != null
+        ? List<LiturgicalEvent>.from(liturgicalStatus['movableEvents'] as Iterable)
+        : <LiturgicalEvent>[];
 
-    var filteredPlans = _selectedCategory == 'ሁሉም'
+    final filteredPlans = _selectedCategoryIndex == 0
         ? List<ReadingPlan>.from(allPlans)
-        : allPlans.where((p) => p.category == _selectedCategory).toList();
+        : allPlans.where((p) {
+            switch (_selectedCategoryIndex) {
+              case 1:
+                return p.category == 'ጾምና በዓላት' || p.categoryEn == 'Fasts & Feasts';
+              case 2:
+                return p.category == 'ሐዲስ ኪዳን' || p.categoryEn == 'New Testament';
+              case 3:
+                return p.category == 'ጥበብና መዝሙር' || p.categoryEn == 'Wisdom & Psalms';
+              case 4:
+                return p.category == 'ዓመታዊ' || p.categoryEn == 'Annual';
+              default:
+                return true;
+            }
+          }).toList();
 
     if (recommendedPlanId != null) {
       filteredPlans.sort((a, b) {
@@ -528,6 +665,8 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
       if (s.isNotEmpty) activePlansCount++;
     }
 
+    final categories = isEnglish ? _categoriesEn : _categoriesAm;
+
     return Scaffold(
       backgroundColor: themeConfig.backgroundColor,
       body: sessionState.isLoading
@@ -539,32 +678,23 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   // 1. Editorial Header + Create Custom Plan Button
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'READING PLANS & RHYTHMS',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                  color: themeConfig.accentColor,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'የንባብ ዕቅዶች',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: themeConfig.textColor,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            isEnglish ? 'Reading Plans' : 'የንባብ ዕቅዶች',
+                            style: isEnglish
+                                ? GoogleFonts.inter(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: themeConfig.textColor,
+                                  )
+                                : GoogleFonts.notoSansEthiopic(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900,
+                                    color: themeConfig.textColor,
+                                  ),
                           ),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
@@ -574,14 +704,19 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
-                            onPressed: () => _showCustomPlanBuilderSheet(context, themeConfig),
+                            onPressed: () => _showCustomPlanBuilderSheet(context, themeConfig, isEnglish),
                             icon: const Icon(Icons.add_rounded, size: 18),
                             label: Text(
-                              'ዕቅድ ፍጠር',
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                              ),
+                              isEnglish ? 'Create Plan' : 'ዕቅድ ፍጠር',
+                              style: isEnglish
+                                  ? GoogleFonts.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                    )
+                                  : GoogleFonts.notoSansEthiopic(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                             ),
                           ),
                         ],
@@ -601,7 +736,9 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                           ethDate,
                           movableEvents,
                           evangelist,
+                          evangelistEn,
                           allPlans,
+                          isEnglish,
                         ),
                         child: Container(
                           padding: const EdgeInsets.all(18),
@@ -641,12 +778,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                         ),
                                         const SizedBox(width: 5),
                                         Text(
-                                          'የባሕረ ሐሳብ ዘመን ቀመር',
-                                          style: GoogleFonts.notoSansEthiopic(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                            color: themeConfig.goldAccent,
-                                          ),
+                                          isEnglish ? 'Bahire Hasab Calendar' : 'የባሕረ ሐሳብ ዘመን ቀመር',
+                                          style: isEnglish
+                                              ? GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: themeConfig.goldAccent,
+                                                )
+                                              : GoogleFonts.notoSansEthiopic(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: themeConfig.goldAccent,
+                                                ),
                                         ),
                                       ],
                                     ),
@@ -659,12 +802,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      evangelist,
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: themeConfig.accentColor,
-                                      ),
+                                      isEnglish ? evangelistEn : evangelist,
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: themeConfig.accentColor,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: themeConfig.accentColor,
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -678,21 +827,35 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          ethDate.format(),
-                                          style: GoogleFonts.notoSansEthiopic(
-                                            fontSize: 16.5,
-                                            fontWeight: FontWeight.w900,
-                                            color: themeConfig.textColor,
-                                          ),
+                                          ethDate.format(isEnglish: isEnglish),
+                                          style: isEnglish
+                                              ? GoogleFonts.inter(
+                                                  fontSize: 16.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: themeConfig.textColor,
+                                                )
+                                              : GoogleFonts.notoSansEthiopic(
+                                                  fontSize: 16.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: themeConfig.textColor,
+                                                ),
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '$seasonTitle ($seasonCategory) • $seasonDescription',
-                                          style: GoogleFonts.notoSansEthiopic(
-                                            fontSize: 12,
-                                            color: themeConfig.secondaryTextColor,
-                                            height: 1.4,
-                                          ),
+                                          isEnglish
+                                              ? '$seasonTitleEn ($seasonCategoryEn) • $seasonDescriptionEn'
+                                              : '$seasonTitle ($seasonCategory) • $seasonDescription',
+                                          style: isEnglish
+                                              ? GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  color: themeConfig.secondaryTextColor,
+                                                  height: 1.4,
+                                                )
+                                              : GoogleFonts.notoSansEthiopic(
+                                                  fontSize: 12,
+                                                  color: themeConfig.secondaryTextColor,
+                                                  height: 1.4,
+                                                ),
                                         ),
                                       ],
                                     ),
@@ -715,15 +878,22 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       ethDate,
                                       movableEvents,
                                       evangelist,
+                                      evangelistEn,
                                       allPlans,
+                                      isEnglish,
                                     ),
                                     icon: const Icon(Icons.auto_stories_outlined, size: 15),
                                     label: Text(
-                                      'አጽዋማት',
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w800,
-                                      ),
+                                      isEnglish ? 'Feasts' : 'አጽዋማት',
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -759,31 +929,55 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      '🔥 $activePlansCount በሂደት ላይ • ${allPlans.length} ዕቅዶች',
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        color: themeConfig.goldAccent,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 11.5,
-                                      ),
+                                      isEnglish
+                                          ? '🔥 $activePlansCount in progress • ${allPlans.length} plans'
+                                          : '🔥 $activePlansCount በሂደት ላይ • ${allPlans.length} ዕቅዶች',
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              color: themeConfig.goldAccent,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11.5,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              color: themeConfig.goldAccent,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11.5,
+                                            ),
                                     ),
                                   ),
                                   const SizedBox(height: 10),
                                   Text(
-                                    '$totalCompletedDays ቀናት ተጠናቀዋል',
-                                    style: GoogleFonts.notoSansEthiopic(
-                                      color: themeConfig.textColor,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                    ),
+                                    isEnglish
+                                        ? '$totalCompletedDays days completed'
+                                        : '$totalCompletedDays ቀናት ተጠናቀዋል',
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            color: themeConfig.textColor,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            color: themeConfig.textColor,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                          ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'ማንኛውንም ዕቅድ ሲጀምሩ በንባብ ገጹ ላይ ቀጥታ መከታተያ ይከፈታል።',
-                                    style: GoogleFonts.notoSansEthiopic(
-                                      color: themeConfig.secondaryTextColor,
-                                      fontSize: 12,
-                                      height: 1.45,
-                                    ),
+                                    isEnglish
+                                        ? 'Starting any plan opens direct tracking on the reader screen.'
+                                        : 'ማንኛውንም ዕቅድ ሲጀምሩ በንባብ ገጹ ላይ ቀጥታ መከታተያ ይከፈታል።',
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            color: themeConfig.secondaryTextColor,
+                                            fontSize: 12,
+                                            height: 1.45,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            color: themeConfig.secondaryTextColor,
+                                            fontSize: 12,
+                                            height: 1.45,
+                                          ),
                                   ),
                                 ],
                               ),
@@ -808,20 +1002,20 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     ),
                   ),
 
-                  // 3. Category Filter Pills
+                  // 4. Category Filter Pills
                   SliverToBoxAdapter(
                     child: SizedBox(
                       height: 52,
                       child: ListView.separated(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
+                        itemCount: categories.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 8),
                         itemBuilder: (context, index) {
-                          final cat = _categories[index];
-                          final isSelected = _selectedCategory == cat;
+                          final cat = categories[index];
+                          final isSelected = _selectedCategoryIndex == index;
                           return GestureDetector(
-                            onTap: () => setState(() => _selectedCategory = cat),
+                            onTap: () => setState(() => _selectedCategoryIndex = index),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
@@ -837,13 +1031,21 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                               child: Center(
                                 child: Text(
                                   cat,
-                                  style: GoogleFonts.notoSansEthiopic(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: isSelected
-                                        ? themeConfig.backgroundColor
-                                        : themeConfig.textColor,
-                                  ),
+                                  style: isEnglish
+                                      ? GoogleFonts.inter(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected
+                                              ? themeConfig.backgroundColor
+                                              : themeConfig.textColor,
+                                        )
+                                      : GoogleFonts.notoSansEthiopic(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected
+                                              ? themeConfig.backgroundColor
+                                              : themeConfig.textColor,
+                                        ),
                                 ),
                               ),
                             ),
@@ -853,7 +1055,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     ),
                   ),
 
-                  // 4. Plans List
+                  // 5. Plans List
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
                     sliver: SliverList(
@@ -876,6 +1078,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                               progress,
                               themeConfig,
                               isDark,
+                              isEnglish,
                               isLiturgicalMatch: isLiturgicalMatch,
                             ),
                           );
@@ -896,7 +1099,8 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     Set<int> completedSet,
     double progress,
     ReaderThemeConfig themeConfig,
-    bool isDark, {
+    bool isDark,
+    bool isEnglish, {
     bool isLiturgicalMatch = false,
   }) {
     int nextDay = 1;
@@ -906,12 +1110,14 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
         break;
       }
     }
-    final nextPassage = plan.passages[(nextDay - 1).clamp(0, plan.passages.length - 1)];
+    final nextPassage = plan.passages.isNotEmpty
+        ? plan.passages[(nextDay - 1).clamp(0, plan.passages.length - 1)]
+        : null;
     final isCustom = plan.id.startsWith('custom_');
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
-      onTap: () => _openPlanDetailModal(context, plan, themeConfig),
+      onTap: () => _openPlanDetailModal(context, plan, themeConfig, isEnglish),
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
@@ -964,29 +1170,45 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                   Icon(Icons.stars_rounded, size: 12, color: themeConfig.goldAccent),
                                   const SizedBox(width: 3),
                                   Text(
-                                    'ወቅታዊ ዕቅድ',
-                                    style: GoogleFonts.notoSansEthiopic(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      color: themeConfig.goldAccent,
-                                    ),
+                                    isEnglish ? 'Current Season' : 'ወቅታዊ ዕቅድ',
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: themeConfig.goldAccent,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                            color: themeConfig.goldAccent,
+                                          ),
                                   ),
                                 ],
                               ),
                             ),
                           ],
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: themeConfig.accentColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              plan.badgeText,
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w800,
-                                color: themeConfig.accentColor,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: themeConfig.accentColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                plan.getDisplayBadge(isEnglish),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: isEnglish
+                                    ? GoogleFonts.inter(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: themeConfig.accentColor,
+                                      )
+                                    : GoogleFonts.notoSansEthiopic(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: themeConfig.accentColor,
+                                      ),
                               ),
                             ),
                           ),
@@ -1017,21 +1239,33 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        plan.title,
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: themeConfig.textColor,
-                        ),
+                        plan.getDisplayTitle(isEnglish),
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              ),
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        plan.subtitle,
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 12.5,
-                          color: themeConfig.secondaryTextColor,
-                          height: 1.4,
-                        ),
+                        plan.getDisplaySubtitle(isEnglish),
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 12.5,
+                                color: themeConfig.secondaryTextColor,
+                                height: 1.4,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 12.5,
+                                color: themeConfig.secondaryTextColor,
+                                height: 1.4,
+                              ),
                       ),
                     ],
                   ),
@@ -1054,14 +1288,24 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'ቀጣይ፦ ቀን $nextDay (${nextPassage.passageReference})',
+                    nextPassage != null
+                        ? (isEnglish
+                            ? 'Next: Day $nextDay (${nextPassage.getPassageReference(true)})'
+                            : 'ቀጣይ፦ ቀን $nextDay (${nextPassage.getPassageReference(false)})')
+                        : (isEnglish ? 'Day $nextDay' : 'ቀን $nextDay'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.secondaryTextColor,
-                    ),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: themeConfig.secondaryTextColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: themeConfig.secondaryTextColor,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1073,14 +1317,23 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: () => _launchPlanPassageInReader(context, plan, nextPassage),
+                  onPressed: nextPassage != null
+                      ? () => _launchPlanPassageInReader(context, plan, nextPassage)
+                      : null,
                   icon: const Icon(Icons.play_arrow_rounded, size: 16),
                   label: Text(
-                    completedSet.isEmpty ? 'ጀምር' : 'ቀጥል (ቀን $nextDay)',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    completedSet.isEmpty
+                        ? (isEnglish ? 'Start' : 'ጀምር')
+                        : (isEnglish ? 'Resume (Day $nextDay)' : 'ቀጥል (ቀን $nextDay)'),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                          ),
                   ),
                 ),
               ],
@@ -1095,6 +1348,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     BuildContext context,
     ReadingPlan plan,
     ReaderThemeConfig themeConfig,
+    bool isEnglish,
   ) {
     showModalBottomSheet(
       context: context,
@@ -1139,20 +1393,33 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    plan.title,
-                                    style: GoogleFonts.notoSansEthiopic(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w900,
-                                      color: themeConfig.textColor,
-                                    ),
+                                    plan.getDisplayTitle(isEnglish),
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            color: themeConfig.textColor,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            color: themeConfig.textColor,
+                                          ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    '${completedSet.length} ከ ${plan.totalDays} ቀናት ተጠናቋል',
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: themeConfig.secondaryTextColor,
-                                    ),
+                                    isEnglish
+                                        ? '${completedSet.length} of ${plan.totalDays} days completed'
+                                        : '${completedSet.length} ከ ${plan.totalDays} ቀናት ተጠናቋል',
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            fontSize: 12.5,
+                                            color: themeConfig.secondaryTextColor,
+                                          )
+                                        : TextStyle(
+                                            fontSize: 12.5,
+                                            color: themeConfig.secondaryTextColor,
+                                          ),
                                   ),
                                 ],
                               ),
@@ -1224,22 +1491,37 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          passage.title,
-                                          style: GoogleFonts.notoSansEthiopic(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 13.5,
-                                            color: themeConfig.textColor,
-                                            decoration: isDone ? TextDecoration.lineThrough : null,
-                                          ),
+                                          isEnglish && passage.titleEn.isNotEmpty
+                                              ? passage.titleEn
+                                              : passage.title,
+                                          style: isEnglish
+                                              ? GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 13.5,
+                                                  color: themeConfig.textColor,
+                                                  decoration: isDone ? TextDecoration.lineThrough : null,
+                                                )
+                                              : GoogleFonts.notoSansEthiopic(
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 13.5,
+                                                  color: themeConfig.textColor,
+                                                  decoration: isDone ? TextDecoration.lineThrough : null,
+                                                ),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          passage.passageReference,
-                                          style: GoogleFonts.notoSansEthiopic(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: themeConfig.accentColor,
-                                          ),
+                                          passage.getPassageReference(isEnglish),
+                                          style: isEnglish
+                                              ? GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: themeConfig.accentColor,
+                                                )
+                                              : GoogleFonts.notoSansEthiopic(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: themeConfig.accentColor,
+                                                ),
                                         ),
                                       ],
                                     ),
@@ -1251,11 +1533,16 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                     },
                                     icon: const Icon(Icons.menu_book_rounded, size: 15),
                                     label: Text(
-                                      'አንብብ',
-                                      style: GoogleFonts.notoSansEthiopic(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 12,
-                                      ),
+                                      isEnglish ? 'Read' : 'አንብብ',
+                                      style: isEnglish
+                                          ? GoogleFonts.inter(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                            )
+                                          : GoogleFonts.notoSansEthiopic(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                            ),
                                     ),
                                   ),
                                 ],

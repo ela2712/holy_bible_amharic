@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/theme_provider.dart';
+import 'services/notification_service.dart';
 import 'ui/screens/main_navigation_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.initialize();
   runApp(
     const ProviderScope(
       child: HolyBibleApp(),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/geez_normalizer.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
@@ -52,6 +54,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final searchState = ref.watch(searchProvider);
     final themeConfig = ref.watch(themeConfigProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     // Filter results by testament if selected
     final filteredResults = searchState.results.where((item) {
@@ -77,7 +80,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'HOMOPHONE-AWARE GEEZ SEARCH',
+                        isEnglish ? 'SCRIPTURE & KEYWORD SEARCH' : 'የቅዱሳት መጻሕፍት ፍለጋ',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
@@ -87,12 +90,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'የቃላትና ጥቅሶች ፍለጋ',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: themeConfig.textColor,
-                        ),
+                        isEnglish ? 'Search Scripture' : 'የቃላትና ጥቅሶች ፍለጋ',
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: themeConfig.textColor,
+                              ),
                       ),
                     ],
                   ),
@@ -130,17 +139,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 child: TextField(
                   controller: _queryController,
                   textInputAction: TextInputAction.search,
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: themeConfig.textColor,
-                  ),
+                  style: isEnglish
+                      ? GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: themeConfig.textColor,
+                        )
+                      : GoogleFonts.notoSansEthiopic(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: themeConfig.textColor,
+                        ),
                   decoration: InputDecoration(
-                    hintText: 'ቃላትን ወይም ጥቅሶችን ይፈልጉ...',
-                    hintStyle: GoogleFonts.notoSansEthiopic(
-                      fontSize: 13.5,
-                      color: themeConfig.secondaryTextColor,
-                    ),
+                    hintText: isEnglish ? 'Search words or verses...' : 'ቃላትን ወይም ጥቅሶችን ይፈልጉ...',
+                    hintStyle: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 13.5,
+                            color: themeConfig.secondaryTextColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 13.5,
+                            color: themeConfig.secondaryTextColor,
+                          ),
                     prefixIcon: Icon(Icons.search_rounded, size: 21, color: themeConfig.accentColor),
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -162,7 +182,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             size: 20,
                             color: _showCustomKeyboard ? themeConfig.accentColor : themeConfig.secondaryTextColor,
                           ),
-                          tooltip: 'የግዕዝ ኪቦርድ (Ge\'ez Keyboard)',
+                          tooltip: isEnglish ? 'Ge\'ez Keyboard' : 'የግዕዝ ኪቦርድ',
                           onPressed: () => setState(() => _showCustomKeyboard = !_showCustomKeyboard),
                         ),
                       ],
@@ -184,11 +204,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               padding: const EdgeInsets.fromLTRB(20, 6, 20, 8),
               child: Row(
                 children: [
-                  _buildFilterPill('ሁሉም (All)', 'ALL', themeConfig),
+                  _buildFilterPill(isEnglish ? 'All' : 'ሁሉም', 'ALL', themeConfig, isEnglish),
                   const SizedBox(width: 8),
-                  _buildFilterPill('ብሉይ ኪዳን (OT)', 'OT', themeConfig),
+                  _buildFilterPill(isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን', 'OT', themeConfig, isEnglish),
                   const SizedBox(width: 8),
-                  _buildFilterPill('ሐዲስ ኪዳን (NT)', 'NT', themeConfig),
+                  _buildFilterPill(isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን', 'NT', themeConfig, isEnglish),
                 ],
               ),
             ),
@@ -198,8 +218,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: searchState.isSearching
                   ? Center(child: CircularProgressIndicator(color: themeConfig.accentColor))
                   : filteredResults.isNotEmpty
-                      ? _buildResultsList(context, filteredResults, themeConfig, isDark)
-                      : _buildDiscoveryAndHistoryView(context, searchState.recentSearches, themeConfig, isDark),
+                      ? _buildResultsList(context, filteredResults, themeConfig, isDark, isEnglish)
+                      : _buildDiscoveryAndHistoryView(context, searchState.recentSearches, themeConfig, isDark, isEnglish),
             ),
             if (_showCustomKeyboard)
               BuiltInGeezKeyboard(
@@ -215,7 +235,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildFilterPill(String label, String value, ReaderThemeConfig themeConfig) {
+  Widget _buildFilterPill(String label, String value, ReaderThemeConfig themeConfig, bool isEnglish) {
     final isSelected = _testamentFilter == value;
     return GestureDetector(
       onTap: () => setState(() => _testamentFilter = value),
@@ -231,11 +251,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.notoSansEthiopic(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: isSelected ? Colors.white : themeConfig.textColor,
-          ),
+          style: isEnglish
+              ? GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : themeConfig.textColor,
+                )
+              : GoogleFonts.notoSansEthiopic(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : themeConfig.textColor,
+                ),
         ),
       ),
     );
@@ -246,6 +272,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     List<Map<String, dynamic>> results,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,12 +283,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${results.length} ጥቅሶች ተገኝተዋል',
-                style: GoogleFonts.notoSansEthiopic(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: themeConfig.accentColor,
-                ),
+                isEnglish
+                    ? '${results.length} verses found'
+                    : '${results.length} ጥቅሶች ተገኝተዋል',
+                style: isEnglish
+                    ? GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: themeConfig.accentColor,
+                      )
+                    : GoogleFonts.notoSansEthiopic(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: themeConfig.accentColor,
+                      ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -270,12 +305,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'ሞክሼ ፊደላት ንቁ (Normalized)',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF10B981),
-                  ),
+                  isEnglish ? 'Normalized' : 'ሞክሼ ፊደላት ንቁ',
+                  style: isEnglish
+                      ? GoogleFonts.inter(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF10B981),
+                        )
+                      : GoogleFonts.notoSansEthiopic(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF10B981),
+                        ),
                 ),
               ),
             ],
@@ -376,6 +417,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
+    final normalizedQuery = GeezNormalizer.normalize(trimmedQuery);
+    final queryTerms = normalizedQuery.split(' ').where((t) => t.isNotEmpty).toList();
+
+    final words = text.split(' ');
     final spans = <TextSpan>[];
     final baseStyle = GoogleFonts.notoSerifEthiopic(
       fontSize: 15,
@@ -390,29 +435,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       backgroundColor: themeConfig.accentColor.withValues(alpha: isDark ? 0.28 : 0.16),
     );
 
-    final lowerText = text.toLowerCase();
-    final lowerQuery = trimmedQuery.toLowerCase();
-    int start = 0;
-
-    while (true) {
-      final index = lowerText.indexOf(lowerQuery, start);
-      if (index == -1) {
-        if (start < text.length) {
-          spans.add(TextSpan(text: text.substring(start)));
-        }
-        break;
-      }
-
-      if (index > start) {
-        spans.add(TextSpan(text: text.substring(start, index)));
-      }
+    for (int i = 0; i < words.length; i++) {
+      final word = words[i];
+      final normWord = GeezNormalizer.normalize(word);
+      final isMatch = queryTerms.any((term) => normWord.contains(term));
 
       spans.add(TextSpan(
-        text: text.substring(index, index + trimmedQuery.length),
-        style: highlightStyle,
+        text: i == 0 ? word : ' $word',
+        style: isMatch ? highlightStyle : baseStyle,
       ));
-
-      start = index + trimmedQuery.length;
     }
 
     return RichText(
@@ -428,23 +459,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     List<String> recents,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
+    final keywords = isEnglish
+        ? const ['Love', 'Faith', 'Hope', 'Peace', 'Prayer', 'Wisdom', 'Grace', 'Light', 'Salvation', 'Life']
+        : _suggestedKeywords;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
       children: [
         Text(
-          'ታዋቂ የጥናት ርዕሶች (Popular Topics)',
-          style: GoogleFonts.notoSansEthiopic(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
-            color: themeConfig.textColor,
-          ),
+          isEnglish ? 'Popular Topics' : 'ታዋቂ የጥናት ርዕሶች',
+          style: isEnglish
+              ? GoogleFonts.inter(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: themeConfig.textColor,
+                )
+              : GoogleFonts.notoSansEthiopic(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: themeConfig.textColor,
+                ),
         ),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _suggestedKeywords.map((word) {
+          children: keywords.map((word) {
             return InkWell(
               borderRadius: BorderRadius.circular(14),
               onTap: () {
@@ -466,11 +508,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     const SizedBox(width: 6),
                     Text(
                       word,
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: themeConfig.textColor,
-                      ),
+                      style: isEnglish
+                          ? GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: themeConfig.textColor,
+                            )
+                          : GoogleFonts.notoSansEthiopic(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: themeConfig.textColor,
+                            ),
                     ),
                   ],
                 ),
@@ -485,22 +533,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'የቅርብ ጊዜ ፍለጋዎች (Recent Searches)',
-                style: GoogleFonts.notoSansEthiopic(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15,
-                  color: themeConfig.textColor,
-                ),
+                isEnglish ? 'Recent Searches' : 'የቅርብ ጊዜ ፍለጋዎች',
+                style: isEnglish
+                    ? GoogleFonts.inter(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: themeConfig.textColor,
+                      )
+                    : GoogleFonts.notoSansEthiopic(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: themeConfig.textColor,
+                      ),
               ),
               TextButton(
                 onPressed: () => ref.read(searchProvider.notifier).clearRecentSearches(),
                 child: Text(
-                  'ሁሉንም አጽዳ',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: themeConfig.accentColor,
-                  ),
+                  isEnglish ? 'Clear all' : 'ሁሉንም አጽዳ',
+                  style: isEnglish
+                      ? GoogleFonts.inter(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: themeConfig.accentColor,
+                        )
+                      : GoogleFonts.notoSansEthiopic(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: themeConfig.accentColor,
+                        ),
                 ),
               ),
             ],
@@ -513,7 +573,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               return InputChip(
                 backgroundColor: themeConfig.surfaceColor,
                 side: BorderSide(color: themeConfig.cardBorderColor),
-                label: Text(query, style: GoogleFonts.notoSansEthiopic(fontSize: 12.5)),
+                label: Text(
+                  query,
+                  style: isEnglish
+                      ? GoogleFonts.inter(fontSize: 12.5)
+                      : GoogleFonts.notoSansEthiopic(fontSize: 12.5),
+                ),
                 onPressed: () {
                   _queryController.text = query;
                   setState(() {});

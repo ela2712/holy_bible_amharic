@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/geez_numbers.dart';
 import '../../models/book.dart';
 import '../../models/verse.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_plan_session_provider.dart';
@@ -1053,11 +1054,14 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final isOt = currentBook?.isOldTestament ?? (bookNum <= 39);
     final isCanon81Deut = (bibleState.currentTranslation?.id == 2) &&
         ((isOt && bookNum > 39) || bookNum > 66);
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     String testamentTitle;
     if (isEnglish) {
       testamentTitle = isOt ? 'OT' : 'NT';
+      if (isCanon81Deut) {
+        testamentTitle = 'Canon 81';
+      }
     } else {
       testamentTitle = isOt ? 'ብሉይ' : 'ሐዲስ';
       if (isCanon81Deut) {
@@ -1066,7 +1070,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     }
 
     return PopupMenuButton<String>(
-      tooltip: isEnglish ? 'Select Testament' : 'ኪዳን ምረጥ (Select Testament)',
+      tooltip: isEnglish ? 'Select Testament' : 'ኪዳን ምረጥ',
       offset: const Offset(0, 36),
       color: themeConfig.surfaceColor,
       shape: RoundedRectangleBorder(
@@ -1118,7 +1122,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን (Old Testament)',
+                        isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን',
                         style: isEnglish
                             ? GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
@@ -1175,7 +1179,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን (New Testament)',
+                        isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን',
                         style: isEnglish
                             ? GoogleFonts.plusJakartaSans(
                                 fontSize: 13,
@@ -1303,8 +1307,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   ) {
     final current = bibleState.currentTranslation;
     final currentId = current?.id ?? 2;
-    final isEnglish = currentId == 3;
-    String shortTitle = '81 ቀኖና';
+    final isEnglish = ref.watch(isEnglishUiProvider);
+    String shortTitle = isEnglish ? '81 Canon' : '81 ቀኖና';
     if (currentId == 1) {
       shortTitle = '1954';
     } else if (currentId == 3) {
@@ -1314,7 +1318,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     }
 
     return PopupMenuButton<int>(
-      tooltip: isEnglish ? 'Switch Translation' : 'ትርጉም ቀይር (Switch Translation)',
+      tooltip: isEnglish ? 'Switch Translation' : 'ትርጉም ቀይር',
       offset: const Offset(0, 36),
       color: themeConfig.surfaceColor,
       shape: RoundedRectangleBorder(
@@ -1444,7 +1448,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
@@ -1508,7 +1512,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
     final label = isEnglish ? 'Ch. $chapterStr' : 'ምዕ. $chapterStr';
 
     return InkWell(
@@ -1567,7 +1571,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
     IconData themeIcon;
     String themeTooltip;
     switch (themeConfig.mode) {
@@ -1786,8 +1790,10 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final compactBookName = _getCompactBookName(bibleState.currentBook, bookName);
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
+    final compactBookName = isEnglish && bookNameEn.isNotEmpty
+        ? bookNameEn
+        : _getCompactBookName(bibleState.currentBook, bookName);
     final displayChapterTitle = isEnglish ? 'Chapter $chapterStr' : 'ምዕራፍ $chapterStr';
     final displayBookTitle = isEnglish && bookNameEn.isNotEmpty ? bookNameEn : bookName;
 
@@ -2133,7 +2139,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final canPrev = bibleState.currentChapter > 1;
     final canNext = bibleState.currentBook != null &&
         bibleState.currentChapter < bibleState.currentBook!.totalChapters;
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2199,7 +2205,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
   ) {
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -1,5 +1,5 @@
 name: holy_bible_amharic
-description: "High-performance, authentic multiplatform Amharic Holy Bible app featuring 1954 Haile Selassie text, Orthodox 81 Canon, KJV parallel study, Strong's concordance, audio, and Ge'ez phonetic keyboard."
+description: "High-performance, authentic multiplatform Amharic Holy Bible app featuring Orthodox 81 Canon, 1954 Haile Selassie text, KJV parallel study, reading plans, and Ge'ez phonetic keyboard."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -26,12 +26,11 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.2
 
-  # Media & Audio
-  just_audio: ^0.9.42
-
   # Utility & Sharing
   share_plus: ^10.1.4
   intl: ^0.20.2
+  flutter_local_notifications: ^22.3.2
+  timezone: ^0.11.2
 
 dev_dependencies:
   flutter_test:
@@ -44,4 +43,3 @@ flutter:
   assets:
     - assets/database/
     - assets/data/
-    - assets/audio_manifest.json

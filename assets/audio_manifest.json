@@ -1,7 +1,0 @@
-{
-  "description": "Audio Bible streaming sources and book mapping",
-  "version": "1.0",
-  "sources": {
-    "amharic_1954": "https://raw.githubusercontent.com/EthiopicBible/audio/main/amh_1954/"
-  }
-}

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../data/reading_plans_data.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import 'book_selector_screen.dart';
@@ -24,6 +25,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     final themeConfig = ref.watch(themeConfigProvider);
     final repo = ref.watch(bibleRepositoryProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     if (bibleState.isLoading) {
       return Scaffold(
@@ -46,7 +48,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                 slivers: [
                   // 1. Modern Editorial Header (No boxy AppBar!)
                   SliverToBoxAdapter(
-                    child: _buildModernHeader(context, ref, bibleState, themeConfig, isDark),
+                    child: _buildModernHeader(context, ref, bibleState, themeConfig, isDark, isEnglish),
                   ),
 
                   // 2. Main Content Padding
@@ -55,23 +57,23 @@ class HomeDashboardScreen extends ConsumerWidget {
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
                         // Hero: Editorial Daily Verse Card
-                        _buildDailyVerseHero(context, ref, repo, themeConfig),
+                        _buildDailyVerseHero(context, ref, repo, themeConfig, isEnglish),
                         const SizedBox(height: 20),
 
                         // 2-Column Bento Grid: Resume Reading + Active Plan
-                        _buildBentoGridRow(context, ref, bibleState, themeConfig, isDark),
+                        _buildBentoGridRow(context, ref, bibleState, themeConfig, isDark, isEnglish),
                         const SizedBox(height: 26),
 
                         // Modern Canon Quick-Access Strip
-                        _buildCanonQuickStrip(context, ref, themeConfig, isDark),
+                        _buildCanonQuickStrip(context, ref, themeConfig, isDark, isEnglish),
                         const SizedBox(height: 28),
 
                         // Visual Reading Plans Carousel
-                        _buildReadingPlansCarousel(context, ref, themeConfig, isDark),
+                        _buildReadingPlansCarousel(context, ref, themeConfig, isDark, isEnglish),
                         const SizedBox(height: 28),
 
                         // Curated Thematic Collections Grid
-                        _buildThematicBentoSection(context, ref, themeConfig, isDark),
+                        _buildThematicBentoSection(context, ref, themeConfig, isDark, isEnglish),
                       ]),
                     ),
                   ),
@@ -90,6 +92,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
     final shortTrans = _shortTransLabel(bibleState.currentTranslation?.name ?? '81 ቀኖና');
 
@@ -128,13 +131,20 @@ class HomeDashboardScreen extends ConsumerWidget {
                 Row(
                   children: [
                     Text(
-                      'መጽሐፍ ቅዱስ',
-                      style: GoogleFonts.notoSansEthiopic(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: themeConfig.textColor,
-                        letterSpacing: -0.3,
-                      ),
+                      isEnglish ? 'Holy Bible' : 'መጽሐፍ ቅዱስ',
+                      style: isEnglish
+                          ? GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: themeConfig.textColor,
+                              letterSpacing: -0.3,
+                            )
+                          : GoogleFonts.notoSansEthiopic(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: themeConfig.textColor,
+                              letterSpacing: -0.3,
+                            ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -144,7 +154,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '81 ቀኖና',
+                        isEnglish
+                            ? (bibleState.currentTranslation?.id == 3 ? 'KJV' : '81 Canon')
+                            : '81 ቀኖና',
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
@@ -157,12 +169,20 @@ class HomeDashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍትና ትርጉሞች',
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 11.5,
-                    color: themeConfig.secondaryTextColor,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  isEnglish
+                      ? 'Ethiopian Orthodox 81 Canon & Translations'
+                      : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍትና ትርጉሞች',
+                  style: isEnglish
+                      ? GoogleFonts.inter(
+                          fontSize: 11,
+                          color: themeConfig.secondaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        )
+                      : GoogleFonts.notoSansEthiopic(
+                          fontSize: 11.5,
+                          color: themeConfig.secondaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                 ),
               ],
             ),
@@ -242,6 +262,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     dynamic repo,
     ReaderThemeConfig themeConfig,
+    bool isEnglish,
   ) {
     return FutureBuilder<Map<String, dynamic>?>(
       future: repo.getDailyVerse(ref.watch(bibleStateProvider).currentTranslation?.id ?? 2),
@@ -311,13 +332,20 @@ class HomeDashboardScreen extends ConsumerWidget {
                               const Icon(Icons.auto_awesome, color: Color(0xFFFBBF24), size: 14),
                               const SizedBox(width: 6),
                               Text(
-                                'የዕለቱ ቃል • DAILY SCRIPTURE',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.4,
-                                ),
+                                isEnglish ? 'DAILY SCRIPTURE' : 'የዕለቱ ቃል',
+                                style: isEnglish
+                                    ? GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.4,
+                                      )
+                                    : GoogleFonts.notoSansEthiopic(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.4,
+                                      ),
                               ),
                             ],
                           ),
@@ -341,14 +369,14 @@ class HomeDashboardScreen extends ConsumerWidget {
                               color: const Color(0xFFFBBF24).withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.palette_outlined, color: Color(0xFFFBBF24), size: 14),
-                                SizedBox(width: 5),
+                                const Icon(Icons.palette_outlined, color: Color(0xFFFBBF24), size: 14),
+                                const SizedBox(width: 5),
                                 Text(
-                                  'ካርድ ፍጠር',
-                                  style: TextStyle(
+                                  isEnglish ? 'Share Card' : 'ካርድ ፍጠር',
+                                  style: const TextStyle(
                                     color: Color(0xFFFBBF24),
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
@@ -408,7 +436,10 @@ class HomeDashboardScreen extends ConsumerWidget {
                             onNavigateTab(0);
                           },
                           icon: const Icon(Icons.menu_book_rounded, size: 15),
-                          label: const Text('ምዕራፉን አንብብ', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                          label: Text(
+                            isEnglish ? 'Read Chapter' : 'ምዕራፉን አንብብ',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                          ),
                         ),
                       ],
                     ),
@@ -428,6 +459,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
     final book = bibleState.currentBook;
     final chapter = bibleState.currentChapter;
@@ -497,7 +529,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   const Spacer(),
                   Text(
-                    'የቀጠለ ንባብ • RESUME',
+                    isEnglish ? 'RESUME READING' : 'የቀጠለ ንባብ',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -507,27 +539,37 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    book != null ? book.name : 'ኦሪት ዘፍጥረት',
+                    book != null ? book.name : (isEnglish ? 'Genesis' : 'ኦሪት ዘፍጥረት'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                    ),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                   const SizedBox(height: 2),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'ምዕራፍ $chapter ከ $totalCh',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: themeConfig.accentColor,
+                      Expanded(
+                        child: Text(
+                          isEnglish ? 'Chapter $chapter of $totalCh' : 'ምዕራፍ $chapter ከ $totalCh',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: themeConfig.accentColor,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 4),
                       Icon(Icons.arrow_forward_rounded, size: 16, color: themeConfig.accentColor),
                     ],
                   ),
@@ -579,7 +621,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          '10 ዕቅዶች',
+                          isEnglish
+                              ? '${ReadingPlansData.allPlans.length} Plans'
+                              : '${ReadingPlansData.allPlans.length} ዕቅዶች',
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w800,
@@ -591,7 +635,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   const Spacer(),
                   Text(
-                    'ሥርዓተ ንባብ • PLANS',
+                    isEnglish ? 'READING PLANS' : 'ሥርዓተ ንባብ',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
@@ -601,27 +645,37 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'የንባብ ዕቅዶች',
+                    isEnglish ? 'Devotional Plans' : 'የንባብ ዕቅዶች',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                    ),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                   const SizedBox(height: 2),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'ጾም፣ በዓላትና ዓመታዊ',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: themeConfig.goldAccent,
+                      Expanded(
+                        child: Text(
+                          isEnglish ? 'Fasts, Feasts & More' : 'ጾም፣ በዓላትና ዓመታዊ',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: themeConfig.goldAccent,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 4),
                       Icon(Icons.arrow_forward_rounded, size: 16, color: themeConfig.goldAccent),
                     ],
                   ),
@@ -639,6 +693,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
     final items = [
       {
@@ -689,7 +744,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('ፈጣን መዳረሻ', 'SACRED CANON', themeConfig),
+        _buildSectionTitle('ፈጣን መዳረሻ', 'Sacred Canon', themeConfig, isEnglish),
         const SizedBox(height: 12),
         SizedBox(
           height: 100,
@@ -749,12 +804,18 @@ class HomeDashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        item['label'] as String,
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: themeConfig.textColor,
-                        ),
+                        isEnglish ? (item['sub'] as String) : (item['label'] as String),
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              ),
                       ),
                     ],
                   ),
@@ -772,6 +833,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
     final plans = ReadingPlansData.allPlans.take(6).toList();
     final gradients = [
@@ -789,11 +851,13 @@ class HomeDashboardScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _buildSectionTitle('የንባብ ዕቅዶች', 'DEVOTIONAL PLANS', themeConfig),
+            _buildSectionTitle('የንባብ ዕቅዶች', 'Devotional Plans', themeConfig, isEnglish),
             TextButton(
               onPressed: () => onNavigateTab(2),
               child: Text(
-                'ሁሉንም እይ (10) →',
+                isEnglish
+                    ? 'View all (${ReadingPlansData.allPlans.length}) →'
+                    : 'ሁሉንም እይ (${ReadingPlansData.allPlans.length}) →',
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: themeConfig.accentColor),
               ),
             ),
@@ -845,16 +909,22 @@ class HomeDashboardScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              plan.category,
-                              style: GoogleFonts.notoSansEthiopic(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              plan.getDisplayCategory(isEnglish),
+                              style: isEnglish
+                                  ? GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    )
+                                  : GoogleFonts.notoSansEthiopic(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                             ),
                           ),
                           Text(
-                            '${plan.totalDays} ቀናት',
+                            isEnglish ? '${plan.totalDays} Days' : '${plan.totalDays} ቀናት',
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
@@ -865,25 +935,37 @@ class HomeDashboardScreen extends ConsumerWidget {
                       ),
                       const Spacer(),
                       Text(
-                        plan.title,
+                        plan.getDisplayTitle(isEnglish),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansEthiopic(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        plan.subtitle,
+                        plan.getDisplaySubtitle(isEnglish),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.notoSansEthiopic(
-                          color: Colors.white.withValues(alpha: 0.82),
-                          fontSize: 11.5,
-                          height: 1.35,
-                        ),
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: 0.82),
+                                fontSize: 11.5,
+                                height: 1.35,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                color: Colors.white.withValues(alpha: 0.82),
+                                fontSize: 11.5,
+                                height: 1.35,
+                              ),
                       ),
                     ],
                   ),
@@ -901,11 +983,14 @@ class HomeDashboardScreen extends ConsumerWidget {
     WidgetRef ref,
     ReaderThemeConfig themeConfig,
     bool isDark,
+    bool isEnglish,
   ) {
     final guides = [
       {
         'title': 'የተራራው ስብከት',
+        'titleEn': 'Sermon on the Mount',
         'sub': 'ማቴዎስ ምዕራፍ 5–7',
+        'subEn': 'Matthew Ch. 5–7',
         'bookNum': 40,
         'chapter': 5,
         'icon': Icons.wb_twilight_rounded,
@@ -913,7 +998,9 @@ class HomeDashboardScreen extends ConsumerWidget {
       },
       {
         'title': 'መጽናኛና ጥበቃ',
+        'titleEn': 'Comfort & Refuge',
         'sub': 'መዝሙር 23 እና 91',
+        'subEn': 'Psalm 23 & 91',
         'bookNum': 19,
         'chapter': 23,
         'icon': Icons.shield_outlined,
@@ -921,7 +1008,9 @@ class HomeDashboardScreen extends ConsumerWidget {
       },
       {
         'title': 'የጥበብ መጀመሪያ',
+        'titleEn': 'Beginning of Wisdom',
         'sub': 'መጽሐፈ ምሳሌ ምዕራፍ 1',
+        'subEn': 'Proverbs Ch. 1',
         'bookNum': 20,
         'chapter': 1,
         'icon': Icons.workspace_premium_outlined,
@@ -929,7 +1018,9 @@ class HomeDashboardScreen extends ConsumerWidget {
       },
       {
         'title': 'የፍቅር መዝሙር',
+        'titleEn': 'Hymn of Love',
         'sub': '1 ቆሮንቶስ ምዕራፍ 13',
+        'subEn': '1 Corinthians Ch. 13',
         'bookNum': 46,
         'chapter': 13,
         'icon': Icons.favorite_border_rounded,
@@ -940,7 +1031,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('የተመረጡ የጥናት ርዕሶች', 'CURATED PASSAGES', themeConfig),
+        _buildSectionTitle('የተመረጡ የጥናት ክፍሎች', 'Curated Passages', themeConfig, isEnglish),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
@@ -955,6 +1046,8 @@ class HomeDashboardScreen extends ConsumerWidget {
           itemBuilder: (context, idx) {
             final g = guides[idx];
             final color = g['color'] as Color;
+            final titleStr = isEnglish ? (g['titleEn'] as String) : (g['title'] as String);
+            final subStr = isEnglish ? (g['subEn'] as String) : (g['sub'] as String);
 
             return InkWell(
               borderRadius: BorderRadius.circular(18),
@@ -998,24 +1091,35 @@ class HomeDashboardScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            g['title'] as String,
+                            titleStr,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: themeConfig.textColor,
-                            ),
+                            style: isEnglish
+                                ? GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: themeConfig.textColor,
+                                  )
+                                : GoogleFonts.notoSansEthiopic(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: themeConfig.textColor,
+                                  ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            g['sub'] as String,
+                            subStr,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 11,
-                              color: themeConfig.secondaryTextColor,
-                            ),
+                            style: isEnglish
+                                ? GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    color: themeConfig.secondaryTextColor,
+                                  )
+                                : GoogleFonts.notoSansEthiopic(
+                                    fontSize: 11,
+                                    color: themeConfig.secondaryTextColor,
+                                  ),
                           ),
                         ],
                       ),
@@ -1030,28 +1134,20 @@ class HomeDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String amharic, String english, ReaderThemeConfig themeConfig) {
-    return Row(
-      children: [
-        Text(
-          amharic,
-          style: GoogleFonts.notoSansEthiopic(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: themeConfig.textColor,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '• $english',
-          style: TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.7,
-            color: themeConfig.secondaryTextColor,
-          ),
-        ),
-      ],
+  Widget _buildSectionTitle(String amharic, String english, ReaderThemeConfig themeConfig, bool isEnglish) {
+    return Text(
+      isEnglish ? english : amharic,
+      style: isEnglish
+          ? GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: themeConfig.textColor,
+            )
+          : GoogleFonts.notoSansEthiopic(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: themeConfig.textColor,
+            ),
     );
   }
 

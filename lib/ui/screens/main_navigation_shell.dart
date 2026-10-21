@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
-import '../../providers/bible_state.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../widgets/modern_bible_icons.dart';
 import 'home_reader_screen.dart';
@@ -51,9 +51,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   @override
   Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeConfigProvider);
-    final bibleState = ref.watch(bibleStateProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
-    final isEnglish = bibleState.currentTranslation?.id == 3;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     final screens = [
       HomeReaderScreen(

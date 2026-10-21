@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/annotation.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 
@@ -72,6 +73,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
   Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeConfigProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     // Automatically refresh when verses change in the reader
     ref.listen(bibleStateProvider.select((s) => s.verses), (_, _) {
@@ -87,38 +89,29 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
           children: [
             // 1. Modern Editorial Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'STUDY VAULT & ANNOTATIONS',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                          color: themeConfig.accentColor,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'የእኔ ማህደር',
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: themeConfig.textColor,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    isEnglish ? 'Saved Vault' : 'የእኔ ማህደር',
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                   Row(
                     children: [
                       IconButton(
                         icon: Icon(Icons.refresh_rounded, color: themeConfig.secondaryTextColor, size: 20),
-                        tooltip: 'አድስ (Refresh)',
+                        tooltip: isEnglish ? 'Refresh' : 'አድስ',
                         onPressed: _loadData,
                       ),
                       if (Navigator.canPop(context))
@@ -147,23 +140,26 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                     _buildSegmentPill(
                       index: 0,
                       icon: Icons.bookmark_rounded,
-                      label: 'ዕልባቶች',
+                      label: isEnglish ? 'Bookmarks' : 'ዕልባቶች',
                       count: _bookmarks.length,
                       themeConfig: themeConfig,
+                      isEnglish: isEnglish,
                     ),
                     _buildSegmentPill(
                       index: 1,
                       icon: Icons.palette_rounded,
-                      label: 'ቀለሞች',
+                      label: isEnglish ? 'Highlights' : 'ቀለሞች',
                       count: _highlights.length,
                       themeConfig: themeConfig,
+                      isEnglish: isEnglish,
                     ),
                     _buildSegmentPill(
                       index: 2,
-                      icon: Icons.sticky_note_2_rounded,
-                      label: 'ማስታወሻ',
+                      icon: Icons.edit_note_rounded,
+                      label: isEnglish ? 'Notes' : 'ማስታወሻዎች',
                       count: _notes.length,
                       themeConfig: themeConfig,
+                      isEnglish: isEnglish,
                     ),
                   ],
                 ),
@@ -192,11 +188,15 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
     required String label,
     required int count,
     required ReaderThemeConfig themeConfig,
+    required bool isEnglish,
   }) {
     final isSelected = _selectedSection == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedSection = index),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _selectedSection = index);
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -215,11 +215,17 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
               const SizedBox(width: 6),
               Text(
                 '$label ($count)',
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : themeConfig.textColor,
-                ),
+                style: isEnglish
+                    ? GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : themeConfig.textColor,
+                      )
+                    : GoogleFonts.notoSansEthiopic(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : themeConfig.textColor,
+                      ),
               ),
             ],
           ),

@@ -658,6 +658,72 @@ class BibleRepository {
     return list;
   }
 
+  Future<Map<String, int>> restoreBackup(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    int bookmarksAdded = 0;
+    int highlightsAdded = 0;
+    int notesAdded = 0;
+
+    // Restore bookmarks
+    if (data['bookmarks'] is List) {
+      final bookmarks = await _getStoredBookmarks();
+      for (final item in data['bookmarks']) {
+        if (item is Map) {
+          final bId = item['book_id'];
+          final ch = item['chapter'];
+          final v = item['verse'];
+          if (bId != null && ch != null && v != null) {
+            bookmarks['${bId}_${ch}_$v'] = true;
+            bookmarksAdded++;
+          }
+        }
+      }
+      await prefs.setString('user_bookmarks_map', json.encode(bookmarks));
+    }
+
+    // Restore highlights
+    if (data['highlights'] is List) {
+      final highlights = await _getStoredHighlights();
+      for (final item in data['highlights']) {
+        if (item is Map) {
+          final bId = item['book_id'];
+          final ch = item['chapter'];
+          final v = item['verse'];
+          final color = item['color_hex']?.toString() ?? '#FFD54F';
+          if (bId != null && ch != null && v != null) {
+            highlights['${bId}_${ch}_$v'] = color;
+            highlightsAdded++;
+          }
+        }
+      }
+      await prefs.setString('user_highlights_map', json.encode(highlights));
+    }
+
+    // Restore notes
+    if (data['notes'] is List) {
+      final notes = await _getStoredNotes();
+      for (final item in data['notes']) {
+        if (item is Map) {
+          final bId = item['book_id'];
+          final ch = item['chapter'];
+          final v = item['verse'];
+          final text = item['note_text']?.toString() ?? '';
+          if (bId != null && ch != null && v != null && text.trim().isNotEmpty) {
+            notes['${bId}_${ch}_$v'] = text.trim();
+            notesAdded++;
+          }
+        }
+      }
+      await prefs.setString('user_notes_map', json.encode(notes));
+    }
+
+    return {
+      'bookmarks': bookmarksAdded,
+      'highlights': highlightsAdded,
+      'notes': notesAdded,
+    };
+  }
+
   Future<Map<String, dynamic>?> getDailyVerse(int translationId) async {
     await ensureInitialized();
     final list = _searchIndex[translationId] ?? [];

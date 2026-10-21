@@ -1,23 +1,31 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../core/theme/app_theme.dart';
+import '../../providers/app_language_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../widgets/ethiopian_cross_painter.dart';
 
 enum CardAspectRatio {
-  square(1.0, '1:1 ካሬ (Square)'),
-  portrait(4 / 5, '4:5 ፖርትሬት (Feed)'),
-  story(9 / 16, '9:16 ስቶሪ (Story)'),
-  landscape(16 / 9, '16:9 ሰፊ (Wide)');
+  square(1.0, 'ካሬ (1:1)', 'Square (1:1)'),
+  portrait(4 / 5, 'ፖርትሬት (4:5)', 'Portrait (4:5)'),
+  story(9 / 16, 'ስቶሪ (9:16)', 'Story (9:16)'),
+  landscape(16 / 9, 'ሰፊ (16:9)', 'Wide (16:9)');
 
   final double ratio;
-  final String label;
-  const CardAspectRatio(this.ratio, this.label);
+  final String labelAm;
+  final String labelEn;
+  const CardAspectRatio(this.ratio, this.labelAm, this.labelEn);
+
+  String getDisplayLabel(bool isEnglish) => isEnglish ? labelEn : labelAm;
 }
 
 class CardThemePreset {
   final String name;
+  final String nameEn;
   final List<Color> backgroundColors;
   final Color textColor;
   final Color accentColor;
@@ -27,6 +35,7 @@ class CardThemePreset {
 
   const CardThemePreset({
     required this.name,
+    required this.nameEn,
     required this.backgroundColors,
     required this.textColor,
     required this.accentColor,
@@ -34,9 +43,11 @@ class CardThemePreset {
     required this.haragPrimary,
     required this.haragSecondary,
   });
+
+  String getDisplayName(bool isEnglish) => isEnglish ? nameEn : name;
 }
 
-class VerseCardMakerScreen extends StatefulWidget {
+class VerseCardMakerScreen extends ConsumerStatefulWidget {
   final String reference;
   final String verseText;
 
@@ -47,10 +58,10 @@ class VerseCardMakerScreen extends StatefulWidget {
   });
 
   @override
-  State<VerseCardMakerScreen> createState() => _VerseCardMakerScreenState();
+  ConsumerState<VerseCardMakerScreen> createState() => _VerseCardMakerScreenState();
 }
 
-class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
+class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
   final GlobalKey _cardKey = GlobalKey();
 
   int _selectedPresetIndex = 0;
@@ -66,7 +77,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
   static const List<CardThemePreset> _presets = [
     // 1. Ancient Ethiopian Parchment (ብራና)
     CardThemePreset(
-      name: 'የጥንት ብራና (Parchment)',
+      name: 'የጥንት ብራና',
+      nameEn: 'Ancient Parchment',
       backgroundColors: [Color(0xFFF7F2E7), Color(0xFFEBE0CC)],
       textColor: Color(0xFF1F1A14),
       accentColor: Color(0xFF065F46),
@@ -76,7 +88,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     ),
     // 2. Lalibela Rock-Hewn Sandstone & Gold (ላሊበላ)
     CardThemePreset(
-      name: 'የላሊበላ ድንጋይ (Lalibela)',
+      name: 'የላሊበላ ድንጋይ',
+      nameEn: 'Lalibela Rock',
       backgroundColors: [Color(0xFF2C1810), Color(0xFF4A1F18)],
       textColor: Color(0xFFFDFBF7),
       accentColor: Color(0xFFFFD54F),
@@ -86,7 +99,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     ),
     // 3. Axumite Monastic Obsidian & Gold Leaf (አክሱም)
     CardThemePreset(
-      name: 'የአክሱም ጽላት (Axumite)',
+      name: 'የአክሱም ጽላት',
+      nameEn: 'Axumite Tablet',
       backgroundColors: [Color(0xFF0F172A), Color(0xFF1E293B)],
       textColor: Color(0xFFF8FAFC),
       accentColor: Color(0xFF38BDF8),
@@ -96,7 +110,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     ),
     // 4. Gondar Imperial Velvet Crimson (ጎንደር)
     CardThemePreset(
-      name: 'የጎንደር ሐር (Gondarine)',
+      name: 'የጎንደር ሐር',
+      nameEn: 'Gondar Velvet',
       backgroundColors: [Color(0xFF3B0B13), Color(0xFF6B1422)],
       textColor: Color(0xFFFFF7ED),
       accentColor: Color(0xFFFBBF24),
@@ -106,7 +121,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     ),
     // 5. Debre Damo Mountain Mist & Emerald (ደብረ ዳሞ)
     CardThemePreset(
-      name: 'ደብረ ዳሞ (Debre Damo)',
+      name: 'ደብረ ዳሞ',
+      nameEn: 'Debre Damo',
       backgroundColors: [Color(0xFF062C20), Color(0xFF0E4D3A)],
       textColor: Color(0xFFF0FDF4),
       accentColor: Color(0xFF34D399),
@@ -116,7 +132,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     ),
     // 6. Modern Editorial Obsidian & Titanium (ዘመናዊ ስሌት)
     CardThemePreset(
-      name: 'ዘመናዊ ስሌት (Modern)',
+      name: 'ዘመናዊ ስሌት',
+      nameEn: 'Modern Obsidian',
       backgroundColors: [Color(0xFF090A0F), Color(0xFF161824)],
       textColor: Color(0xFFFFFFFF),
       accentColor: Color(0xFFE2E8F0),
@@ -126,7 +143,7 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     ),
   ];
 
-  Future<void> _captureAndShare() async {
+  Future<void> _captureAndShare(bool isEnglish) async {
     setState(() => _isGenerating = true);
     try {
       final boundary =
@@ -144,14 +161,21 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
         name: 'verse_card_${DateTime.now().millisecondsSinceEpoch}.png',
       );
 
+      final shareText = isEnglish
+          ? '${widget.reference}\n«${widget.verseText}»\n— Holy Bible App'
+          : '${widget.reference}\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ';
+
       await Share.shareXFiles(
         [xFile],
-        text: '${widget.reference}\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ',
+        text: shareText,
       );
     } catch (e) {
       if (mounted) {
+        final errorMsg = isEnglish
+            ? 'Unable to share image: $e'
+            : 'ምስሉን ማጋራት አልተቻለም: $e';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ምስሉን ማጋራት አልተቻለም: $e')),
+          SnackBar(content: Text(errorMsg)),
         );
       }
     } finally {
@@ -161,34 +185,39 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeConfig = ref.watch(themeConfigProvider);
+    final isEnglish = ref.watch(isEnglishUiProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final preset = _presets[_selectedPresetIndex];
 
     final cardWidth = 330.0;
     final cardHeight = cardWidth / _aspectRatio.ratio;
 
     final bodyFont = _fontFamily == 'Serif'
-        ? GoogleFonts.notoSerifEthiopic
-        : GoogleFonts.notoSansEthiopic;
+        ? (isEnglish ? GoogleFonts.merriweather : GoogleFonts.notoSerifEthiopic)
+        : (isEnglish ? GoogleFonts.inter : GoogleFonts.notoSansEthiopic);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F1117) : const Color(0xFFF8FAFC),
+      backgroundColor: themeConfig.backgroundColor,
       appBar: AppBar(
+        backgroundColor: themeConfig.surfaceColor,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'የጥቅስ ምስል አዘጋጅ',
-              style: GoogleFonts.notoSansEthiopic(fontSize: 17, fontWeight: FontWeight.w900),
+              isEnglish ? 'Verse Card Maker' : 'የጥቅስ ምስል አዘጋጅ',
+              style: isEnglish
+                  ? GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: themeConfig.textColor)
+                  : GoogleFonts.notoSansEthiopic(fontSize: 17, fontWeight: FontWeight.w900, color: themeConfig.textColor),
             ),
             Text(
-              'ETHIOPIAN MANUSCRIPT VERSE CARD MAKER',
+              isEnglish ? 'ILLUMINATED MANUSCRIPT CARD' : 'የብራና ጽሑፍና የጥቅስ ምስል',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
-                color: theme.colorScheme.primary,
+                color: themeConfig.accentColor,
               ),
             ),
           ],
@@ -198,13 +227,13 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
+                backgroundColor: themeConfig.accentColor,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: _isGenerating ? null : _captureAndShare,
+              onPressed: _isGenerating ? null : () => _captureAndShare(isEnglish),
               icon: _isGenerating
                   ? const SizedBox(
                       width: 14,
@@ -213,15 +242,17 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                     )
                   : const Icon(Icons.ios_share_rounded, size: 16),
               label: Text(
-                'አጋራ',
-                style: GoogleFonts.notoSansEthiopic(fontSize: 12.5, fontWeight: FontWeight.w800),
+                isEnglish ? 'Share' : 'አጋራ',
+                style: isEnglish
+                    ? GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800)
+                    : GoogleFonts.notoSansEthiopic(fontSize: 12.5, fontWeight: FontWeight.w800),
               ),
             ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 40),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -343,17 +374,24 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                                       child: Text(
                                         widget.reference,
                                         textAlign: TextAlign.center,
-                                        style: GoogleFonts.notoSansEthiopic(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w900,
-                                          color: preset.accentColor,
-                                          letterSpacing: 0.4,
-                                        ),
+                                        style: isEnglish
+                                            ? GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w900,
+                                                color: preset.accentColor,
+                                                letterSpacing: 0.4,
+                                              )
+                                            : GoogleFonts.notoSansEthiopic(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w900,
+                                                color: preset.accentColor,
+                                                letterSpacing: 0.4,
+                                              ),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'መጽሐፍ ቅዱስ • HOLY BIBLE',
+                                      isEnglish ? 'HOLY BIBLE • መጽሐፍ ቅዱስ' : 'መጽሐፍ ቅዱስ • HOLY BIBLE',
                                       textAlign: TextAlign.center,
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 9,
@@ -377,7 +415,11 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
             const SizedBox(height: 24),
 
             // 2. Preset Background Themes (Horizontal Carousel)
-            _buildSectionTitle('የጀርባና የብራና ገጽታ (Manuscript Texture):'),
+            _buildSectionTitle(
+              isEnglish ? 'Manuscript Preset Texture:' : 'የጀርባና የብራና ገጽታ፦',
+              isEnglish,
+              themeConfig,
+            ),
             const SizedBox(height: 8),
             SizedBox(
               height: 48,
@@ -396,18 +438,24 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                         gradient: LinearGradient(colors: item.backgroundColors),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isSelected ? theme.colorScheme.primary : Colors.white24,
+                          color: isSelected ? themeConfig.accentColor : Colors.white24,
                           width: isSelected ? 2.5 : 1,
                         ),
                       ),
                       child: Center(
                         child: Text(
-                          item.name,
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: item.textColor,
-                          ),
+                          item.getDisplayName(isEnglish),
+                          style: isEnglish
+                              ? GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: item.textColor,
+                                )
+                              : GoogleFonts.notoSansEthiopic(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: item.textColor,
+                                ),
                         ),
                       ),
                     ),
@@ -418,32 +466,44 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
             const SizedBox(height: 20),
 
             // 3. Orthodox Cross Watermark Selector
-            _buildSectionTitle('የኦርቶዶክስ መስቀል ምልክት (Watermark):'),
+            _buildSectionTitle(
+              isEnglish ? 'Orthodox Cross Watermark:' : 'የመስቀል ምልክት (ውኃ መልክ)፦',
+              isEnglish,
+              themeConfig,
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
                 _buildCrossOption(
                   style: EthiopianCrossStyle.lalibela,
-                  label: 'ላሊበላ',
+                  label: isEnglish ? 'Lalibela' : 'ላሊበላ',
                   theme: theme,
+                  themeConfig: themeConfig,
+                  isEnglish: isEnglish,
                 ),
                 const SizedBox(width: 8),
                 _buildCrossOption(
                   style: EthiopianCrossStyle.axum,
-                  label: 'አክሱም',
+                  label: isEnglish ? 'Axum' : 'አክሱም',
                   theme: theme,
+                  themeConfig: themeConfig,
+                  isEnglish: isEnglish,
                 ),
                 const SizedBox(width: 8),
                 _buildCrossOption(
                   style: EthiopianCrossStyle.gondar,
-                  label: 'ጎንደር',
+                  label: isEnglish ? 'Gondar' : 'ጎንደር',
                   theme: theme,
+                  themeConfig: themeConfig,
+                  isEnglish: isEnglish,
                 ),
                 const SizedBox(width: 8),
                 _buildCrossOption(
                   style: EthiopianCrossStyle.none,
-                  label: 'ያለ መስቀል',
+                  label: isEnglish ? 'None' : 'ያለ መስቀል',
                   theme: theme,
+                  themeConfig: themeConfig,
+                  isEnglish: isEnglish,
                 ),
               ],
             ),
@@ -451,18 +511,25 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('የመስቀሉ ድምቀት፦', style: TextStyle(fontSize: 12)),
+                  Text(
+                    isEnglish ? 'Opacity:' : 'የመስቀሉ ድምቀት፦',
+                    style: TextStyle(fontSize: 12, color: themeConfig.secondaryTextColor),
+                  ),
                   Expanded(
                     child: Slider(
                       value: _crossOpacity,
                       min: 0.05,
                       max: 0.45,
                       divisions: 8,
+                      activeColor: themeConfig.accentColor,
                       label: '${(_crossOpacity * 100).toInt()}%',
                       onChanged: (val) => setState(() => _crossOpacity = val),
                     ),
                   ),
-                  Text('${(_crossOpacity * 100).toInt()}%', style: const TextStyle(fontSize: 12)),
+                  Text(
+                    '${(_crossOpacity * 100).toInt()}%',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: themeConfig.textColor),
+                  ),
                 ],
               ),
             ],
@@ -470,12 +537,13 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
 
             // 4. Aspect Ratio & Haräg Border Toggles
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionTitle('መጠን (Ratio):'),
+                      _buildSectionTitle(isEnglish ? 'Aspect Ratio:' : 'መጠን፦', isEnglish, themeConfig),
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 6,
@@ -488,22 +556,28 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? theme.colorScheme.primary
-                                    : (isDark ? const Color(0xFF1E2230) : Colors.white),
+                                    ? themeConfig.accentColor
+                                    : themeConfig.surfaceColor,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: isSelected
-                                      ? theme.colorScheme.primary
-                                      : Colors.grey.withValues(alpha: 0.3),
+                                      ? themeConfig.accentColor
+                                      : themeConfig.cardBorderColor,
                                 ),
                               ),
                               child: Text(
-                                r.label.split(' ')[0],
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: isSelected ? Colors.white : null,
-                                ),
+                                r.getDisplayLabel(isEnglish),
+                                style: isEnglish
+                                    ? GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected ? Colors.white : themeConfig.textColor,
+                                      )
+                                    : GoogleFonts.notoSansEthiopic(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected ? Colors.white : themeConfig.textColor,
+                                      ),
                               ),
                             ),
                           );
@@ -516,14 +590,21 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionTitle('የብራና ሐረግ (Border):'),
+                    _buildSectionTitle(isEnglish ? 'Illuminated Border:' : 'የብራና ሐረግ፦', isEnglish, themeConfig),
                     const SizedBox(height: 6),
                     FilterChip(
                       selected: _showHaragBorder,
-                      avatar: const Icon(Icons.border_outer_rounded, size: 16),
+                      backgroundColor: themeConfig.surfaceColor,
+                      selectedColor: themeConfig.goldAccent.withValues(alpha: 0.2),
+                      checkmarkColor: themeConfig.goldAccent,
+                      avatar: Icon(Icons.border_outer_rounded, size: 16, color: themeConfig.goldAccent),
                       label: Text(
-                        _showHaragBorder ? 'ሐረግ አለ' : 'ሐረግ የለም',
-                        style: GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w700),
+                        _showHaragBorder
+                            ? (isEnglish ? 'Border On' : 'ሐረግ አለ')
+                            : (isEnglish ? 'Border Off' : 'ሐረግ የለም'),
+                        style: isEnglish
+                            ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor)
+                            : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor),
                       ),
                       onSelected: (val) => setState(() => _showHaragBorder = val),
                     ),
@@ -534,15 +615,27 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
             const SizedBox(height: 18),
 
             // 5. Typography Controls (Font Switcher, Size, Alignment)
-            _buildSectionTitle('የፊደል ቅርጽና አቀማመጥ (Typography):'),
+            _buildSectionTitle(isEnglish ? 'Typography & Alignment:' : 'የፊደል ቅርጽና አቀማመጥ፦', isEnglish, themeConfig),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'Serif', label: Text('ባህላዊ ብራና')),
-                      ButtonSegment(value: 'Sans', label: Text('ዘመናዊ')),
+                    segments: [
+                      ButtonSegment(
+                        value: 'Serif',
+                        label: Text(
+                          isEnglish ? 'Serif' : 'ባህላዊ ብራና',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                      ButtonSegment(
+                        value: 'Sans',
+                        label: Text(
+                          isEnglish ? 'Sans' : 'ዘመናዊ',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
                     ],
                     selected: {_fontFamily},
                     onSelectionChanged: (set) => setState(() => _fontFamily = set.first),
@@ -554,17 +647,17 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.format_align_left_rounded),
-                      color: _alignment == TextAlign.left ? theme.colorScheme.primary : null,
+                      color: _alignment == TextAlign.left ? themeConfig.accentColor : themeConfig.secondaryTextColor,
                       onPressed: () => setState(() => _alignment = TextAlign.left),
                     ),
                     IconButton(
                       icon: const Icon(Icons.format_align_center_rounded),
-                      color: _alignment == TextAlign.center ? theme.colorScheme.primary : null,
+                      color: _alignment == TextAlign.center ? themeConfig.accentColor : themeConfig.secondaryTextColor,
                       onPressed: () => setState(() => _alignment = TextAlign.center),
                     ),
                     IconButton(
                       icon: const Icon(Icons.format_align_right_rounded),
-                      color: _alignment == TextAlign.right ? theme.colorScheme.primary : null,
+                      color: _alignment == TextAlign.right ? themeConfig.accentColor : themeConfig.secondaryTextColor,
                       onPressed: () => setState(() => _alignment = TextAlign.right),
                     ),
                   ],
@@ -573,7 +666,7 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
             ),
             Row(
               children: [
-                const Icon(Icons.format_size_rounded, size: 20),
+                Icon(Icons.format_size_rounded, size: 20, color: themeConfig.secondaryTextColor),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Slider(
@@ -581,11 +674,15 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                     min: 13.0,
                     max: 26.0,
                     divisions: 13,
+                    activeColor: themeConfig.accentColor,
                     label: '${_fontSize.toInt()}pt',
                     onChanged: (val) => setState(() => _fontSize = val),
                   ),
                 ),
-                Text('${_fontSize.toInt()}pt', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  '${_fontSize.toInt()}pt',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: themeConfig.textColor),
+                ),
               ],
             ),
           ],
@@ -594,10 +691,12 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isEnglish, ReaderThemeConfig themeConfig) {
     return Text(
       title,
-      style: GoogleFonts.notoSansEthiopic(fontSize: 13, fontWeight: FontWeight.w800),
+      style: isEnglish
+          ? GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: themeConfig.textColor)
+          : GoogleFonts.notoSansEthiopic(fontSize: 13, fontWeight: FontWeight.w800, color: themeConfig.textColor),
     );
   }
 
@@ -605,6 +704,8 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
     required EthiopianCrossStyle style,
     required String label,
     required ThemeData theme,
+    required ReaderThemeConfig themeConfig,
+    required bool isEnglish,
   }) {
     final isSelected = _crossStyle == style;
     return Expanded(
@@ -613,10 +714,10 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+            color: isSelected ? themeConfig.accentColor : themeConfig.surfaceColor,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? theme.colorScheme.primary : Colors.grey.withValues(alpha: 0.3),
+              color: isSelected ? themeConfig.accentColor : themeConfig.cardBorderColor,
             ),
           ),
           child: Column(
@@ -628,22 +729,28 @@ class _VerseCardMakerScreenState extends State<VerseCardMakerScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : null,
+                        color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
                       ),
                     )
                   : OrthodoxCrossIcon(
                       size: 16,
-                      color: isSelected ? Colors.white : theme.colorScheme.primary,
+                      color: isSelected ? Colors.white : themeConfig.accentColor,
                       style: style,
                     ),
               const SizedBox(height: 2),
               Text(
                 label,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : null,
-                ),
+                style: isEnglish
+                    ? GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : themeConfig.textColor,
+                      )
+                    : GoogleFonts.notoSansEthiopic(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected ? Colors.white : themeConfig.textColor,
+                      ),
               ),
             ],
           ),

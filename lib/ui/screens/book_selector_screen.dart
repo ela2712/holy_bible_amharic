@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/geez_numbers.dart';
 import '../../models/book.dart';
+import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 
@@ -87,40 +88,44 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     super.dispose();
   }
 
-  Map<String, dynamic> _getCanonicalGroupStyle(Book book) {
+  Map<String, dynamic> _getCanonicalGroupStyle(Book book, bool isEnglish) {
     final n = book.bookNumber;
     if (book.isNewTestament) {
       if (n >= 40 && n <= 43) {
-        return {'label': 'ወንጌላት (Gospels)', 'color': const Color(0xFF047857)};
+        return {'label': isEnglish ? 'Gospels' : 'ወንጌላት', 'color': const Color(0xFF047857)};
       }
       if (n == 44) {
-        return {'label': 'ታሪክ (Acts)', 'color': const Color(0xFF0D9488)};
+        return {'label': isEnglish ? 'Acts' : 'ታሪክ', 'color': const Color(0xFF0D9488)};
       }
       if (n >= 45 && n <= 65) {
-        return {'label': 'መልእክታት (Epistles)', 'color': const Color(0xFF0284C7)};
+        return {'label': isEnglish ? 'Epistles' : 'መልእክታት', 'color': const Color(0xFF0284C7)};
       }
       if (n == 66) {
-        return {'label': 'ራእይ (Prophecy)', 'color': const Color(0xFF7C3AED)};
+        return {'label': isEnglish ? 'Revelation' : 'ራእይ', 'color': const Color(0xFF7C3AED)};
       }
-      return {'label': 'ቀኖና 81 (Canon)', 'color': const Color(0xFFE11D48)};
+      return {'label': isEnglish ? 'Canon 81' : 'ቀኖና 81', 'color': const Color(0xFFE11D48)};
     } else {
       if (n >= 1 && n <= 5) {
-        return {'label': 'ኦሪት (Pentateuch)', 'color': const Color(0xFF0F766E)};
+        return {'label': isEnglish ? 'Law' : 'ኦሪት', 'color': const Color(0xFF0F766E)};
       }
       if (n >= 6 && n <= 17) {
-        return {'label': 'ታሪክ (History)', 'color': const Color(0xFF0D9488)};
+        return {'label': isEnglish ? 'History' : 'ታሪክ', 'color': const Color(0xFF0D9488)};
       }
       if (n >= 18 && n <= 22) {
-        return {'label': 'ጥበብና መዝሙር (Wisdom)', 'color': const Color(0xFF059669)};
+        return {'label': isEnglish ? 'Wisdom & Poetry' : 'ጥበብና መዝሙር', 'color': const Color(0xFF059669)};
       }
       if (n >= 23 && n <= 39) {
-        return {'label': 'ነቢያት (Prophets)', 'color': const Color(0xFF4F46E5)};
+        return {'label': isEnglish ? 'Prophets' : 'ነቢያት', 'color': const Color(0xFF4F46E5)};
       }
-      return {'label': 'ቀኖና 81 (Deuterocanon)', 'color': const Color(0xFFE11D48)};
+      return {'label': isEnglish ? 'Deuterocanon' : 'ቀኖና 81', 'color': const Color(0xFFE11D48)};
     }
   }
 
-  String _getBookAbbreviation(Book book) {
+  String _getBookAbbreviation(Book book, bool isEnglish) {
+    if (isEnglish && book.nameEn.trim().isNotEmpty) {
+      final en = book.nameEn.trim();
+      return en.length <= 4 ? en : en.substring(0, 3);
+    }
     if (book.shortName.trim().isNotEmpty) {
       return book.shortName.trim();
     }
@@ -190,6 +195,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
   Widget build(BuildContext context) {
     final bibleState = ref.watch(bibleStateProvider);
     final themeConfig = ref.watch(themeConfigProvider);
+    final isEnglish = ref.watch(isEnglishUiProvider);
 
     final filteredBooks = bibleState.books.where((b) {
       if (_testamentFilter == 'OT' && !b.isOldTestament) return false;
@@ -200,6 +206,22 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
           b.nameEn.toLowerCase().contains(q) ||
           b.shortName.toLowerCase().contains(q);
     }).toList();
+
+    final step0BookName = _selectedBook != null
+        ? (isEnglish && _selectedBook!.nameEn.isNotEmpty
+            ? _selectedBook!.nameEn
+            : _selectedBook!.name)
+        : null;
+
+    final step0Label = step0BookName != null
+        ? (isEnglish ? '1. $step0BookName' : '፩. $step0BookName')
+        : (isEnglish ? '1. Book' : '፩. መጽሐፍ');
+
+    final step1Label = isEnglish
+        ? '2. Chapter $_selectedChapter'
+        : '፪. ምዕራፍ $_selectedChapter';
+
+    final step2Label = isEnglish ? '3. Verse' : '፫. ቁጥር';
 
     return Scaffold(
       backgroundColor: themeConfig.backgroundColor,
@@ -228,7 +250,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'SCRIPTURE NAVIGATOR',
+                          isEnglish ? 'SCRIPTURE NAVIGATOR' : 'የቅዱሳት መጻሕፍት ማውጫ',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -238,12 +260,18 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'መጽሐፍ፣ ምዕራፍና ቁጥር መምረጫ',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: themeConfig.textColor,
-                          ),
+                          isEnglish ? 'Select Book, Chapter & Verse' : 'መጽሐፍ፣ ምዕራፍና ቁጥር መምረጫ',
+                          style: isEnglish
+                              ? GoogleFonts.inter(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  color: themeConfig.textColor,
+                                )
+                              : GoogleFonts.notoSansEthiopic(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: themeConfig.textColor,
+                                ),
                         ),
                       ],
                     ),
@@ -255,7 +283,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                         color: themeConfig.textColor,
                         size: 21,
                       ),
-                      tooltip: _isGridView ? 'ዝርዝር እይታ (List View)' : 'ሰንጠረዥ እይታ (Grid View)',
+                      tooltip: _isGridView
+                          ? (isEnglish ? 'List View' : 'ዝርዝር እይታ')
+                          : (isEnglish ? 'Grid View' : 'ሰንጠረዥ እይታ'),
                       onPressed: () => setState(() => _isGridView = !_isGridView),
                     ),
                   IconButton(
@@ -280,21 +310,24 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   children: [
                     _buildStepTab(
                       stepIndex: 0,
-                      label: _selectedBook != null ? '፩. ${_selectedBook!.name}' : '፩. መጽሐፍ (Book)',
+                      label: step0Label,
                       isEnabled: true,
                       themeConfig: themeConfig,
+                      isEnglish: isEnglish,
                     ),
                     _buildStepTab(
                       stepIndex: 1,
-                      label: '፪. ምዕራፍ $_selectedChapter',
+                      label: step1Label,
                       isEnabled: _selectedBook != null,
                       themeConfig: themeConfig,
+                      isEnglish: isEnglish,
                     ),
                     _buildStepTab(
                       stepIndex: 2,
-                      label: '፫. ቁጥር (Verse)',
+                      label: step2Label,
                       isEnabled: _selectedBook != null,
                       themeConfig: themeConfig,
+                      isEnglish: isEnglish,
                     ),
                   ],
                 ),
@@ -304,10 +337,10 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             // 3. Step Content
             Expanded(
               child: _currentStep == 0
-                  ? _buildStep0BookSelection(filteredBooks, bibleState, themeConfig)
+                  ? _buildStep0BookSelection(filteredBooks, bibleState, themeConfig, isEnglish)
                   : _currentStep == 1
-                      ? _buildStep1ChapterSelection(themeConfig, bibleState)
-                      : _buildStep2VerseSelection(themeConfig),
+                      ? _buildStep1ChapterSelection(themeConfig, bibleState, isEnglish)
+                      : _buildStep2VerseSelection(themeConfig, isEnglish),
             ),
           ],
         ),
@@ -320,6 +353,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     required String label,
     required bool isEnabled,
     required ReaderThemeConfig themeConfig,
+    required bool isEnglish,
   }) {
     final isSelected = _currentStep == stepIndex;
     return Expanded(
@@ -337,15 +371,25 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.notoSansEthiopic(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: isSelected
-                  ? Colors.white
-                  : isEnabled
-                      ? themeConfig.textColor
-                      : themeConfig.secondaryTextColor.withValues(alpha: 0.4),
-            ),
+            style: isEnglish
+                ? GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected
+                        ? Colors.white
+                        : isEnabled
+                            ? themeConfig.textColor
+                            : themeConfig.secondaryTextColor.withValues(alpha: 0.4),
+                  )
+                : GoogleFonts.notoSansEthiopic(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected
+                        ? Colors.white
+                        : isEnabled
+                            ? themeConfig.textColor
+                            : themeConfig.secondaryTextColor.withValues(alpha: 0.4),
+                  ),
           ),
         ),
       ),
@@ -356,6 +400,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     List<Book> books,
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
+    bool isEnglish,
   ) {
     return Column(
       children: [
@@ -374,9 +419,11 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   ),
                   child: TextField(
                     controller: _searchController,
-                    style: GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.textColor),
+                    style: isEnglish
+                        ? GoogleFonts.inter(fontSize: 13.5, color: themeConfig.textColor)
+                        : GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.textColor),
                     decoration: InputDecoration(
-                      hintText: 'መጽሐፍ ፈልግ (Search book)...',
+                      hintText: isEnglish ? 'Search book...' : 'መጽሐፍ ፈልግ...',
                       hintStyle: TextStyle(fontSize: 12.5, color: themeConfig.secondaryTextColor),
                       prefixIcon: Icon(Icons.search_rounded, size: 18, color: themeConfig.accentColor),
                       suffixIcon: _filter.isNotEmpty
@@ -396,11 +443,11 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              _buildTestamentChip('ሁሉም', 'ALL', themeConfig),
+              _buildTestamentChip(isEnglish ? 'All' : 'ሁሉም', 'ALL', themeConfig, isEnglish),
               const SizedBox(width: 4),
-              _buildTestamentChip('ብሉይ', 'OT', themeConfig),
+              _buildTestamentChip(isEnglish ? 'OT' : 'ብሉይ', 'OT', themeConfig, isEnglish),
               const SizedBox(width: 4),
-              _buildTestamentChip('ሐዲስ', 'NT', themeConfig),
+              _buildTestamentChip(isEnglish ? 'NT' : 'ሐዲስ', 'NT', themeConfig, isEnglish),
             ],
           ),
         ),
@@ -409,19 +456,21 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
           child: books.isEmpty
               ? Center(
                   child: Text(
-                    'ምንም መጽሐፍ አልተገኘም',
-                    style: GoogleFonts.notoSansEthiopic(color: themeConfig.secondaryTextColor),
+                    isEnglish ? 'No books found' : 'ምንም መጽሐፍ አልተገኘም',
+                    style: isEnglish
+                        ? GoogleFonts.inter(color: themeConfig.secondaryTextColor)
+                        : GoogleFonts.notoSansEthiopic(color: themeConfig.secondaryTextColor),
                   ),
                 )
               : _isGridView
-                  ? _buildAbbreviationGrid(books, bibleState, themeConfig)
-                  : _buildDetailedList(books, bibleState, themeConfig),
+                  ? _buildAbbreviationGrid(books, bibleState, themeConfig, isEnglish)
+                  : _buildDetailedList(books, bibleState, themeConfig, isEnglish),
         ),
       ],
     );
   }
 
-  Widget _buildTestamentChip(String label, String value, ReaderThemeConfig themeConfig) {
+  Widget _buildTestamentChip(String label, String value, ReaderThemeConfig themeConfig, bool isEnglish) {
     final isSelected = _testamentFilter == value;
     return GestureDetector(
       onTap: () => setState(() => _testamentFilter = value),
@@ -436,11 +485,17 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.notoSansEthiopic(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
-            color: isSelected ? themeConfig.backgroundColor : themeConfig.textColor,
-          ),
+          style: isEnglish
+              ? GoogleFonts.inter(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? themeConfig.backgroundColor : themeConfig.textColor,
+                )
+              : GoogleFonts.notoSansEthiopic(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? themeConfig.backgroundColor : themeConfig.textColor,
+                ),
         ),
       ),
     );
@@ -450,6 +505,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     List<Book> books,
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
+    bool isEnglish,
   ) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
@@ -463,9 +519,12 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
       itemBuilder: (context, index) {
         final book = books[index];
         final isCurrent = bibleState.currentBook?.id == book.id;
-        final style = _getCanonicalGroupStyle(book);
+        final style = _getCanonicalGroupStyle(book, isEnglish);
         final catColor = style['color'] as Color;
-        final abbr = _getBookAbbreviation(book);
+        final abbr = _getBookAbbreviation(book, isEnglish);
+        final displayName = isEnglish && book.nameEn.isNotEmpty
+            ? book.nameEn
+            : book.name.replaceAll('መጽሐፈ ', '').replaceAll('ኦሪት ', '').replaceAll('ትንቢተ ', '');
 
         return InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -493,27 +552,39 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   ),
                   child: Text(
                     abbr,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: catColor,
-                    ),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: catColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: catColor,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  book.name.replaceAll('መጽሐፈ ', '').replaceAll('ኦሪት ', '').replaceAll('ትንቢተ ', ''),
+                  displayName,
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: themeConfig.textColor,
-                  ),
+                  style: isEnglish
+                      ? GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: themeConfig.textColor,
+                        )
+                      : GoogleFonts.notoSansEthiopic(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: themeConfig.textColor,
+                        ),
                 ),
                 Text(
-                  '${book.totalChapters} ምዕራፍ',
+                  isEnglish ? '${book.totalChapters} Ch.' : '${book.totalChapters} ምዕራፍ',
                   style: TextStyle(
                     fontSize: 9.5,
                     color: themeConfig.secondaryTextColor,
@@ -531,6 +602,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     List<Book> books,
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
+    bool isEnglish,
   ) {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
@@ -539,9 +611,10 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
       itemBuilder: (context, index) {
         final book = books[index];
         final isCurrent = bibleState.currentBook?.id == book.id;
-        final style = _getCanonicalGroupStyle(book);
+        final style = _getCanonicalGroupStyle(book, isEnglish);
         final catColor = style['color'] as Color;
         final catLabel = style['label'] as String;
+        final displayName = isEnglish && book.nameEn.isNotEmpty ? book.nameEn : book.name;
 
         return InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -567,12 +640,18 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    _getBookAbbreviation(book),
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: catColor,
-                    ),
+                    _getBookAbbreviation(book, isEnglish),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: catColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: catColor,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -581,12 +660,18 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        book.name,
-                        style: GoogleFonts.notoSansEthiopic(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: themeConfig.textColor,
-                        ),
+                        displayName,
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              ),
                       ),
                       const SizedBox(height: 2),
                       Row(
@@ -599,16 +684,22 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                             ),
                             child: Text(
                               catLabel,
-                              style: GoogleFonts.notoSansEthiopic(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: catColor,
-                              ),
+                              style: isEnglish
+                                  ? GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: catColor,
+                                    )
+                                  : GoogleFonts.notoSansEthiopic(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: catColor,
+                                    ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${book.totalChapters} ምዕራፎች',
+                            isEnglish ? '${book.totalChapters} Chapters' : '${book.totalChapters} ምዕራፎች',
                             style: TextStyle(fontSize: 11.5, color: themeConfig.secondaryTextColor),
                           ),
                         ],
@@ -628,9 +719,11 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
   Widget _buildStep1ChapterSelection(
     ReaderThemeConfig themeConfig,
     BibleViewState bibleState,
+    bool isEnglish,
   ) {
     final book = _selectedBook;
     if (book == null) return const SizedBox.shrink();
+    final bookDisplayName = isEnglish && book.nameEn.isNotEmpty ? book.nameEn : book.name;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,15 +734,21 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${book.name} — ምዕራፍ ይምረጡ',
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: themeConfig.textColor,
-                ),
+                isEnglish ? '$bookDisplayName — Select Chapter' : '$bookDisplayName — ምዕራፍ ይምረጡ',
+                style: isEnglish
+                    ? GoogleFonts.inter(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: themeConfig.textColor,
+                      )
+                    : GoogleFonts.notoSansEthiopic(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: themeConfig.textColor,
+                      ),
               ),
               Text(
-                '${book.totalChapters} ምዕራፎች',
+                isEnglish ? '${book.totalChapters} Chapters' : '${book.totalChapters} ምዕራፎች',
                 style: TextStyle(fontSize: 12, color: themeConfig.secondaryTextColor),
               ),
             ],
@@ -669,7 +768,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
               final ch = index + 1;
               final isCurrent =
                   bibleState.currentBook?.id == book.id && bibleState.currentChapter == ch;
-              final label = themeConfig.useGeezNumerals ? GeezNumbers.toGeez(ch) : '$ch';
+              final label = !isEnglish && themeConfig.useGeezNumerals ? GeezNumbers.toGeez(ch) : '$ch';
 
               return InkWell(
                 borderRadius: BorderRadius.circular(14),
@@ -686,11 +785,17 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   ),
                   child: Text(
                     label,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: isCurrent ? Colors.white : themeConfig.textColor,
-                    ),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: isCurrent ? Colors.white : themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: isCurrent ? Colors.white : themeConfig.textColor,
+                          ),
                   ),
                 ),
               );
@@ -701,9 +806,10 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     );
   }
 
-  Widget _buildStep2VerseSelection(ReaderThemeConfig themeConfig) {
+  Widget _buildStep2VerseSelection(ReaderThemeConfig themeConfig, bool isEnglish) {
     final book = _selectedBook;
     if (book == null) return const SizedBox.shrink();
+    final bookDisplayName = isEnglish && book.nameEn.isNotEmpty ? book.nameEn : book.name;
 
     if (_loadingVerseCount) {
       return Center(child: CircularProgressIndicator(color: themeConfig.accentColor));
@@ -726,20 +832,30 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             onPressed: () => _onVerseTapped(1),
             icon: const Icon(Icons.menu_book_rounded, size: 18),
             label: Text(
-              '${book.name} ምዕራፍ $_selectedChapterን ከመጀመሪያው ክፈት',
-              style: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              isEnglish
+                  ? 'Open $bookDisplayName Chapter $_selectedChapter from Verse 1'
+                  : '$bookDisplayName ምዕራፍ $_selectedChapterን ከመጀመሪያው ክፈት',
+              style: isEnglish
+                  ? GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)
+                  : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: Text(
-            'ወይም ወደ ተለየ ቁጥር (Verse) በቀጥታ ይዝለሉ፦',
-            style: GoogleFonts.notoSansEthiopic(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: themeConfig.secondaryTextColor,
-            ),
+            isEnglish ? 'Or jump directly to a verse:' : 'ወይም ወደ ተለየ ቁጥር በቀጥታ ይዝለሉ፦',
+            style: isEnglish
+                ? GoogleFonts.inter(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: themeConfig.secondaryTextColor,
+                  )
+                : GoogleFonts.notoSansEthiopic(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: themeConfig.secondaryTextColor,
+                  ),
           ),
         ),
         Expanded(
@@ -754,7 +870,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             itemCount: _verseCountForChapter,
             itemBuilder: (context, index) {
               final v = index + 1;
-              final label = themeConfig.useGeezNumerals ? GeezNumbers.toGeez(v) : '$v';
+              final label = !isEnglish && themeConfig.useGeezNumerals ? GeezNumbers.toGeez(v) : '$v';
 
               return InkWell(
                 borderRadius: BorderRadius.circular(12),
@@ -768,11 +884,17 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   ),
                   child: Text(
                     label,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.textColor,
-                    ),
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: themeConfig.textColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: themeConfig.textColor,
+                          ),
                   ),
                 ),
               );

@@ -13,6 +13,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/bible_repository.dart';
 import '../widgets/built_in_geez_keyboard.dart';
 import 'verse_card_maker_screen.dart';
+import 'parallel_reader_screen.dart';
 
 class StudyToolsSheet extends ConsumerStatefulWidget {
   final Verse verse;
@@ -735,7 +736,71 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
         return ListView(
           controller: scrollController,
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-          children: parallels.entries.map((entry) {
+          children: [
+            // Full Chapter Parallel Comparison Button
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ParallelReaderScreen(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: themeConfig.accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: themeConfig.accentColor.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: themeConfig.accentColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.compare_arrows_rounded, size: 18, color: Colors.white),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ሙሉ ምዕራፍ ጎን ለጎን አነጻጽር',
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.5,
+                                color: themeConfig.accentColor,
+                              ),
+                            ),
+                            Text(
+                              'ይህንን ምዕራፍ ከሌላ ትርጉም ጋር ቁጥር በቁጥር ያነጻጽሩ',
+                              style: GoogleFonts.notoSansEthiopic(
+                                fontSize: 11,
+                                color: themeConfig.secondaryTextColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 14, color: themeConfig.accentColor),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            ...parallels.entries.map((entry) {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(16),
@@ -789,9 +854,10 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                 ],
               ),
             );
-          }).toList(),
-        );
-      },
-    );
-  }
+          }),
+        ],
+      );
+    },
+  );
+}
 }
