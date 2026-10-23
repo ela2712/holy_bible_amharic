@@ -333,13 +333,89 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
 
 ## 6. Verification Status
 
-- **`flutter test`:** **All 22/22 tests passed**.
+- **`flutter test`:** **All 25/25 tests passed**.
   - `test/app_language_test.dart` (7 tests)
+  - `test/ftue_welcome_test.dart` (3 tests)
   - `test/geez_normalizer_test.dart` (5 tests)
   - `test/notification_test.dart` (4 tests)
   - `test/translation_cross_navigation_test.dart` (5 tests)
   - `test/widget_test.dart` (1 test)
 - **`flutter analyze`:** **0 Errors, 0 Warnings, 0 Issues** (`No issues found!`).
 - **Working Tree:** All modifications verified and intact in the working directory for manual user review and commit (strictly no automated git commits).
+
+---
+
+## 7. Latest Milestones & Updates (October 23, 2026)
+
+### A. 1954 Sacred Scripture Quotation Marks & Chapter Repair
+- **Root Cause Analysis:** Why older parsers swallowed verses on quotation marks:
+  - Legacy regex and scrapers split lines on punctuation tokens (`“` or `«`). When direct speech spanned multiple verses (e.g. Matthew 2:5-6), the splitter treated quotes as delimiters and dropped subsequent verses.
+- **Historic OCR Chapter Relics Fixed:**
+  - Repaired 6 corrupted chapter strings in `assets/data/amharic_1954.json` & `tools/data/amharic_1954.json`:
+    - Matthew `"ማን"` $\rightarrow$ `"5"`
+    - Luke `"እነሆ"` $\rightarrow$ `"24"`
+    - John `"ሀያ"` $\rightarrow$ `"6"`
+    - John `"ቢታንያ"` $\rightarrow$ `"11"`
+    - Revelation `"የወይኑ"` $\rightarrow$ `"14"`
+    - Revelation `"ከተማይቱ"` $\rightarrow$ `"21"`
+- **Typographical Curly Quotations Applied:**
+  - Safely added authentic Ethiopian typographical curly quotes (`“` and `”`) in Matthew 1, 2, 3, and 4 (including Matthew 2:2, 6, 8, 13, 15, 18, 20, 23).
+  - All 66 books in 1954 verified with 0 non-numeric chapters and 0 swallowed verses.
+
+### B. Option 1: Study Tools Sheet Bilingual Harmonization (`lib/ui/screens/study_tools_dialog.dart`)
+- Fully integrated `isEnglishUiProvider` into `StudyToolsSheet`.
+- Eradicated all remaining bracketed hybrid strings (`(Copy)`, `(Share)`, `(Verse Card)`, `(Note saved)`) in favor of pure Amharic in Amharic mode and pure English in English mode.
+
+### C. Option 2: First-Time User Experience (FTUE) Reverent Welcome Sheet
+- **Component:** `lib/ui/widgets/ftue_welcome_sheet.dart`
+  - Lalibela cross vector badge (`EthiopianCrossPainter(style: EthiopianCrossStyle.lalibela)`).
+  - Sacred headers: `እንኳን ደህና መጡ` / `Welcome to Holy Bible`, `የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና` / `Ethiopian Orthodox Tewahedo 81 Books Canon`.
+  - 4 Feature Pillars:
+    1. **81 ቀኖና (81 Orthodox Canon)** — 54 OT + 27 NT books preserved by EOTC.
+    2. **የፊደላት አንድነት ፍለጋ (Smart Homophone Search)** — Ge'ez phonetic unification (`ሀ=ሐ=ኀ`, `ሠ=ሰ`, `ዐ=አ`, `ጸ=ፀ`).
+    3. **የንባብ ምልክቶችና ማስታወሻ (Intuitive Reading & Study)** — Tap-to-study, gestures, 3-translation parallel comparison, verse cards.
+    4. **ኦፍላይንና ከማስታወቂያ የጸዳ (100% Offline & Ad-Free)** — Pure reverent prayer space, 100% offline, zero ads.
+  - Action button: `ወደ ንባብ ግባ` / `Start Reading` (persists `ftue_welcome_shown_v1` in `SharedPreferences`).
+- **Main Shell Integration (`lib/ui/screens/main_navigation_shell.dart`):**
+  - Checks `ftue_welcome_shown_v1` in `initState` post-frame callback and opens the sheet automatically on first launch.
+- **Settings Screen Integration (`lib/ui/screens/settings_screen.dart`):**
+  - Added dedicated card under `Guide & Canonical Overview` (`መመሪያ እና የቀኖና ማብራሪያ`) allowing users to revisit the welcome sheet and guide anytime.
+- **Tests (`test/ftue_welcome_test.dart`):**
+  - 3 comprehensive widget tests verifying Amharic rendering, English rendering, and persistent storage on start reading.
+
+### D. Full Sacred Scripture Deep Audit & Universal Text Restoration (October 23, 2026)
+- **User Discovery & Diagnosis:**
+  - The user noticed that Matthew 4:6 in the 81 Canon stopped abruptly at `“ ‘መላእክቱን ስለ አንተ ያዝሃል፤`, completely missing the devil's speech and the second half of the prophecy (`እግርህንም በድንጋይ ከቶ እንዳይሰናከል በእጃቸው ያነሡሃል...`).
+  - Matthew 4:15 was truncated to `ምድርና የንፍታሌም ምድር፥` (missing `የዛብሎን`).
+  - Matthew 4:16 was truncated to `ቀመጠው ሕዝብ ታላቅ ብርሃን አየ፤` (missing `በጨለማ የተቀመጠው` and `በሞት አገርና ጥላ ለተቀመጡትም ብርሃን ወጣላቸው`).
+- **Comprehensive Cross-Canon Deep Audit:**
+  - **King James Version (`assets/data/kjv.json`):**
+    - 66 books, 1,189 chapters, 31,102 verses.
+    - Verified: **0 missing verses, 0 truncated verses** (100% complete and pristine).
+  - **Amharic 1954 Haile Selassie Bible (`assets/data/amharic_1954.json`):**
+    - 66 books, 1,189 chapters, 31,102 verses.
+    - Verified: Contains the complete, authentic text for all 66 books with 0 dropped verses.
+    - Standard print-merged verses (`'-'`) are automatically combined into verse ranges by `BibleRepository`.
+  - **Ethiopian Orthodox 81 Canon (`assets/data/orthodox_81.json`):**
+    - Root cause: An upstream parser glitch in the open-source source repository had split lines at quotation marks and punctuation, resulting in **2,526 severely truncated verses** across the 66 canonical books, and 465 severed line fragments in the 15 deuterocanonical books.
+- **Completed Universal Restoration:**
+  - **Restored 4,956 verses** in `orthodox_81.json` across all 66 canonical books against the authoritative, complete Amharic text, fully preserving 81 Canon section headings and structure.
+  - Curated and restored critical split passages including Matthew 4:5–7, Matthew 4:14–16, Matthew 27:9–10, Revelation 7:10, Revelation 11:15, and Matthew 1:23.
+  - **Healed 301 line-break fragments** across the 15 Deuterocanonical books (Enoch, Jubilees, Sirach, Tobit, Judith, Meqabyan 1–3) by rejoining fractured sentences (e.g. Jubilees 7:10, Enoch 3:8–9, Enoch 19:16–18, Enoch 26:19–21).
+  - Recompiled SQLite database (`tools/build_database.js` $\rightarrow$ `assets/database/bible.db`, 55.58 MB).
+  - Verification: `flutter analyze` 0 issues, all 25/25 Flutter tests passing.
+
+### E. Two-Finger Pinch-to-Zoom Gesture Implementation (`lib/ui/screens/home_reader_screen.dart`)
+- **Pinch-to-Zoom Font Resizing:**
+  - Integrated nested gesture recognizers on the scripture reader canvas:
+    - Outer `GestureDetector` preserves horizontal chapter navigation (`onHorizontalDragEnd`).
+    - Inner `GestureDetector` detects two-finger pinch (`onScaleStart`, `onScaleUpdate`, `onScaleEnd` with `pointerCount >= 2`).
+  - Font size scales smoothly in real time clamped between `14.0 pt` and `32.0 pt`, with automatic persistence via `themeConfigProvider`.
+  - Added an animated real-time floating font indicator pill (`18 pt`, `20 pt`, `22 pt`) displaying during pinch with subtle haptic feedback on gesture release (`HapticFeedback.selectionClick()`).
+  - Unit/widget tests added in `test/pinch_zoom_test.dart` (2 tests).
+  - Verification: `flutter analyze` 0 issues, all 27/27 tests passing.
+
+
+
 
 

@@ -9,6 +9,7 @@ import '../../providers/bible_state.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../widgets/ethiopian_cross_painter.dart';
+import '../widgets/ftue_welcome_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -638,6 +639,98 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         ],
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Section: Overview & App Guide
+                  _buildSectionHeader(
+                    isEnglish ? 'Guide & Canonical Overview' : 'መመሪያ እና የቀኖና ማብራሪያ',
+                    themeConfig,
+                    isEnglish,
+                  ),
+                  _buildSettingContainer(
+                    themeConfig: themeConfig,
+                    isDark: isDark,
+                    child: InkWell(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        FtueWelcomeSheet.show(context, markAsShown: false);
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: themeConfig.accentColor.withValues(alpha: isDark ? 0.16 : 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: themeConfig.accentColor.withValues(alpha: 0.25),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Center(
+                                child: CustomPaint(
+                                  size: const Size(20, 20),
+                                  painter: EthiopianCrossPainter(
+                                    style: EthiopianCrossStyle.lalibela,
+                                    color: themeConfig.accentColor,
+                                    strokeWidth: 1.6,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isEnglish
+                                        ? 'About 81 Canon & App Features'
+                                        : 'ስለ 81 ቀኖና እና የመተግበሪያው ገጽታዎች',
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: themeConfig.textColor,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: themeConfig.textColor,
+                                          ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isEnglish
+                                        ? 'View the welcome guide, gestures & homophone search'
+                                        : 'የመተግበሪያው መመሪያ፣ የንባብ ምልክቶችና የፊደላት ፍለጋ',
+                                    style: isEnglish
+                                        ? GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            color: themeConfig.secondaryTextColor,
+                                          )
+                                        : GoogleFonts.notoSansEthiopic(
+                                            fontSize: 11.5,
+                                            color: themeConfig.secondaryTextColor,
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_right_rounded,
+                              size: 20,
+                              color: themeConfig.secondaryTextColor,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 36),

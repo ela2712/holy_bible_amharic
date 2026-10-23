@@ -40,6 +40,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isChromeVisible = true;
   int? _selectedVerseNumber;
+  double _baseFontSize = 18.0;
+  bool _isPinching = false;
 
   @override
   void initState() {
@@ -249,10 +251,33 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               }
                             }
                           },
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 740),
-                              child: ListView(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.translucent,
+                            onScaleStart: (details) {
+                              _baseFontSize = themeConfig.fontSize;
+                              _isPinching = false;
+                            },
+                            onScaleUpdate: (details) {
+                              if (details.pointerCount >= 2) {
+                                if (!_isPinching) {
+                                  setState(() => _isPinching = true);
+                                }
+                                final newSize = (_baseFontSize * details.scale).clamp(14.0, 32.0);
+                                if ((newSize - themeConfig.fontSize).abs() >= 0.5) {
+                                  ref.read(themeConfigProvider.notifier).setFontSize(newSize);
+                                }
+                              }
+                            },
+                            onScaleEnd: (details) {
+                              if (_isPinching) {
+                                HapticFeedback.selectionClick();
+                                setState(() => _isPinching = false);
+                              }
+                            },
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 740),
+                                child: ListView(
                                 controller: _scrollController,
                                 padding: EdgeInsets.fromLTRB(
                                   22,
@@ -306,6 +331,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                             ),
                           ),
                         ),
+                      ),
             ),
 
             // 2. Active Reading Plan In-Reader Floating Bar (if user is reading a plan)
@@ -342,6 +368,53 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 isDark,
               ),
             ),
+
+            // 4. Pinch Zoom Font Indicator Pill
+            if (_isPinching)
+              Positioned(
+                top: 24,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E2128) : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: themeConfig.accentColor.withValues(alpha: 0.5),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.12),
+                          blurRadius: 14,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.format_size_rounded,
+                          size: 16,
+                          color: themeConfig.accentColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${themeConfig.fontSize.toInt()} pt',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

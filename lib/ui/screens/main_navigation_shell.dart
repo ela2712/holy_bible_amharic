@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/app_language_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../widgets/ftue_welcome_sheet.dart';
 import '../widgets/modern_bible_icons.dart';
 import 'home_reader_screen.dart';
 import 'home_dashboard_screen.dart';
@@ -23,6 +25,26 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   int _currentIndex = 0; // 0: ንባብ (Bible), 1: መነሻ (Home), 2: ዕቅዶች (Plans), 3: ማህደር (Saved)
   bool _isReaderChromeVisible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFtueWelcome();
+    });
+  }
+
+  Future<void> _checkFtueWelcome() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasShown = prefs.getBool(FtueWelcomeSheet.prefsKey) ?? false;
+      if (!hasShown && mounted) {
+        FtueWelcomeSheet.show(context);
+      }
+    } catch (_) {
+      // Graceful fallback in constrained test/headless environments
+    }
+  }
 
   void _onTabSelected(int index) {
     if (_currentIndex != index) {
