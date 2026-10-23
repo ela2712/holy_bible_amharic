@@ -405,15 +405,20 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
   - Recompiled SQLite database (`tools/build_database.js` $\rightarrow$ `assets/database/bible.db`, 55.58 MB).
   - Verification: `flutter analyze` 0 issues, all 25/25 Flutter tests passing.
 
-### E. Two-Finger Pinch-to-Zoom Gesture Implementation (`lib/ui/screens/home_reader_screen.dart`)
-- **Pinch-to-Zoom Font Resizing:**
-  - Integrated nested gesture recognizers on the scripture reader canvas:
-    - Outer `GestureDetector` preserves horizontal chapter navigation (`onHorizontalDragEnd`).
-    - Inner `GestureDetector` detects two-finger pinch (`onScaleStart`, `onScaleUpdate`, `onScaleEnd` with `pointerCount >= 2`).
-  - Font size scales smoothly in real time clamped between `14.0 pt` and `32.0 pt`, with automatic persistence via `themeConfigProvider`.
-  - Added an animated real-time floating font indicator pill (`18 pt`, `20 pt`, `22 pt`) displaying during pinch with subtle haptic feedback on gesture release (`HapticFeedback.selectionClick()`).
-  - Unit/widget tests added in `test/pinch_zoom_test.dart` (2 tests).
-  - Verification: `flutter analyze` 0 issues, all 27/27 tests passing.
+### F. Android Build Toolchain Setup & Native Release APK Generation (October 23, 2026)
+- **Environment Setup:**
+  - Configured Microsoft OpenJDK 17 (`C:\Android\jdk-17`) with `JAVA_HOME`.
+  - Configured Android Command-line SDK Tools (`C:\Android\sdk\cmdline-tools\latest`).
+  - Installed Android SDK packages: `platforms;android-36`, `platforms;android-35`, `platforms;android-34`, `build-tools;36.0.0`, `build-tools;35.0.0`, `build-tools;34.0.0`, `platform-tools`.
+  - Accepted all Android SDK and CMake licenses (`flutter doctor -v` reports all checks passing with green checkmarks).
+- **Release APK Build:**
+  - Executed `flutter build apk --release`.
+  - Output binary: `build/app/outputs/flutter-apk/app-release.apk` (83.2 MB, 79.4 MB compressed).
+  - Also copied to project root: `app-release.apk` for easy access.
+- **Local Wi-Fi Distribution Server (`tools/serve_apk.js`):**
+  - Active background HTTP server on port 8080 (`http://10.18.100.251:8080`).
+  - Provides a clean mobile download page with a direct one-tap download button for sideloading directly to physical Android devices over Wi-Fi.
+
 
 
 
