@@ -111,8 +111,8 @@ class DailyNotificationNotifier extends StateNotifier<DailyNotificationState> {
     }
   }
 
-  Future<void> sendTestNotification({bool isEnglish = false}) async {
-    await NotificationService.instance.showDailyVerseNow(isEnglish: isEnglish);
+  Future<bool> sendTestNotification({bool isEnglish = false}) async {
+    return await NotificationService.instance.showDailyVerseNow(isEnglish: isEnglish);
   }
 }
 

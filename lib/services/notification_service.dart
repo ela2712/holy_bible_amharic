@@ -47,6 +47,22 @@ class NotificationService {
         },
       );
 
+      final androidImplementation = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImplementation != null) {
+        await androidImplementation.createNotificationChannel(
+          const AndroidNotificationChannel(
+            channelId,
+            'ዕለታዊ ጥቅስ (Daily Verse)',
+            description: 'ዕለታዊ የመጽሐፍ ቅዱስ ቃል ማስታወሻ (Daily Holy Scripture Verse Reminder)',
+            importance: Importance.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+      }
+
       _isInitialized = true;
     } catch (e) {
       debugPrint('NotificationService initialization skipped or failed: $e');
@@ -144,13 +160,18 @@ class NotificationService {
 
   /// Schedules a recurring daily verse push notification at [hour]:[minute].
   /// References the sacred 81 Orthodox Canon daily verse.
-  Future<void> scheduleDailyVerse({
+  Future<bool> scheduleDailyVerse({
     required int hour,
     required int minute,
     bool isEnglish = false,
   }) async {
     try {
       await initialize();
+      final hasPermission = await requestPermission();
+      if (!hasPermission) {
+        debugPrint('Notification permission denied by user');
+        return false;
+      }
 
       // Ensure 81 Canon daily verse data is loaded
       final verseData = await BibleRepository.instance.getDailyVerse(2);
@@ -190,8 +211,10 @@ class NotificationService {
       );
 
       debugPrint('Daily verse scheduled for $scheduledDate (ID: $dailyVerseNotificationId)');
+      return true;
     } catch (e) {
       debugPrint('Failed to schedule daily verse notification: $e');
+      return false;
     }
   }
 
@@ -206,9 +229,15 @@ class NotificationService {
   }
 
   /// Shows an immediate test/preview notification with today's 81 Canon verse.
-  Future<void> showDailyVerseNow({bool isEnglish = false}) async {
+  Future<bool> showDailyVerseNow({bool isEnglish = false}) async {
     try {
       await initialize();
+      final hasPermission = await requestPermission();
+      if (!hasPermission) {
+        debugPrint('Notification permission denied by user');
+        return false;
+      }
+
       final verseData = await BibleRepository.instance.getDailyVerse(2);
       final reference = verseData != null
           ? '${verseData['book_name']} ${verseData['chapter']}:${verseData['verse']}'
@@ -234,8 +263,10 @@ class NotificationService {
         body: verseText,
         notificationDetails: details,
       );
+      return true;
     } catch (e) {
       debugPrint('Failed to show test notification: $e');
+      return false;
     }
   }
 }

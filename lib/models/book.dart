@@ -24,6 +24,9 @@ class Book {
   bool get isOldTestament => testament.toUpperCase() == 'OT';
   bool get isNewTestament => testament.toUpperCase() == 'NT';
 
+  String getDisplayName(bool isEnglish) =>
+      (isEnglish && nameEn.isNotEmpty) ? nameEn : name;
+
   factory Book.fromMap(Map<String, dynamic> map) {
     return Book(
       id: map['id'] as int,

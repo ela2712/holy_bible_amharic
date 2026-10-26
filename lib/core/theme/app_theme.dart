@@ -140,10 +140,16 @@ class AppTheme {
     TextTheme textTheme;
     switch (config.fontFamily) {
       case 'Abyssinica':
-        textTheme = GoogleFonts.abyssinicaSilTextTheme(baseTheme.textTheme);
+        textTheme = baseTheme.textTheme.apply(
+          fontFamily: 'AbyssinicaSIL',
+          fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'],
+        );
         break;
       case 'Sans':
-        textTheme = GoogleFonts.notoSansEthiopicTextTheme(baseTheme.textTheme);
+        textTheme = baseTheme.textTheme.apply(
+          fontFamily: 'NotoSansEthiopic',
+          fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif'],
+        );
         break;
       case 'PowerGeez':
         textTheme = baseTheme.textTheme.apply(
@@ -153,14 +159,17 @@ class AppTheme {
             'Power Ge\'ez',
             'Nyala',
             'WashRa',
-            'Abyssinica SIL',
-            'Noto Serif Ethiopic',
+            'NotoSerifEthiopic',
+            'AbyssinicaSIL',
           ],
         );
         break;
       case 'Serif':
       default:
-        textTheme = GoogleFonts.notoSerifEthiopicTextTheme(baseTheme.textTheme);
+        textTheme = baseTheme.textTheme.apply(
+          fontFamily: 'NotoSerifEthiopic',
+          fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'serif'],
+        );
         break;
     }
 

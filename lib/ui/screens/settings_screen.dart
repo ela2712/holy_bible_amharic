@@ -601,17 +601,18 @@ class SettingsScreen extends ConsumerWidget {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton.icon(
-                              onPressed: () {
+                              onPressed: () async {
                                 HapticFeedback.lightImpact();
-                                notifNotifier.sendTestNotification(isEnglish: isEnglish);
+                                final sent = await notifNotifier.sendTestNotification(isEnglish: isEnglish);
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      isEnglish
-                                          ? 'Sample verse notification sent'
-                                          : 'የሙከራ የዕለት ጥቅስ ማሳወቂያ ተልኳል',
+                                      sent
+                                          ? (isEnglish ? 'Sample verse notification sent' : 'የሙከራ የዕለት ጥቅስ ማሳወቂያ ተልኳል')
+                                          : (isEnglish ? 'Notification permission not granted' : 'የማሳወቂያ ፈቃድ አልተሰጠም'),
                                     ),
-                                    duration: const Duration(seconds: 2),
+                                    duration: const Duration(seconds: 3),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );

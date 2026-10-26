@@ -81,10 +81,20 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
       bookName: passage.bookName,
     );
 
+    // Jump straight to the first unread chapter of this day
+    final readSet = ref.read(readingPlanSessionProvider).getReadChapters(plan.id, passage.day);
+    int targetChapter = passage.startChapter;
+    for (int ch = passage.startChapter; ch <= passage.endChapter; ch++) {
+      if (!readSet.contains(ch)) {
+        targetChapter = ch;
+        break;
+      }
+    }
+
     if (targetBook != null) {
       await ref.read(bibleStateProvider.notifier).selectBook(
             targetBook,
-            chapter: passage.startChapter,
+            chapter: targetChapter,
           );
     }
 
@@ -609,6 +619,200 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     );
   }
 
+  Widget _buildActivePlanBanner(
+    BuildContext context,
+    ReadingPlanSessionState sessionState,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+    bool isEnglish,
+  ) {
+    final plan = sessionState.activeSessionPlan!;
+    final passage = sessionState.activePassage!;
+    final day = sessionState.activeSessionDay ?? 1;
+    final isDayDone = sessionState.isDayCompleted(plan.id, day);
+    final completedDays = sessionState.completedDaysByPlan[plan.id] ?? <int>{};
+    final progress = (completedDays.length / plan.totalDays).clamp(0.0, 1.0);
+    final totalChs = (passage.endChapter - passage.startChapter + 1).clamp(1, 150);
+    final readChs = sessionState.getReadChapters(plan.id, day);
+    final readCount = readChs.length;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: themeConfig.surfaceColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isDayDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
+            width: 1.6,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.07),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: (isDayDone ? const Color(0xFF10B981) : themeConfig.goldAccent)
+                        .withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isDayDone ? Icons.check_circle_rounded : Icons.local_fire_department_rounded,
+                        size: 14,
+                        color: isDayDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        isEnglish ? 'Active Reading Session' : 'በሂደት ላይ ያለ ንባብ',
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: isDayDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: isDayDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.close_rounded, size: 18, color: themeConfig.secondaryTextColor),
+                  tooltip: isEnglish ? 'Pause Session' : 'ዕቅድ አቁም',
+                  onPressed: () {
+                    ref.read(readingPlanSessionProvider.notifier).clearActiveSession();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              plan.getDisplayTitle(isEnglish),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: isEnglish
+                  ? GoogleFonts.inter(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: themeConfig.textColor,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: themeConfig.textColor,
+                    ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  isEnglish
+                      ? 'Day $day of ${plan.totalDays} • ${passage.getPassageReference(true)}'
+                      : 'ቀን $day ከ ${plan.totalDays} • ${passage.getPassageReference(false)}',
+                  style: GoogleFonts.notoSansEthiopic(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: themeConfig.accentColor,
+                  ),
+                ),
+                if (totalChs > 1) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (readCount >= totalChs ? const Color(0xFF10B981) : themeConfig.goldAccent)
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isEnglish ? '$readCount/$totalChs read' : '$readCount/$totalChs ተነቧል',
+                      style: GoogleFonts.notoSansEthiopic(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: readCount >= totalChs ? const Color(0xFF10B981) : themeConfig.goldAccent,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: themeConfig.cardBorderColor.withValues(alpha: 0.35),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  progress >= 1.0 ? const Color(0xFF10B981) : themeConfig.accentColor,
+                ),
+                minHeight: 5,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeConfig.accentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => _launchPlanPassageInReader(context, plan, passage),
+                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                    label: Text(
+                      isEnglish ? 'Continue Reading' : 'ንባቡን ቀጥል',
+                      style: isEnglish
+                          ? GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800)
+                          : GoogleFonts.notoSansEthiopic(fontSize: 13, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: themeConfig.textColor,
+                    side: BorderSide(color: themeConfig.cardBorderColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () => _openPlanDetailModal(context, plan, themeConfig, isEnglish),
+                  child: Text(
+                    isEnglish ? 'Plan Details' : 'ዝርዝር',
+                    style: isEnglish
+                        ? GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700)
+                        : GoogleFonts.notoSansEthiopic(fontSize: 12.5, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeConfigProvider);
@@ -723,6 +927,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                       ),
                     ),
                   ),
+
+                  // 1.5 Active Plan In-Progress Banner
+                  if (sessionState.activeSessionPlan != null && sessionState.activePassage != null)
+                    SliverToBoxAdapter(
+                      child: _buildActivePlanBanner(
+                        context,
+                        sessionState,
+                        themeConfig,
+                        isDark,
+                        isEnglish,
+                      ),
+                    ),
 
                   // 2. Bahire Hasab Liturgical Banner
                   SliverToBoxAdapter(
@@ -1523,6 +1739,22 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                                   color: themeConfig.accentColor,
                                                 ),
                                         ),
+                                        if (!isDone && (passage.endChapter - passage.startChapter + 1) > 1)
+                                          Padding(
+                                            padding: const EdgeInsets.only(top: 2),
+                                            child: Text(
+                                              isEnglish
+                                                  ? '${sessionState.getReadChaptersCount(plan.id, passage.day)} of ${passage.endChapter - passage.startChapter + 1} chapters read'
+                                                  : '${sessionState.getReadChaptersCount(plan.id, passage.day)} ከ ${passage.endChapter - passage.startChapter + 1} ምዕራፎች ተነበዋል',
+                                              style: GoogleFonts.notoSansEthiopic(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                                color: sessionState.getReadChaptersCount(plan.id, passage.day) > 0
+                                                    ? themeConfig.goldAccent
+                                                    : themeConfig.secondaryTextColor,
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),

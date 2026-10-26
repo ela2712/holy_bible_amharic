@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/canonical_book_map.dart';
 import '../../core/utils/geez_numbers.dart';
 import '../../models/book.dart';
 import '../../models/verse.dart';
@@ -40,8 +41,10 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isChromeVisible = true;
   int? _selectedVerseNumber;
-  double _baseFontSize = 18.0;
   bool _isPinching = false;
+  final Map<int, Offset> _pointerPositions = {};
+  double _initialPinchDistance = 0.0;
+  double _pinchBaseFontSize = 18.0;
 
   @override
   void initState() {
@@ -61,6 +64,75 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       if (!_isChromeVisible) {
         setState(() => _isChromeVisible = true);
         widget.onChromeVisibilityChanged?.call(true);
+      }
+    }
+    _checkAutoTrackReadingPlan();
+  }
+
+  void _checkAutoTrackReadingPlan() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    // Auto-track chapter as read if reached within 140px of bottom or scrolled past 80%
+    final bool isNearBottom = pos.maxScrollExtent <= 0 ||
+        pos.pixels >= (pos.maxScrollExtent - 140) ||
+        (pos.maxScrollExtent > 0 && (pos.pixels / pos.maxScrollExtent) >= 0.80);
+
+    if (isNearBottom) {
+      _markActivePlanChapterReadIfApplicable();
+    }
+  }
+
+  void _markActivePlanChapterReadIfApplicable() {
+    final planSession = ref.read(readingPlanSessionProvider);
+    final plan = planSession.activeSessionPlan;
+    final passage = planSession.activePassage;
+    if (plan == null || passage == null) return;
+
+    final bibleState = ref.read(bibleStateProvider);
+    final currentBook = bibleState.currentBook;
+    final currentChapter = bibleState.currentChapter;
+    if (currentBook == null) return;
+
+    final currentTransId = bibleState.currentTranslation?.id ?? 2;
+    final passageCanonId = CanonicalBookMap.getCanonicalId(1, passage.bookNumber);
+    final currentCanonId = CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber);
+
+    if (passageCanonId.isNotEmpty && passageCanonId == currentCanonId) {
+      if (currentChapter >= passage.startChapter && currentChapter <= passage.endChapter) {
+        final totalChapters = (passage.endChapter - passage.startChapter + 1).clamp(1, 150);
+        final isAlreadyRead = planSession.isChapterCompleted(plan.id, passage.day, currentChapter);
+        if (!isAlreadyRead) {
+          ref.read(readingPlanSessionProvider.notifier).markChapterCompleted(
+                planId: plan.id,
+                day: passage.day,
+                chapter: currentChapter,
+                totalChaptersInDay: totalChapters,
+              );
+        }
+        return;
+      }
+    }
+
+    // Read-ahead check: If current active day is already completed, did the reader move into the next day's chapters?
+    // Note: Capped strictly at plan.totalDays so it never counts past the end of the plan.
+    final currentDay = planSession.activeSessionDay ?? 1;
+    if (planSession.isDayCompleted(plan.id, currentDay) && currentDay < plan.totalDays) {
+      final nextDay = currentDay + 1;
+      final nextPassage = plan.passages[(nextDay - 1).clamp(0, plan.passages.length - 1)];
+      final nextCanonId = CanonicalBookMap.getCanonicalId(1, nextPassage.bookNumber);
+
+      if (nextCanonId.isNotEmpty && nextCanonId == currentCanonId) {
+        if (currentChapter >= nextPassage.startChapter && currentChapter <= nextPassage.endChapter) {
+          // Seamlessly auto-advance active session day and record the chapter!
+          ref.read(readingPlanSessionProvider.notifier).startReadingSession(plan, nextDay);
+          final totalChapters = (nextPassage.endChapter - nextPassage.startChapter + 1).clamp(1, 150);
+          ref.read(readingPlanSessionProvider.notifier).markChapterCompleted(
+                planId: plan.id,
+                day: nextDay,
+                chapter: currentChapter,
+                totalChaptersInDay: totalChapters,
+              );
+        }
       }
     }
   }
@@ -128,14 +200,18 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
     switch (themeConfig.fontFamily) {
       case 'Abyssinica':
-        return GoogleFonts.abyssinicaSil(
+        return TextStyle(
+          fontFamily: 'AbyssinicaSIL',
+          fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'],
           fontSize: size,
           height: lineHeight,
           fontWeight: weight,
           color: textColor,
         );
       case 'Sans':
-        return GoogleFonts.notoSansEthiopic(
+        return TextStyle(
+          fontFamily: 'NotoSansEthiopic',
+          fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif'],
           fontSize: size,
           height: lineHeight,
           fontWeight: weight,
@@ -149,8 +225,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             'Power Ge\'ez',
             'Nyala',
             'WashRa',
-            'Abyssinica SIL',
-            'Noto Serif Ethiopic',
+            'NotoSerifEthiopic',
+            'AbyssinicaSIL',
           ],
           fontSize: size,
           height: lineHeight,
@@ -159,7 +235,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
         );
       case 'Serif':
       default:
-        return GoogleFonts.notoSerifEthiopic(
+        return TextStyle(
+          fontFamily: 'NotoSerifEthiopic',
+          fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'serif'],
           fontSize: size,
           height: lineHeight,
           fontWeight: weight,
@@ -241,6 +319,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       : GestureDetector(
                           behavior: HitTestBehavior.translucent,
                           onHorizontalDragEnd: (details) {
+                            if (_isPinching || _pointerPositions.length > 1) return;
                             if (details.primaryVelocity != null) {
                               if (details.primaryVelocity! < -300) {
                                 ref.read(bibleStateProvider.notifier).nextChapter();
@@ -251,27 +330,53 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               }
                             }
                           },
-                          child: GestureDetector(
+                          child: Listener(
                             behavior: HitTestBehavior.translucent,
-                            onScaleStart: (details) {
-                              _baseFontSize = themeConfig.fontSize;
-                              _isPinching = false;
-                            },
-                            onScaleUpdate: (details) {
-                              if (details.pointerCount >= 2) {
-                                if (!_isPinching) {
+                            onPointerDown: (event) {
+                              _pointerPositions[event.pointer] = event.position;
+                              if (_pointerPositions.length == 2) {
+                                final points = _pointerPositions.values.toList();
+                                _initialPinchDistance = (points[0] - points[1]).distance;
+                                _pinchBaseFontSize = themeConfig.fontSize;
+                                if (_initialPinchDistance > 10.0) {
                                   setState(() => _isPinching = true);
-                                }
-                                final newSize = (_baseFontSize * details.scale).clamp(14.0, 32.0);
-                                if ((newSize - themeConfig.fontSize).abs() >= 0.5) {
-                                  ref.read(themeConfigProvider.notifier).setFontSize(newSize);
                                 }
                               }
                             },
-                            onScaleEnd: (details) {
-                              if (_isPinching) {
+                            onPointerMove: (event) {
+                              _pointerPositions[event.pointer] = event.position;
+                              if (_pointerPositions.length >= 2 && _initialPinchDistance > 10.0) {
+                                final points = _pointerPositions.values.toList();
+                                final currentDist = (points[0] - points[1]).distance;
+                                if (currentDist > 10.0) {
+                                  if (!_isPinching) {
+                                    setState(() => _isPinching = true);
+                                  }
+                                  final scaleRatio = currentDist / _initialPinchDistance;
+                                  final newSize = (_pinchBaseFontSize * scaleRatio).clamp(14.0, 32.0);
+                                  if ((newSize - themeConfig.fontSize).abs() >= 0.5) {
+                                    ref.read(themeConfigProvider.notifier).setFontSize(newSize);
+                                  }
+                                }
+                              }
+                            },
+                            onPointerUp: (event) {
+                              _pointerPositions.remove(event.pointer);
+                              if (_pointerPositions.length < 2 && _isPinching) {
                                 HapticFeedback.selectionClick();
-                                setState(() => _isPinching = false);
+                                setState(() {
+                                  _isPinching = false;
+                                  _initialPinchDistance = 0.0;
+                                });
+                              }
+                            },
+                            onPointerCancel: (event) {
+                              _pointerPositions.remove(event.pointer);
+                              if (_pointerPositions.length < 2 && _isPinching) {
+                                setState(() {
+                                  _isPinching = false;
+                                  _initialPinchDistance = 0.0;
+                                });
                               }
                             },
                             child: Center(
@@ -497,6 +602,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             final currentTheme = ref.watch(themeConfigProvider);
             final currentBible = ref.watch(bibleStateProvider);
             final currentIsDark = currentTheme.mode == ReaderThemeMode.dark;
+            final isEnglish = ref.watch(isEnglishUiProvider);
 
             return Container(
               decoration: BoxDecoration(
@@ -541,7 +647,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            'የንባብ ገጽታና ቅንብሮች',
+                            isEnglish ? 'Reader Theme & Settings' : 'የንባብ ገጽታና ቅንብሮች',
                             style: GoogleFonts.notoSansEthiopic(
                               fontSize: 17,
                               fontWeight: FontWeight.w800,
@@ -562,7 +668,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
                       // 1. Translations (1954, 81, KJV)
                       Text(
-                        'ትርጉም (TRANSLATION)',
+                        isEnglish ? 'TRANSLATION' : 'ትርጉም',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -574,8 +680,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       Row(
                         children: [
                           _buildTranslationOptionChip(
-                            label: '81 ቀኖና',
-                            subLabel: 'ኦርቶዶክሳዊ',
+                            label: isEnglish ? '81 Canon' : '81 ቀኖና',
+                            subLabel: isEnglish ? 'Orthodox' : 'ኦርቶዶክሳዊ',
                             isSelected: currentBible.currentTranslation?.id == 2,
                             onTap: () {
                               final t = currentBible.translations.firstWhere((x) => x.id == 2, orElse: () => currentBible.translations.first);
@@ -585,8 +691,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           ),
                           const SizedBox(width: 8),
                           _buildTranslationOptionChip(
-                            label: '1954 ቀዳማዊ ኃ.ሥ.',
-                            subLabel: '66 መጻሕፍት',
+                            label: isEnglish ? '1954 H.S.' : '1954 ቀዳማዊ ኃ.ሥ.',
+                            subLabel: isEnglish ? '66 Books' : '66 መጻሕፍት',
                             isSelected: currentBible.currentTranslation?.id == 1,
                             onTap: () {
                               final t = currentBible.translations.firstWhere((x) => x.id == 1, orElse: () => currentBible.translations.first);
@@ -611,7 +717,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
                       // 2. Reading Theme Presets (Light, Sepia, Dark)
                       Text(
-                        'ገጽታ (THEME PRESETS)',
+                        isEnglish ? 'THEME PRESETS' : 'ገጽታ',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -623,8 +729,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       Row(
                         children: [
                           _buildThemeModeCard(
-                            label: 'ብርሃን',
-                            subLabel: 'Light',
+                            label: isEnglish ? 'Light' : 'ብርሃን',
+                            subLabel: isEnglish ? 'Alabaster' : 'Light',
                             mode: ReaderThemeMode.light,
                             bgColor: const Color(0xFFFAF9F6),
                             cardColor: Colors.white,
@@ -635,8 +741,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           ),
                           const SizedBox(width: 10),
                           _buildThemeModeCard(
-                            label: 'ወረቀት',
-                            subLabel: 'Sepia',
+                            label: isEnglish ? 'Sepia' : 'ወረቀት',
+                            subLabel: isEnglish ? 'Parchment' : 'Sepia',
                             mode: ReaderThemeMode.sepia,
                             bgColor: const Color(0xFFF4EFE6),
                             cardColor: const Color(0xFFEFE8DC),
@@ -647,8 +753,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           ),
                           const SizedBox(width: 10),
                           _buildThemeModeCard(
-                            label: 'ጨለማ',
-                            subLabel: 'Dark',
+                            label: isEnglish ? 'Dark' : 'ጨለማ',
+                            subLabel: isEnglish ? 'Obsidian' : 'Dark',
                             mode: ReaderThemeMode.dark,
                             bgColor: const Color(0xFF0E1014),
                             cardColor: const Color(0xFF171A21),
@@ -663,7 +769,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
                       // 3. Font Family Varieties (Serif, Sans, Abyssinica, Power Ge'ez)
                       Text(
-                        'የፊደል ቅርጽ (FONT FAMILY)',
+                        isEnglish ? 'FONT FAMILY' : 'የፊደል ቅርጽ',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -675,37 +781,37 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       Row(
                         children: [
                           _buildFontFamilyCard(
-                            label: 'ሴሪፍ',
+                            label: isEnglish ? 'Serif' : 'ሴሪፍ',
                             subLabel: 'Noto Serif',
                             sampleText: 'በመጀመሪያ',
-                            sampleStyle: GoogleFonts.notoSerifEthiopic(fontWeight: FontWeight.w700),
+                            sampleStyle: const TextStyle(fontFamily: 'NotoSerifEthiopic', fontWeight: FontWeight.w700),
                             isSelected: currentTheme.fontFamily == 'Serif',
                             onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('Serif'),
                             theme: currentTheme,
                           ),
                           const SizedBox(width: 8),
                           _buildFontFamilyCard(
-                            label: 'ሳንስ',
+                            label: isEnglish ? 'Sans' : 'ሳንስ',
                             subLabel: 'Noto Sans',
                             sampleText: 'በመጀመሪያ',
-                            sampleStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
+                            sampleStyle: const TextStyle(fontFamily: 'NotoSansEthiopic', fontWeight: FontWeight.w700),
                             isSelected: currentTheme.fontFamily == 'Sans',
                             onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('Sans'),
                             theme: currentTheme,
                           ),
                           const SizedBox(width: 8),
                           _buildFontFamilyCard(
-                            label: 'አቢሲኒካ',
+                            label: isEnglish ? 'Abyssinica' : 'አቢሲኒካ',
                             subLabel: 'Abyssinica',
                             sampleText: 'በመጀመሪያ',
-                            sampleStyle: GoogleFonts.abyssinicaSil(fontWeight: FontWeight.w700),
+                            sampleStyle: const TextStyle(fontFamily: 'AbyssinicaSIL', fontWeight: FontWeight.w700),
                             isSelected: currentTheme.fontFamily == 'Abyssinica',
                             onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('Abyssinica'),
                             theme: currentTheme,
                           ),
                           const SizedBox(width: 8),
                           _buildFontFamilyCard(
-                            label: 'ፓወር ግዕዝ',
+                            label: isEnglish ? 'Power Ge\'ez' : 'ፓወር ግዕዝ',
                             subLabel: 'Power Ge\'ez',
                             sampleText: 'በመጀመሪያ',
                             sampleStyle: const TextStyle(
@@ -715,8 +821,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                                 'Power Ge\'ez',
                                 'Nyala',
                                 'WashRa',
-                                'Abyssinica SIL',
-                                'Noto Serif Ethiopic',
+                                'NotoSerifEthiopic',
+                                'AbyssinicaSIL',
                               ],
                               fontWeight: FontWeight.w700,
                             ),
@@ -728,9 +834,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       ),
                       const SizedBox(height: 22),
 
-                      // 3. Layout and Numerals Toggles
+                      // 4. Layout and Numerals Toggles
                       Text(
-                        'አቀራረብ (LAYOUT & NUMERALS)',
+                        isEnglish ? 'LAYOUT & NUMERALS' : 'አቀራረብ',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
@@ -751,7 +857,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               dense: true,
                               activeThumbColor: currentTheme.accentColor,
                               title: Text(
-                                'በአንቀጽ ንባብ (Continuous Paragraph Mode)',
+                                isEnglish ? 'Continuous Paragraph Mode' : 'በአንቀጽ ንባብ',
                                 style: GoogleFonts.notoSansEthiopic(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -768,7 +874,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               dense: true,
                               activeThumbColor: currentTheme.accentColor,
                               title: Text(
-                                'የግዕዝ ቁጥሮች (Ge\'ez Numerals ፩፣ ፪፣ ፫)',
+                                isEnglish ? 'Ge\'ez Numerals (፩፣ ፪፣ ፫)' : 'የግዕዝ ቁጥሮች (፩፣ ፪፣ ፫)',
                                 style: GoogleFonts.notoSansEthiopic(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -785,12 +891,12 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // 4. Font Size Adjustment
+                      // 5. Font Size Adjustment
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'የፊደል መጠን (FONT SIZE)',
+                            isEnglish ? 'FONT SIZE' : 'የፊደል መጠን',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
@@ -848,7 +954,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       ),
                       const SizedBox(height: 18),
 
-                      // 5. Quick Shortcuts (Parallel Study & Settings)
+                      // 6. Quick Shortcuts (Parallel Study & Settings)
                       Row(
                         children: [
                           Expanded(
@@ -867,7 +973,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               },
                               icon: Icon(Icons.compare_arrows_rounded, size: 18, color: currentTheme.accentColor),
                               label: Text(
-                                'ማነፃፀሪያ (Parallel)',
+                                isEnglish ? 'Parallel Study' : 'ማነፃፀሪያ',
                                 style: GoogleFonts.notoSansEthiopic(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
@@ -893,7 +999,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               },
                               icon: Icon(CupertinoIcons.gear_alt, size: 18, color: currentTheme.secondaryTextColor),
                               label: Text(
-                                'ሙሉ ቅንብሮች',
+                                isEnglish ? 'All Settings' : 'ሙሉ ቅንብሮች',
                                 style: GoogleFonts.notoSansEthiopic(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w700,
@@ -1710,16 +1816,58 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
+    final isEnglish = ref.watch(isEnglishUiProvider);
     final plan = planSession.activeSessionPlan!;
     final passage = planSession.activePassage!;
     final isDone = planSession.isDayCompleted(plan.id, passage.day);
+
+    final currentTransId = bibleState.currentTranslation?.id ?? 2;
+    final currentBook = bibleState.currentBook;
+    final currentChapter = bibleState.currentChapter;
+
+    final passageCanonId = CanonicalBookMap.getCanonicalId(1, passage.bookNumber);
+    final currentCanonId = currentBook != null
+        ? CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber)
+        : '';
+    final bool isSameBook = passageCanonId.isNotEmpty && passageCanonId == currentCanonId;
+
+    final bool isInChapterRange = isSameBook &&
+        currentChapter >= passage.startChapter &&
+        currentChapter <= passage.endChapter;
+
+    final totalChaptersInDay = (passage.endChapter - passage.startChapter + 1).clamp(1, 150);
+    final readChapters = planSession.getReadChapters(plan.id, passage.day);
+    final int readCount = readChapters.length;
+    final bool isCurrentChapterRead = readChapters.contains(currentChapter);
+    final bool isAtFinalChapter = isSameBook && currentChapter == passage.endChapter;
+
+    // Header label
+    final String headerLabel;
+    if (!isInChapterRange) {
+      headerLabel = isEnglish
+          ? '${plan.getDisplayTitle(true)} • Day ${passage.day}/${plan.totalDays}'
+          : '${plan.getDisplayTitle(false)} • ቀን ${passage.day}/${plan.totalDays}';
+    } else if (totalChaptersInDay > 1) {
+      headerLabel = isEnglish
+          ? 'Day ${passage.day} • Ch $currentChapter ($readCount/$totalChaptersInDay read${isCurrentChapterRead ? " ✓" : ""})'
+          : 'ቀን ${passage.day} • ምዕራፍ $currentChapter ($readCount/$totalChaptersInDay ተነቧል${isCurrentChapterRead ? " ✓" : ""})';
+    } else {
+      headerLabel = isEnglish
+          ? 'Day ${passage.day} of ${plan.totalDays}${isDone ? " • Completed ✓" : ""}'
+          : 'ቀን ${passage.day} ከ ${plan.totalDays}${isDone ? " • ተጠናቋል ✓" : ""}';
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: themeConfig.surfaceColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: themeConfig.goldAccent.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(
+          color: (isInChapterRange && isDone)
+              ? const Color(0xFF10B981).withValues(alpha: 0.6)
+              : themeConfig.goldAccent.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.1),
@@ -1733,10 +1881,21 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: themeConfig.goldAccent.withValues(alpha: 0.12),
+              color: ((isInChapterRange && isDone)
+                      ? const Color(0xFF10B981)
+                      : (isInChapterRange ? themeConfig.goldAccent : themeConfig.accentColor))
+                  .withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.flag_rounded, size: 18, color: themeConfig.goldAccent),
+            child: Icon(
+              isDone
+                  ? Icons.check_circle_rounded
+                  : (isInChapterRange ? Icons.menu_book_rounded : Icons.explore_outlined),
+              size: 18,
+              color: (isInChapterRange && isDone)
+                  ? const Color(0xFF10B981)
+                  : (isInChapterRange ? themeConfig.goldAccent : themeConfig.accentColor),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1745,17 +1904,19 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '${plan.title} • ቀን ${passage.day}/${plan.totalDays}',
+                  headerLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.notoSansEthiopic(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: themeConfig.goldAccent,
+                    color: (isInChapterRange && isDone)
+                        ? const Color(0xFF10B981)
+                        : (isInChapterRange ? themeConfig.goldAccent : themeConfig.accentColor),
                   ),
                 ),
                 Text(
-                  passage.passageReference,
+                  passage.getPassageReference(isEnglish),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.notoSansEthiopic(
@@ -1768,50 +1929,156 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () async {
-              final nextPassage = await ref
-                  .read(readingPlanSessionProvider.notifier)
-                  .completeActiveDayAndGetNext();
-              if (!context.mounted) return;
-              if (nextPassage != null) {
-                final targetBook = bibleState.books.firstWhere(
-                  (b) => b.bookNumber == nextPassage.bookNumber,
-                  orElse: () => bibleState.books.first,
+
+          // Action Button depending on user location
+          if (!isInChapterRange)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeConfig.accentColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final targetBook = CanonicalBookMap.resolveBook(
+                  books: bibleState.books,
+                  currentTranslationId: currentTransId,
+                  traditionalBookNumber: passage.bookNumber,
                 );
-                await ref.read(bibleStateProvider.notifier).selectBook(
-                      targetBook,
-                      chapter: nextPassage.startChapter,
+                // Jump to first unread chapter of this day
+                int targetChapter = passage.startChapter;
+                for (int ch = passage.startChapter; ch <= passage.endChapter; ch++) {
+                  if (!readChapters.contains(ch)) {
+                    targetChapter = ch;
+                    break;
+                  }
+                }
+                if (targetBook != null) {
+                  await ref.read(bibleStateProvider.notifier).selectBook(
+                        targetBook,
+                        chapter: targetChapter,
+                      );
+                  _scrollToApproximateVerse(1, 30);
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isEnglish
+                            ? 'Navigated to ${passage.getPassageReference(true)}'
+                            : 'ወደ ${passage.getPassageReference(false)} ተጉዟል',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+              label: Text(
+                isEnglish ? 'Resume Plan' : 'ወደ ዕቅዱ ሂድ',
+                style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+              ),
+            )
+          else if (!isAtFinalChapter && currentChapter < passage.endChapter)
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isCurrentChapterRead ? const Color(0xFF10B981) : themeConfig.goldAccent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                // Mark current chapter completed and move to next chapter
+                await ref.read(readingPlanSessionProvider.notifier).markChapterCompleted(
+                      planId: plan.id,
+                      day: passage.day,
+                      chapter: currentChapter,
+                      totalChaptersInDay: totalChaptersInDay,
                     );
+                ref.read(bibleStateProvider.notifier).selectChapter(currentChapter + 1);
+                _scrollToApproximateVerse(1, 30);
+              },
+              icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+              label: Text(
+                isEnglish ? 'Next (Ch ${currentChapter + 1}) →' : 'ቀጣይ (ምዕ ${currentChapter + 1}) →',
+                style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+              ),
+            )
+          else
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                // Ensure current chapter is marked read
+                await ref.read(readingPlanSessionProvider.notifier).markChapterCompleted(
+                      planId: plan.id,
+                      day: passage.day,
+                      chapter: currentChapter,
+                      totalChaptersInDay: totalChaptersInDay,
+                    );
+                final nextPassage = await ref
+                    .read(readingPlanSessionProvider.notifier)
+                    .completeActiveDayAndGetNext();
                 if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('ቀን ${passage.day} ተጠናቋል! ወደ ቀን ${nextPassage.day} ተሸጋግሯል።'),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('እንኳን ደስ አለዎት! የንባብ ዕቅዱን አጠናቀዋል!')),
-                );
-              }
-            },
-            icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-            label: Text(
-              'ቀኑን አጠናቅቅ',
-              style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+                if (nextPassage != null) {
+                  final targetBook = CanonicalBookMap.resolveBook(
+                    books: bibleState.books,
+                    currentTranslationId: currentTransId,
+                    traditionalBookNumber: nextPassage.bookNumber,
+                  );
+                  if (targetBook != null) {
+                    await ref.read(bibleStateProvider.notifier).selectBook(
+                          targetBook,
+                          chapter: nextPassage.startChapter,
+                        );
+                    _scrollToApproximateVerse(1, 30);
+                  }
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isEnglish
+                            ? 'Day ${passage.day} completed! Moved to Day ${nextPassage.day}.'
+                            : 'ቀን ${passage.day} ተጠናቋል! ወደ ቀን ${nextPassage.day} ተሸጋግሯል።',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isEnglish
+                            ? 'Congratulations! You have completed the reading plan!'
+                            : 'እንኳን ደስ አለዎት! የንባብ ዕቅዱን አጠናቀዋል!',
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              icon: Icon(
+                isDone ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
+                size: 16,
+              ),
+              label: Text(
+                isDone
+                    ? (isEnglish ? 'Day Completed ✓' : 'ቀኑ ተጠናቋል ✓')
+                    : (isEnglish ? 'Complete Day' : 'ቀኑን አጠናቅቅ'),
+                style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+              ),
             ),
-          ),
+
           IconButton(
             visualDensity: VisualDensity.compact,
             icon: Icon(Icons.close_rounded, size: 18, color: themeConfig.secondaryTextColor),
-            tooltip: 'ዕቅድ ዝጋ',
+            tooltip: isEnglish ? 'Close Plan Bar' : 'ዕቅድ ዝጋ',
             onPressed: () {
               ref.read(readingPlanSessionProvider.notifier).clearActiveSession();
             },
@@ -2253,6 +2520,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () {
+              _markActivePlanChapterReadIfApplicable();
               ref.read(bibleStateProvider.notifier).nextChapter();
               setState(() => _selectedVerseNumber = null);
               _scrollToApproximateVerse(1, 30);
