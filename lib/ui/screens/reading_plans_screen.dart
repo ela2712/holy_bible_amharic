@@ -106,6 +106,86 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     widget.onNavigateToReader?.call(0);
   }
 
+  Future<void> _confirmResetPlan(
+    BuildContext context,
+    ReadingPlan plan,
+    ReaderThemeConfig themeConfig,
+    bool isEnglish,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: themeConfig.surfaceColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.restart_alt_rounded, color: Colors.redAccent, size: 24),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isEnglish ? 'Reset Reading Plan?' : 'ዕቅዱን እንደገና መጀመር ይፈልጋሉ?',
+                  style: isEnglish
+                      ? GoogleFonts.inter(fontSize: 16.5, fontWeight: FontWeight.w800, color: themeConfig.textColor)
+                      : GoogleFonts.notoSansEthiopic(fontSize: 16.5, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            isEnglish
+                ? 'Are you sure you want to restart "${plan.getDisplayTitle(true)}"? All completed days and read chapters will be reset back to Day 1.'
+                : 'የ"${plan.getDisplayTitle(false)}" ዕቅድን እንደገና መጀመር ይፈልጋሉ? የተጠናቀቁት ቀናትና የተነበቡት ምዕራፎች በሙሉ ተሰርዘው ከቀን ፩ (1) ይጀምራል።',
+            style: isEnglish
+                ? GoogleFonts.inter(fontSize: 13, color: themeConfig.secondaryTextColor, height: 1.45)
+                : GoogleFonts.notoSansEthiopic(fontSize: 13, color: themeConfig.secondaryTextColor, height: 1.45),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                isEnglish ? 'Cancel' : 'ይቅር',
+                style: isEnglish
+                    ? GoogleFonts.inter(fontWeight: FontWeight.w700, color: themeConfig.secondaryTextColor)
+                    : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, color: themeConfig.secondaryTextColor),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                isEnglish ? 'Reset to Day 1' : 'እንደገና ጀምር',
+                style: isEnglish
+                    ? GoogleFonts.inter(fontWeight: FontWeight.w800)
+                    : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await ref.read(readingPlanSessionProvider.notifier).resetPlan(plan.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isEnglish
+                ? '"${plan.getDisplayTitle(true)}" has been reset to Day 1.'
+                : 'የ"${plan.getDisplayTitle(false)}" ዕቅድ ከቀን ፩ እንደገና ተጀምሯል።',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   void _showCustomPlanBuilderSheet(
     BuildContext context,
     ReaderThemeConfig themeConfig,
@@ -694,6 +774,12 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   ),
                 ),
                 const Spacer(),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.restart_alt_rounded, size: 20, color: Colors.redAccent),
+                  tooltip: isEnglish ? 'Reset Plan to Day 1' : 'ዕቅዱን እንደገና ጀምር',
+                  onPressed: () => _confirmResetPlan(context, plan, themeConfig, isEnglish),
+                ),
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   icon: Icon(Icons.close_rounded, size: 18, color: themeConfig.secondaryTextColor),
@@ -1640,6 +1726,12 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                 ],
                               ),
                             ),
+                            if (completedSet.isNotEmpty || sessionState.getReadChaptersCount(plan.id, 1) > 0)
+                              IconButton(
+                                icon: const Icon(Icons.restart_alt_rounded, color: Colors.redAccent, size: 22),
+                                tooltip: isEnglish ? 'Reset Plan to Day 1' : 'ዕቅዱን እንደገና ጀምር',
+                                onPressed: () => _confirmResetPlan(context, plan, themeConfig, isEnglish),
+                              ),
                             IconButton(
                               icon: const Icon(Icons.close_rounded),
                               onPressed: () => Navigator.pop(ctx),

@@ -77,22 +77,30 @@ class DailyNotificationNotifier extends StateNotifier<DailyNotificationState> {
     }
   }
 
-  Future<void> toggleDailyNotification(bool enabled, {bool isEnglish = false}) async {
+  Future<bool> toggleDailyNotification(bool enabled, {bool isEnglish = false}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKeyEnabled, enabled);
 
     if (enabled) {
-      await NotificationService.instance.requestPermission();
+      final hasPermission = await NotificationService.instance.requestPermission();
+      if (!hasPermission) {
+        await prefs.setBool(_prefKeyEnabled, false);
+        state = state.copyWith(isEnabled: false);
+        return false;
+      }
+      await prefs.setBool(_prefKeyEnabled, true);
       await NotificationService.instance.scheduleDailyVerse(
         hour: state.hour,
         minute: state.minute,
         isEnglish: isEnglish,
       );
+      state = state.copyWith(isEnabled: true);
+      return true;
     } else {
+      await prefs.setBool(_prefKeyEnabled, false);
       await NotificationService.instance.cancelDailyVerse();
+      state = state.copyWith(isEnabled: false);
+      return true;
     }
-
-    state = state.copyWith(isEnabled: enabled);
   }
 
   Future<void> updateTime(TimeOfDay time, {bool isEnglish = false}) async {

@@ -254,6 +254,42 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
     }
   }
 
+  /// Resets all progress for a given plan [planId].
+  /// Clears completed days, cleared read chapters, and resets the active session day to Day 1 if this is the active plan.
+  Future<void> resetPlan(String planId) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // 1. Remove completed days pref
+    await prefs.remove('plan_${planId}_completed');
+
+    // 2. Remove read chapters for every passage in this plan
+    final plan = state.allAvailablePlans.firstWhere(
+      (p) => p.id == planId,
+      orElse: () => ReadingPlansData.allPlans.first,
+    );
+    for (final passage in plan.passages) {
+      await prefs.remove('plan_${planId}_day_${passage.day}_chapters');
+    }
+
+    // 3. Update in-memory state
+    final updatedCompletedDays = Map<String, Set<int>>.from(state.completedDaysByPlan);
+    updatedCompletedDays[planId] = <int>{};
+
+    final updatedChapters = Map<String, Map<int, Set<int>>>.from(state.completedChaptersByPlanAndDay);
+    updatedChapters.remove(planId);
+
+    final isActivePlan = state.activeSessionPlan?.id == planId;
+    if (isActivePlan) {
+      await prefs.setInt(_prefActivePlanDay, 1);
+    }
+
+    state = state.copyWith(
+      completedDaysByPlan: updatedCompletedDays,
+      completedChaptersByPlanAndDay: updatedChapters,
+      activeSessionDay: isActivePlan ? 1 : state.activeSessionDay,
+    );
+  }
+
   Future<ReadingPlan> createCustomPlan({
     required String title,
     required String scopeKey,

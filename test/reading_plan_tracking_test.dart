@@ -124,5 +124,38 @@ void main() {
       expect(notifier.state.activeSessionDay, isNull);
       expect(notifier.state.isDayCompleted(plan.id, plan.totalDays), isTrue);
     });
+
+    test('resetPlan clears completed days, read chapters, and rewinds active session to Day 1', () async {
+      final notifier = ReadingPlanSessionNotifier();
+      await notifier.loadAll();
+
+      final plan = ReadingPlansData.allPlans.first;
+      await notifier.startReadingSession(plan, 12);
+      await notifier.markChapterCompleted(
+        planId: plan.id,
+        day: 12,
+        chapter: 1,
+        totalChaptersInDay: 2,
+      );
+      await notifier.toggleDayComplete(plan.id, 1);
+      await notifier.toggleDayComplete(plan.id, 2);
+
+      expect(notifier.state.completedDaysByPlan[plan.id]?.length, 2);
+      expect(notifier.state.getReadChaptersCount(plan.id, 12), 1);
+      expect(notifier.state.activeSessionDay, 12);
+
+      // Execute resetPlan
+      await notifier.resetPlan(plan.id);
+
+      expect(notifier.state.completedDaysByPlan[plan.id]?.isEmpty, isTrue);
+      expect(notifier.state.getReadChaptersCount(plan.id, 12), 0);
+      expect(notifier.state.activeSessionDay, 1);
+
+      // Verify persistence after reload
+      final reloadedNotifier = ReadingPlanSessionNotifier();
+      await reloadedNotifier.loadAll();
+      expect(reloadedNotifier.state.completedDaysByPlan[plan.id]?.isEmpty, isTrue);
+      expect(reloadedNotifier.state.activeSessionDay, 1);
+    });
   });
 }

@@ -489,9 +489,21 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                           activeThumbColor: themeConfig.accentColor,
                           value: notifState.isEnabled,
-                          onChanged: (val) {
+                          onChanged: (val) async {
                             HapticFeedback.selectionClick();
-                            notifNotifier.toggleDailyNotification(val, isEnglish: isEnglish);
+                            final success = await notifNotifier.toggleDailyNotification(val, isEnglish: isEnglish);
+                            if (!val || success) return;
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isEnglish
+                                      ? 'Notification permission was denied. Please enable notifications in device settings.'
+                                      : 'የማሳወቂያ ፈቃድ አልተሰጠም። እባክዎ በስልክዎ Settings ውስጥ ፈቃድ ይስጡ።',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
                           },
                         ),
                         if (notifState.isEnabled) ...[

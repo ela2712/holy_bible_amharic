@@ -22,6 +22,17 @@ class NotificationService {
 
     try {
       tz.initializeTimeZones();
+      final now = DateTime.now();
+      tz.Location? matchedLocation;
+      for (final loc in tz.timeZoneDatabase.locations.values) {
+        if (loc.currentTimeZone.offset == now.timeZoneOffset) {
+          matchedLocation = loc;
+          break;
+        }
+      }
+      if (matchedLocation != null) {
+        tz.setLocalLocation(matchedLocation);
+      }
 
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -77,9 +88,13 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
+        final areEnabled = await androidImplementation.areNotificationsEnabled();
+        if (areEnabled == false) {
+          return false;
+        }
         final granted =
             await androidImplementation.requestNotificationsPermission();
-        return granted ?? false;
+        return granted ?? areEnabled ?? true;
       }
 
       final iosImplementation =
@@ -137,7 +152,6 @@ class NotificationService {
       channelDescription: channelDescription,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
