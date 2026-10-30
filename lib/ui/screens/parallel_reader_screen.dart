@@ -10,27 +10,59 @@ import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 
 enum ParallelViewFilter {
-  allThree,
+  allFour,
+  eotcAndGeez,
   eotcAnd1954,
   eotcAndKjv,
   haileselassieAndKjv,
 }
 
+class _AlignedParallelVerse {
+  final String label;
+  final int verseNumber;
+  final String? text81;
+  final String? textGeez;
+  final String? text1954;
+  final String? textKjv;
+
+  const _AlignedParallelVerse({
+    required this.label,
+    required this.verseNumber,
+    this.text81,
+    this.textGeez,
+    this.text1954,
+    this.textKjv,
+  });
+}
+
 class ParallelReaderScreen extends ConsumerStatefulWidget {
-  const ParallelReaderScreen({super.key});
+  final int? initialBookNumber;
+  final int? initialChapter;
+  final int? initialTargetVerse;
+  final int? initialTranslationId;
+
+  const ParallelReaderScreen({
+    super.key,
+    this.initialBookNumber,
+    this.initialChapter,
+    this.initialTargetVerse,
+    this.initialTranslationId,
+  });
 
   @override
   ConsumerState<ParallelReaderScreen> createState() => _ParallelReaderScreenState();
 }
 
 class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
-  ParallelViewFilter _selectedFilter = ParallelViewFilter.allThree;
-  List<Verse> _verses81 = [];
-  List<Verse> _verses1954 = [];
-  List<Verse> _versesKjv = [];
+  final ScrollController _scrollController = ScrollController();
+  ParallelViewFilter _selectedFilter = ParallelViewFilter.allFour;
+  List<_AlignedParallelVerse> _alignedVerses = [];
+  bool _hasGeezBook = true;
   bool _has1954Book = true;
   bool _hasKjvBook = true;
   bool _isLoading = true;
+  String _customBookTitle = '';
+  int _activeChapter = 1;
 
   @override
   void initState() {
@@ -38,29 +70,38 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
     _loadAllParallelVerses();
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadAllParallelVerses() async {
     setState(() => _isLoading = true);
     final bibleState = ref.read(bibleStateProvider);
     final repo = ref.read(bibleRepositoryProvider);
-    final currentBook = bibleState.currentBook;
-    final currentChapter = bibleState.currentChapter;
+    final targetTransId = widget.initialTranslationId ?? (bibleState.currentTranslation?.id ?? 2);
+    final targetBookNum = widget.initialBookNumber ?? (bibleState.currentBook?.bookNumber ?? 1);
+    final targetChapter = widget.initialChapter ?? bibleState.currentChapter;
+    _activeChapter = targetChapter;
 
-    if (currentBook == null) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
-    }
+    final isEnglish = ref.read(isEnglishUiProvider);
+    final currentBook = await repo.getBookByNumber(targetTransId, targetBookNum) ?? bibleState.currentBook;
+    _customBookTitle = currentBook?.getDisplayName(isEnglish) ?? (isEnglish ? 'Scripture' : 'መጽሐፍ');
 
-    final currentTransId = bibleState.currentTranslation?.id ?? 2;
-    final canonId = CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber);
+    final canonId = CanonicalBookMap.getCanonicalId(targetTransId, targetBookNum);
 
-    // Resolve book numbers across all 3 canons
-    final bookNum81 = CanonicalBookMap.getBookNumber(2, canonId) ?? (currentTransId == 2 ? currentBook.bookNumber : null);
-    final bookNum1954 = CanonicalBookMap.getBookNumber(1, canonId) ?? (currentTransId == 1 ? currentBook.bookNumber : null);
-    final bookNumKjv = CanonicalBookMap.getBookNumber(3, canonId) ?? (currentTransId == 3 ? currentBook.bookNumber : null);
+    // Resolve book numbers across all 4 canons
+    final bookNum81 = CanonicalBookMap.getBookNumber(2, canonId) ?? (targetTransId == 2 ? targetBookNum : null);
+    final bookNumGeez = CanonicalBookMap.getBookNumber(4, canonId) ?? (targetTransId == 4 ? targetBookNum : null);
+    final bookNum1954 = CanonicalBookMap.getBookNumber(1, canonId) ?? (targetTransId == 1 ? targetBookNum : null);
+    final bookNumKjv = CanonicalBookMap.getBookNumber(3, canonId) ?? (targetTransId == 3 ? targetBookNum : null);
 
     List<Verse> verses81 = [];
+    List<Verse> versesGeez = [];
     List<Verse> verses1954 = [];
     List<Verse> versesKjv = [];
+    bool hasGeez = bookNumGeez != null;
     bool has1954 = bookNum1954 != null;
     bool hasKjv = bookNumKjv != null;
 
@@ -72,20 +113,39 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
         try {
           final b = await repo.getBookByNumber(2, bookNum81);
           if (b != null) {
-            final ch = currentChapter.clamp(1, b.totalChapters);
+            final ch = targetChapter.clamp(1, b.totalChapters);
             verses81 = await repo.getVerses(bookId: b.id, chapter: ch);
           }
         } catch (_) {}
       }());
     }
 
-    // 2. Fetch 1954 Translation (ID: 1)
+    // 2. Fetch Ge'ez 81 Canon (ID: 4)
+    if (bookNumGeez != null) {
+      futures.add(() async {
+        try {
+          final b = await repo.getBookByNumber(4, bookNumGeez);
+          if (b != null) {
+            final ch = targetChapter.clamp(1, b.totalChapters);
+            versesGeez = await repo.getVerses(bookId: b.id, chapter: ch);
+          } else {
+            hasGeez = false;
+          }
+        } catch (_) {
+          hasGeez = false;
+        }
+      }());
+    } else {
+      hasGeez = false;
+    }
+
+    // 3. Fetch 1954 Translation (ID: 1)
     if (bookNum1954 != null) {
       futures.add(() async {
         try {
           final b = await repo.getBookByNumber(1, bookNum1954);
           if (b != null) {
-            final ch = currentChapter.clamp(1, b.totalChapters);
+            final ch = targetChapter.clamp(1, b.totalChapters);
             verses1954 = await repo.getVerses(bookId: b.id, chapter: ch);
           } else {
             has1954 = false;
@@ -98,13 +158,13 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
       has1954 = false;
     }
 
-    // 3. Fetch KJV Translation (ID: 3)
+    // 4. Fetch KJV Translation (ID: 3)
     if (bookNumKjv != null) {
       futures.add(() async {
         try {
           final b = await repo.getBookByNumber(3, bookNumKjv);
           if (b != null) {
-            final ch = currentChapter.clamp(1, b.totalChapters);
+            final ch = targetChapter.clamp(1, b.totalChapters);
             versesKjv = await repo.getVerses(bookId: b.id, chapter: ch);
           } else {
             hasKjv = false;
@@ -119,15 +179,90 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
 
     await Future.wait(futures);
 
+    // Build 100% aligned parallel verse rows
+    final aligned = <_AlignedParallelVerse>[];
+    if (verses81.isNotEmpty) {
+      for (final v81 in verses81) {
+        final startV = v81.verse;
+        final endV = v81.verseEnd ?? v81.verse;
+        final label = v81.isMergedRange
+            ? (isEnglish ? 'Verses $startV–$endV' : 'ቁጥር $startV–$endV')
+            : (isEnglish ? 'Verse $startV' : 'ቁጥር $startV');
+
+        // Match Ge'ez
+        final matchGeez = versesGeez.where((v) =>
+            (v.verse >= startV && v.verse <= endV) ||
+            (v.verseEnd != null && v.verse <= endV && v.verseEnd! >= startV)).toList();
+        final textGeez = matchGeez.isNotEmpty
+            ? matchGeez.map((v) => v.text).join(' ')
+            : (hasGeez ? versesGeez.where((v) => v.verse == startV).firstOrNull?.text : null);
+
+        // Match 1954
+        final match1954 = verses1954.where((v) =>
+            (v.verse >= startV && v.verse <= endV) ||
+            (v.verseEnd != null && v.verse <= endV && v.verseEnd! >= startV)).toList();
+        final text1954 = match1954.isNotEmpty
+            ? match1954.map((v) => v.text).join(' ')
+            : (has1954 ? verses1954.where((v) => v.verse == startV).firstOrNull?.text : null);
+
+        // Match KJV
+        final matchKjv = versesKjv.where((v) =>
+            v.verse >= startV && v.verse <= endV).toList();
+        final textKjv = matchKjv.isNotEmpty
+            ? matchKjv.map((v) => v.text).join(' ')
+            : (hasKjv ? versesKjv.where((v) => v.verse == startV).firstOrNull?.text : null);
+
+        aligned.add(_AlignedParallelVerse(
+          label: label,
+          verseNumber: startV,
+          text81: v81.text,
+          textGeez: textGeez,
+          text1954: text1954,
+          textKjv: textKjv,
+        ));
+      }
+    } else {
+      final primary = versesGeez.isNotEmpty
+          ? versesGeez
+          : (verses1954.isNotEmpty ? verses1954 : versesKjv);
+      for (final p in primary) {
+        final label = isEnglish ? 'Verse ${p.verse}' : 'ቁጥር ${p.verse}';
+        final textGeez = versesGeez.where((v) => v.verse == p.verse).firstOrNull?.text;
+        final text1954 = verses1954.where((v) => v.verse == p.verse).firstOrNull?.text;
+        final textKjv = versesKjv.where((v) => v.verse == p.verse).firstOrNull?.text;
+        aligned.add(_AlignedParallelVerse(
+          label: label,
+          verseNumber: p.verse,
+          text81: null,
+          textGeez: textGeez,
+          text1954: text1954,
+          textKjv: textKjv,
+        ));
+      }
+    }
+
     if (mounted) {
       setState(() {
-        _verses81 = verses81;
-        _verses1954 = verses1954;
-        _versesKjv = versesKjv;
+        _alignedVerses = aligned;
+        _hasGeezBook = hasGeez;
         _has1954Book = has1954;
         _hasKjvBook = hasKjv;
         _isLoading = false;
       });
+
+      if (widget.initialTargetVerse != null && aligned.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final targetIndex = aligned.indexWhere((a) => a.verseNumber >= widget.initialTargetVerse!);
+          if (targetIndex > 0 && _scrollController.hasClients) {
+            final targetOffset = (targetIndex * 190.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+            _scrollController.animateTo(
+              targetOffset,
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        });
+      }
     }
   }
 
@@ -137,12 +272,13 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
     final themeConfig = ref.watch(themeConfigProvider);
     final isEnglish = ref.watch(isEnglishUiProvider);
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
-
-    final bookTitle = bibleState.currentBook?.getDisplayName(isEnglish) ??
-        (isEnglish ? 'Scripture' : 'መጽሐፍ');
+    final bookTitle = _customBookTitle.isNotEmpty
+        ? _customBookTitle
+        : (bibleState.currentBook?.getDisplayName(isEnglish) ?? (isEnglish ? 'Scripture' : 'መጽሐፍ'));
+    final activeCh = _activeChapter > 0 ? _activeChapter : bibleState.currentChapter;
     final chapterTitle = isEnglish
-        ? '$bookTitle Chapter ${bibleState.currentChapter}'
-        : '$bookTitle ምዕራፍ ${bibleState.currentChapter}';
+        ? '$bookTitle Chapter $activeCh'
+        : '$bookTitle ምዕራፍ $activeCh';
 
     return Scaffold(
       backgroundColor: themeConfig.backgroundColor,
@@ -223,9 +359,17 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                     child: Row(
                       children: [
                         _buildFilterChip(
-                          filter: ParallelViewFilter.allThree,
-                          label: isEnglish ? 'All 3 Canons' : 'ሁሉንም 3 አነጻጽር',
+                          filter: ParallelViewFilter.allFour,
+                          label: isEnglish ? 'All 4 Canons' : 'ሁሉንም 4 አነጻጽር',
                           icon: Icons.auto_awesome_mosaic_rounded,
+                          themeConfig: themeConfig,
+                          isEnglish: isEnglish,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          filter: ParallelViewFilter.eotcAndGeez,
+                          label: isEnglish ? '81 & Ge\'ez' : '81 እና ግዕዝ',
+                          icon: Icons.menu_book_rounded,
                           themeConfig: themeConfig,
                           isEnglish: isEnglish,
                         ),
@@ -329,13 +473,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
     bool isEnglish,
     bool isDark,
   ) {
-    final maxCount = [
-      _verses81.length,
-      _verses1954.length,
-      _versesKjv.length,
-    ].reduce((a, b) => a > b ? a : b);
-
-    if (maxCount == 0) {
+    if (_alignedVerses.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -350,19 +488,13 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
     }
 
     return ListView.separated(
+      controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
-      itemCount: maxCount,
+      itemCount: _alignedVerses.length,
       separatorBuilder: (_, _) => const SizedBox(height: 14),
       itemBuilder: (context, index) {
-        final v81 = index < _verses81.length ? _verses81[index] : null;
-        final v1954 = index < _verses1954.length ? _verses1954[index] : null;
-        final vKjv = index < _versesKjv.length ? _versesKjv[index] : null;
-
-        final verseNum = v81?.verse ?? v1954?.verse ?? vKjv?.verse ?? (index + 1);
-        final verseRangeLabel = v81 != null && v81.isMergedRange
-            ? (isEnglish ? 'Verses ${v81.verse}–${v81.verseEnd}' : 'ቁጥር ${v81.verse}–${v81.verseEnd}')
-            : (isEnglish ? 'Verse $verseNum' : 'ቁጥር $verseNum');
+        final item = _alignedVerses[index];
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -395,7 +527,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      verseRangeLabel,
+                      item.label,
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
@@ -409,10 +541,11 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                     tooltip: isEnglish ? 'Copy verses' : 'ጥቅሶቹን ቅዳ',
                     onPressed: () {
                       final sb = StringBuffer();
-                      sb.writeln('$verseRangeLabel:');
-                      if (v81 != null) sb.writeln('[81 ቀኖና] ${v81.text}');
-                      if (v1954 != null) sb.writeln('[1954] ${v1954.text}');
-                      if (vKjv != null) sb.writeln('[KJV] ${vKjv.text}');
+                      sb.writeln('${item.label}:');
+                      if (item.text81 != null) sb.writeln('[81 ቀኖና] ${item.text81}');
+                      if (item.textGeez != null) sb.writeln('[ግዕዝ 81] ${item.textGeez}');
+                      if (item.text1954 != null) sb.writeln('[1954] ${item.text1954}');
+                      if (item.textKjv != null) sb.writeln('[KJV] ${item.textKjv}');
 
                       Clipboard.setData(ClipboardData(text: sb.toString().trim()));
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -432,16 +565,37 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                 _buildTranslationBlock(
                   badgeLabel: isEnglish ? '81 Orthodox Canon' : '81 ቀኖና',
                   badgeColor: const Color(0xFF047857),
-                  verseText: v81?.text,
+                  verseText: item.text81,
                   isEthiopic: true,
                   themeConfig: themeConfig,
                   isEnglish: isEnglish,
                 ),
               ],
 
-              // 2. 1954 Translation Slot
-              if (_shouldShow1954) ...[
+              // 2. Ancient Ge'ez 81 Canon Slot
+              if (_shouldShowGeez) ...[
                 if (_shouldShow81) const SizedBox(height: 12),
+                if (!_hasGeezBook)
+                  _buildExclusiveDeuterocanonNotice(
+                    badgeLabel: isEnglish ? "Ancient Ge'ez 81 Canon" : 'የቀደምት ግዕዝ 81 ቀኖና',
+                    badgeColor: const Color(0xFF854D0E),
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  )
+                else
+                  _buildTranslationBlock(
+                    badgeLabel: isEnglish ? "Ancient Ge'ez 81 Canon" : 'የቀደምት ግዕዝ 81 ቀኖና',
+                    badgeColor: const Color(0xFF854D0E),
+                    verseText: item.textGeez,
+                    isEthiopic: true,
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+              ],
+
+              // 3. 1954 Translation Slot
+              if (_shouldShow1954) ...[
+                if (_shouldShow81 || _shouldShowGeez) const SizedBox(height: 12),
                 if (!_has1954Book)
                   _buildExclusiveDeuterocanonNotice(
                     badgeLabel: isEnglish ? '1954 Translation' : '1954 ትርጉም',
@@ -453,16 +607,16 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                   _buildTranslationBlock(
                     badgeLabel: isEnglish ? '1954 Translation' : '1954 ትርጉም',
                     badgeColor: const Color(0xFFB45309),
-                    verseText: v1954?.text,
+                    verseText: item.text1954,
                     isEthiopic: true,
                     themeConfig: themeConfig,
                     isEnglish: isEnglish,
                   ),
               ],
 
-              // 3. KJV Slot
+              // 4. KJV Slot
               if (_shouldShowKjv) ...[
-                if (_shouldShow81 || _shouldShow1954) const SizedBox(height: 12),
+                if (_shouldShow81 || _shouldShowGeez || _shouldShow1954) const SizedBox(height: 12),
                 if (!_hasKjvBook)
                   _buildExclusiveDeuterocanonNotice(
                     badgeLabel: 'King James Version (KJV)',
@@ -474,7 +628,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                   _buildTranslationBlock(
                     badgeLabel: 'King James Version (KJV)',
                     badgeColor: const Color(0xFF4338CA),
-                    verseText: vKjv?.text,
+                    verseText: item.textKjv,
                     isEthiopic: false,
                     themeConfig: themeConfig,
                     isEnglish: isEnglish,
@@ -488,19 +642,25 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
   }
 
   bool get _shouldShow81 =>
-      _selectedFilter == ParallelViewFilter.allThree ||
+      _selectedFilter == ParallelViewFilter.allFour ||
+      _selectedFilter == ParallelViewFilter.eotcAndGeez ||
       _selectedFilter == ParallelViewFilter.eotcAnd1954 ||
       _selectedFilter == ParallelViewFilter.eotcAndKjv;
 
+  bool get _shouldShowGeez =>
+      _selectedFilter == ParallelViewFilter.allFour ||
+      _selectedFilter == ParallelViewFilter.eotcAndGeez;
+
   bool get _shouldShow1954 =>
-      _selectedFilter == ParallelViewFilter.allThree ||
+      _selectedFilter == ParallelViewFilter.allFour ||
       _selectedFilter == ParallelViewFilter.eotcAnd1954 ||
       _selectedFilter == ParallelViewFilter.haileselassieAndKjv;
 
   bool get _shouldShowKjv =>
-      _selectedFilter == ParallelViewFilter.allThree ||
+      _selectedFilter == ParallelViewFilter.allFour ||
       _selectedFilter == ParallelViewFilter.eotcAndKjv ||
       _selectedFilter == ParallelViewFilter.haileselassieAndKjv;
+
 
   Widget _buildTranslationBlock({
     required String badgeLabel,

@@ -88,13 +88,13 @@ class NotificationService {
               AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidImplementation != null) {
-        final areEnabled = await androidImplementation.areNotificationsEnabled();
-        if (areEnabled == false) {
-          return false;
-        }
         final granted =
             await androidImplementation.requestNotificationsPermission();
-        return granted ?? areEnabled ?? true;
+        if (granted != null) {
+          return granted;
+        }
+        final areEnabled = await androidImplementation.areNotificationsEnabled();
+        return areEnabled ?? true;
       }
 
       final iosImplementation =

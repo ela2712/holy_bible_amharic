@@ -27,6 +27,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
 
   static const List<String> _categoriesAm = [
     'ሁሉም',
+    'የኢ/ኦ/ተ/ቤ/ክ ቀኖና',
     'ጾምና በዓላት',
     'ሐዲስ ኪዳን',
     'ጥበብና መዝሙር',
@@ -35,6 +36,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
 
   static const List<String> _categoriesEn = [
     'All',
+    'EOTC Canon',
     'Fasts & Feasts',
     'New Testament',
     'Wisdom & Psalms',
@@ -78,6 +80,7 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
       books: bibleState.books,
       currentTranslationId: bibleState.currentTranslation?.id ?? 2,
       traditionalBookNumber: passage.bookNumber,
+      canonicalId: passage.canonicalId.isNotEmpty ? passage.canonicalId : null,
       bookName: passage.bookName,
     );
 
@@ -928,12 +931,14 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
         : allPlans.where((p) {
             switch (_selectedCategoryIndex) {
               case 1:
-                return p.category == 'ጾምና በዓላት' || p.categoryEn == 'Fasts & Feasts';
+                return p.category == 'የኢ/ኦ/ተ/ቤ/ክ ቀኖና' || p.categoryEn == 'EOTC Canon';
               case 2:
-                return p.category == 'ሐዲስ ኪዳን' || p.categoryEn == 'New Testament';
+                return p.category == 'ጾምና በዓላት' || p.categoryEn == 'Fasts & Feasts';
               case 3:
-                return p.category == 'ጥበብና መዝሙር' || p.categoryEn == 'Wisdom & Psalms';
+                return p.category == 'ሐዲስ ኪዳን' || p.categoryEn == 'New Testament';
               case 4:
+                return p.category == 'ጥበብና መዝሙር' || p.categoryEn == 'Wisdom & Psalms';
+              case 5:
                 return p.category == 'ዓመታዊ' || p.categoryEn == 'Annual';
               default:
                 return true;

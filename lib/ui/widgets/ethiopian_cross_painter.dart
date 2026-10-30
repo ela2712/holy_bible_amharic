@@ -245,64 +245,134 @@ class EthiopianHaragBorderPainter extends CustomPainter {
     final outerPaint = Paint()
       ..color = primaryColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    final innerPaint = Paint()
+    final secondaryPaint = Paint()
       ..color = secondaryColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
     final fillPaint = Paint()
-      ..color = primaryColor.withValues(alpha: 0.18)
+      ..color = primaryColor.withValues(alpha: 0.14)
       ..style = PaintingStyle.fill;
 
-    // Draw outer boundary and inner boundary
+    final secFillPaint = Paint()
+      ..color = secondaryColor.withValues(alpha: 0.16)
+      ..style = PaintingStyle.fill;
+
+    // 1. Double Outer Frame (The Manuscript Border Margin)
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(4, 4, w - 8, h - 8), const Radius.circular(16)),
+      RRect.fromRectAndRadius(Rect.fromLTWH(5, 5, w - 10, h - 10), const Radius.circular(16)),
       outerPaint,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(b, b, w - 2 * b, h - 2 * b), const Radius.circular(10)),
-      innerPaint,
+      RRect.fromRectAndRadius(Rect.fromLTWH(b + 2, b + 2, w - 2 * b - 4, h - 2 * b - 4), const Radius.circular(10)),
+      secondaryPaint,
     );
 
-    // Decorative corner Haräg rosettes / cross knots
-    final corners = [
-      Offset(b * 0.8, b * 0.8),
-      Offset(w - b * 0.8, b * 0.8),
-      Offset(b * 0.8, h - b * 0.8),
-      Offset(w - b * 0.8, h - b * 0.8),
+    // 2. Corner Gondar/Axumite Cross Rosettes (የጥበብ መስቀል ቋጠሮ)
+    final cornerOffsets = [
+      Offset(b * 0.85, b * 0.85),
+      Offset(w - b * 0.85, b * 0.85),
+      Offset(b * 0.85, h - b * 0.85),
+      Offset(w - b * 0.85, h - b * 0.85),
     ];
 
-    for (final c in corners) {
-      canvas.drawCircle(c, b * 0.45, fillPaint);
-      canvas.drawCircle(c, b * 0.45, outerPaint);
-      canvas.drawCircle(c, b * 0.22, innerPaint);
-      canvas.drawCircle(c, b * 0.08, Paint()..color = secondaryColor..style = PaintingStyle.fill);
+    for (final c in cornerOffsets) {
+      final r = b * 0.58;
+      canvas.drawCircle(c, r, fillPaint);
+      canvas.drawCircle(c, r, outerPaint);
+      canvas.drawCircle(c, r * 0.6, secFillPaint);
+      canvas.drawCircle(c, r * 0.6, secondaryPaint);
+      canvas.drawCircle(c, r * 0.22, Paint()..color = primaryColor..style = PaintingStyle.fill);
+
+      // 4 tiny cross lobes around each corner rosette
+      for (int i = 0; i < 4; i++) {
+        final angle = i * math.pi / 2;
+        final lx = c.dx + math.cos(angle) * (r + 3);
+        final ly = c.dy + math.sin(angle) * (r + 3);
+        canvas.drawCircle(Offset(lx, ly), 2.2, Paint()..color = secondaryColor..style = PaintingStyle.fill);
+      }
     }
 
-    // Interlaced diamond pattern along top and bottom edges
-    final step = 22.0;
-    final topCount = ((w - 2 * b - 20) / step).floor();
-    for (int i = 0; i < topCount; i++) {
-      final x = b + 15 + i * step;
-      // Top Haräg knot
+    // 3. Top Illuminated Headpiece (የራስጌ ሐረግ)
+    final cx = w / 2;
+    // Central headpiece arch / crown
+    final crownPath = Path()
+      ..moveTo(cx - 24, b + 2)
+      ..cubicTo(cx - 16, b - 12, cx - 8, 4, cx, 3)
+      ..cubicTo(cx + 8, 4, cx + 16, b - 12, cx + 24, b + 2)
+      ..close();
+    canvas.drawPath(crownPath, secFillPaint);
+    canvas.drawPath(crownPath, outerPaint);
+
+    // Apex Cross on Top Headpiece
+    final apexCross = Path()
+      ..moveTo(cx, 0)
+      ..lineTo(cx, 7)
+      ..moveTo(cx - 3.5, 3.5)
+      ..lineTo(cx + 3.5, 3.5);
+    canvas.drawPath(apexCross, Paint()..color = secondaryColor..style = PaintingStyle.stroke..strokeWidth = 2);
+
+    // 4. Interlaced Ribbon Guilloche / Straps along Top & Bottom Frames
+    final step = 20.0;
+    final margin = b + 18.0;
+    final horizCount = ((w - 2 * margin) / step).floor();
+
+    for (int i = 0; i < horizCount; i++) {
+      final x = margin + i * step;
+
+      // Skip under central headpiece
+      if ((x - cx).abs() < 22) continue;
+
+      // Top braided loop (ማዕበል ሐረግ)
       final topKnot = Path()
         ..moveTo(x, 6)
-        ..lineTo(x + step * 0.5, b - 2)
-        ..lineTo(x + step, 6)
-        ..lineTo(x + step * 0.5, 4)
-        ..close();
-      canvas.drawPath(topKnot, outerPaint);
+        ..quadraticBezierTo(x + step * 0.5, b, x + step, 6)
+        ..quadraticBezierTo(x + step * 0.5, 3, x, 6);
+      canvas.drawPath(topKnot, i % 2 == 0 ? fillPaint : secFillPaint);
+      canvas.drawPath(topKnot, i % 2 == 0 ? outerPaint : secondaryPaint);
 
-      // Bottom Haräg knot
+      // Bottom braided loop
       final bottomKnot = Path()
         ..moveTo(x, h - 6)
-        ..lineTo(x + step * 0.5, h - b + 2)
-        ..lineTo(x + step, h - 6)
-        ..lineTo(x + step * 0.5, h - 4)
+        ..quadraticBezierTo(x + step * 0.5, h - b, x + step, h - 6)
+        ..quadraticBezierTo(x + step * 0.5, h - 3, x, h - 6);
+      canvas.drawPath(bottomKnot, i % 2 == 0 ? fillPaint : secFillPaint);
+      canvas.drawPath(bottomKnot, i % 2 == 0 ? outerPaint : secondaryPaint);
+    }
+
+    // 5. Vertical Side Braids (የጎን ሐረግ ሹሩባ)
+    final vStep = 24.0;
+    final vMargin = b + 16.0;
+    final vertCount = ((h - 2 * vMargin) / vStep).floor();
+
+    for (int i = 0; i < vertCount; i++) {
+      final y = vMargin + i * vStep;
+
+      // Left vertical diamond knot
+      final leftKnot = Path()
+        ..moveTo(6, y)
+        ..lineTo(b - 2, y + vStep * 0.5)
+        ..lineTo(6, y + vStep)
+        ..lineTo(3, y + vStep * 0.5)
         ..close();
-      canvas.drawPath(bottomKnot, outerPaint);
+      canvas.drawPath(leftKnot, i % 2 == 0 ? fillPaint : secFillPaint);
+      canvas.drawPath(leftKnot, i % 2 == 0 ? outerPaint : secondaryPaint);
+
+      // Right vertical diamond knot
+      final rightKnot = Path()
+        ..moveTo(w - 6, y)
+        ..lineTo(w - b + 2, y + vStep * 0.5)
+        ..lineTo(w - 6, y + vStep)
+        ..lineTo(w - 3, y + vStep * 0.5)
+        ..close();
+      canvas.drawPath(rightKnot, i % 2 == 0 ? fillPaint : secFillPaint);
+      canvas.drawPath(rightKnot, i % 2 == 0 ? outerPaint : secondaryPaint);
     }
   }
 
@@ -313,6 +383,7 @@ class EthiopianHaragBorderPainter extends CustomPainter {
         oldDelegate.borderWidth != borderWidth;
   }
 }
+
 
 /// Compact vector widget for rendering an authentic Ethiopian Orthodox cross anywhere in UI/text
 class OrthodoxCrossIcon extends StatelessWidget {

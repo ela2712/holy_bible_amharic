@@ -12,6 +12,29 @@ class GeezNormalizer {
     '"', "'", '«', '»', '“', '”', '—', '-', '…'
   ];
 
+  /// Cleans formatting anomalies (newlines, extra whitespace, space before punctuation, brackets)
+  /// ensuring standard Ethiopic typographic presentation.
+  static String cleanTypography(String text) {
+    if (text.isEmpty) return '';
+    var s = text;
+    // 1. Replace newlines, carriage returns, tabs with space
+    s = s.replaceAll(RegExp(r'[\r\n\t]+'), ' ');
+    // 2. Remove brackets and parentheses without adding spaces
+    s = s.replaceAll(RegExp(r'[\[\]\(\)]'), '');
+    // 3. Remove space before punctuation (Ethiopic ፡ ። ፣ ፤ ፥ ፦ ፧ ፨ and standard : ; , . ? !)
+    s = s.replaceAllMapped(RegExp(r'\s+([\u1361-\u1368\:\;\,\.\?\!])'), (m) => m[1]!);
+    // 4. If multiple punctuation marks occur consecutively, e.g. '፡ ።', clean to '።'
+    s = s.replaceAllMapped(RegExp(r'[\u1361]\s*([\u1362])'), (m) => m[1]!);
+    // 5. Ensure single space after Ethiopic punctuation if followed by a letter or number
+    s = s.replaceAllMapped(
+      RegExp(r'([\u1361-\u1368])([^\s\u1361-\u1368\)\]\}"\u0027\u201C\u201D\u00AB\u00BB])'),
+      (m) => '${m[1]} ${m[2]}',
+    );
+    // 6. Collapse multiple spaces into one
+    s = s.replaceAll(RegExp(r'\s{2,}'), ' ');
+    return s.trim();
+  }
+
   static String normalize(String text) {
     if (text.isEmpty) return '';
 

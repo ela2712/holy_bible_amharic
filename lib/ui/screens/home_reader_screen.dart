@@ -1,7 +1,4 @@
-import 'dart:ui';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,12 +11,11 @@ import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_plan_session_provider.dart';
-import '../widgets/modern_bible_icons.dart';
 import 'book_selector_screen.dart';
-import 'parallel_reader_screen.dart';
 import 'search_screen.dart';
-import 'settings_screen.dart';
 import 'study_tools_dialog.dart';
+import '../../services/bahire_hasab_service.dart';
+import '../widgets/ethiopian_cross_painter.dart';
 
 class HomeReaderScreen extends ConsumerStatefulWidget {
   final ValueChanged<bool>? onChromeVisibilityChanged;
@@ -54,18 +50,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final direction = _scrollController.position.userScrollDirection;
-    if (direction == ScrollDirection.reverse && _scrollController.offset > 60) {
-      if (_isChromeVisible) {
-        setState(() => _isChromeVisible = false);
-        widget.onChromeVisibilityChanged?.call(false);
-      }
-    } else if (direction == ScrollDirection.forward || _scrollController.offset <= 20) {
-      if (!_isChromeVisible) {
-        setState(() => _isChromeVisible = true);
-        widget.onChromeVisibilityChanged?.call(true);
-      }
-    }
     _checkAutoTrackReadingPlan();
   }
 
@@ -94,8 +78,12 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     if (currentBook == null) return;
 
     final currentTransId = bibleState.currentTranslation?.id ?? 2;
-    final passageCanonId = CanonicalBookMap.getCanonicalId(1, passage.bookNumber);
     final currentCanonId = CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber);
+    final passageCanonId = passage.canonicalId.isNotEmpty
+        ? passage.canonicalId
+        : (currentTransId == 2
+            ? CanonicalBookMap.getCanonicalId(2, passage.bookNumber)
+            : CanonicalBookMap.getCanonicalId(1, passage.bookNumber));
 
     if (passageCanonId.isNotEmpty && passageCanonId == currentCanonId) {
       if (currentChapter >= passage.startChapter && currentChapter <= passage.endChapter) {
@@ -119,7 +107,11 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     if (planSession.isDayCompleted(plan.id, currentDay) && currentDay < plan.totalDays) {
       final nextDay = currentDay + 1;
       final nextPassage = plan.passages[(nextDay - 1).clamp(0, plan.passages.length - 1)];
-      final nextCanonId = CanonicalBookMap.getCanonicalId(1, nextPassage.bookNumber);
+      final nextCanonId = nextPassage.canonicalId.isNotEmpty
+          ? nextPassage.canonicalId
+          : (currentTransId == 2
+              ? CanonicalBookMap.getCanonicalId(2, nextPassage.bookNumber)
+              : CanonicalBookMap.getCanonicalId(1, nextPassage.bookNumber));
 
       if (nextCanonId.isNotEmpty && nextCanonId == currentCanonId) {
         if (currentChapter >= nextPassage.startChapter && currentChapter <= nextPassage.endChapter) {
@@ -202,7 +194,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       case 'Abyssinica':
         return TextStyle(
           fontFamily: 'AbyssinicaSIL',
-          fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'],
+          fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic', 'Noto Serif', 'Roboto', 'serif'],
           fontSize: size,
           height: lineHeight,
           fontWeight: weight,
@@ -211,7 +203,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       case 'Sans':
         return TextStyle(
           fontFamily: 'NotoSansEthiopic',
-          fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif'],
+          fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif', 'Roboto'],
           fontSize: size,
           height: lineHeight,
           fontWeight: weight,
@@ -227,6 +219,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             'WashRa',
             'NotoSerifEthiopic',
             'AbyssinicaSIL',
+            'Noto Serif',
+            'Roboto',
+            'serif',
           ],
           fontSize: size,
           height: lineHeight,
@@ -237,13 +232,61 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       default:
         return TextStyle(
           fontFamily: 'NotoSerifEthiopic',
-          fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'serif'],
+          fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'Noto Serif', 'Roboto', 'serif'],
           fontSize: size,
           height: lineHeight,
           fontWeight: weight,
           color: textColor,
         );
     }
+  }
+
+  static final RegExp _rubricPatternAmharic = RegExp(
+    r'(እግዚአብሔር|ኢየሱስ\s+ክርስቶስ|ኢየሱስ|ክርስቶስ|መንፈስ\s+ቅዱስ|አማኑኤል|ፈጣሪ)',
+  );
+
+  static final RegExp _rubricPatternEnglish = RegExp(
+    r'\b(God|Jesus\s+Christ|Jesus|Christ|Holy\s+Spirit|Lord\s+God|Lord|Almighty)\b',
+    caseSensitive: false,
+  );
+
+  List<InlineSpan> _buildRubricatedSpans({
+    required String text,
+    required TextStyle baseStyle,
+    required TextStyle rubricStyle,
+    required bool isEnglish,
+  }) {
+    final pattern = isEnglish ? _rubricPatternEnglish : _rubricPatternAmharic;
+    final matches = pattern.allMatches(text).toList();
+    if (matches.isEmpty) {
+      return [TextSpan(text: text, style: baseStyle)];
+    }
+
+    final spans = <InlineSpan>[];
+    int current = 0;
+
+    for (final m in matches) {
+      if (m.start > current) {
+        spans.add(TextSpan(
+          text: text.substring(current, m.start),
+          style: baseStyle,
+        ));
+      }
+      spans.add(TextSpan(
+        text: text.substring(m.start, m.end),
+        style: rubricStyle,
+      ));
+      current = m.end;
+    }
+
+    if (current < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(current),
+        style: baseStyle,
+      ));
+    }
+
+    return spans;
   }
 
   void _openVerseStudySheet(
@@ -269,10 +312,13 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           setState(() => _selectedVerseNumber = null);
         }
       },
-      onJumpToReference: (targetBookNum, targetCh, targetVerse) {
-        if (mounted) {
-          _scrollToApproximateVerse(targetVerse, 35);
-        }
+      onJumpToReference: (targetBookNum, targetCh, targetVerse) async {
+        if (!mounted) return;
+        await ref.read(bibleStateProvider.notifier).jumpToVerseLocation(
+          bookNumber: targetBookNum,
+          chapter: targetCh,
+          verse: targetVerse,
+        );
       },
       initialTabIndex: initialTabIndex,
     );
@@ -461,18 +507,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 ),
               ),
 
-            // 3. Auto-Hiding Corner Floating Search Button (Option B)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              bottom: _isChromeVisible ? 80 : -90,
-              right: 18,
-              child: _buildCornerSearchButton(
-                context,
-                themeConfig,
-                isDark,
-              ),
-            ),
 
             // 4. Pinch Zoom Font Indicator Pill
             if (_isPinching)
@@ -526,958 +560,6 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     );
   }
 
-  Widget _buildCornerSearchButton(
-    BuildContext context,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: themeConfig.surfaceColor.withValues(alpha: isDark ? 0.90 : 0.94),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: themeConfig.cardBorderColor.withValues(alpha: 0.9),
-              width: 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                HapticFeedback.lightImpact();
-                if (widget.onOpenSearch != null) {
-                  widget.onOpenSearch!();
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SearchScreen(
-                        onNavigateToReader: (_) => Navigator.pop(context),
-                      ),
-                    ),
-                  );
-                }
-              },
-              child: Center(
-                child: ModernSearchIcon(
-                  size: 20,
-                  color: themeConfig.textColor,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openReaderSettingsModal(
-    BuildContext context,
-    BibleViewState bibleState,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    HapticFeedback.lightImpact();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final currentTheme = ref.watch(themeConfigProvider);
-            final currentBible = ref.watch(bibleStateProvider);
-            final currentIsDark = currentTheme.mode == ReaderThemeMode.dark;
-            final isEnglish = ref.watch(isEnglishUiProvider);
-
-            return Container(
-              decoration: BoxDecoration(
-                color: currentTheme.surfaceColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: currentIsDark ? 0.5 : 0.15),
-                    blurRadius: 28,
-                    offset: const Offset(0, -6),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag Handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: currentTheme.cardBorderColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Header Row
-                      Row(
-                        children: [
-                          Icon(
-                            CupertinoIcons.slider_horizontal_3,
-                            size: 20,
-                            color: currentTheme.accentColor,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            isEnglish ? 'Reader Theme & Settings' : 'የንባብ ገጽታና ቅንብሮች',
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: currentTheme.textColor,
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: Icon(Icons.close_rounded, color: currentTheme.secondaryTextColor),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Divider(height: 1, color: currentTheme.cardBorderColor),
-                      const SizedBox(height: 18),
-
-                      // 1. Translations (1954, 81, KJV)
-                      Text(
-                        isEnglish ? 'TRANSLATION' : 'ትርጉም',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
-                          color: currentTheme.secondaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _buildTranslationOptionChip(
-                            label: isEnglish ? '81 Canon' : '81 ቀኖና',
-                            subLabel: isEnglish ? 'Orthodox' : 'ኦርቶዶክሳዊ',
-                            isSelected: currentBible.currentTranslation?.id == 2,
-                            onTap: () {
-                              final t = currentBible.translations.firstWhere((x) => x.id == 2, orElse: () => currentBible.translations.first);
-                              ref.read(bibleStateProvider.notifier).selectTranslation(t);
-                            },
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTranslationOptionChip(
-                            label: isEnglish ? '1954 H.S.' : '1954 ቀዳማዊ ኃ.ሥ.',
-                            subLabel: isEnglish ? '66 Books' : '66 መጻሕፍት',
-                            isSelected: currentBible.currentTranslation?.id == 1,
-                            onTap: () {
-                              final t = currentBible.translations.firstWhere((x) => x.id == 1, orElse: () => currentBible.translations.first);
-                              ref.read(bibleStateProvider.notifier).selectTranslation(t);
-                            },
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildTranslationOptionChip(
-                            label: 'KJV',
-                            subLabel: 'English',
-                            isSelected: currentBible.currentTranslation?.id == 3,
-                            onTap: () {
-                              final t = currentBible.translations.firstWhere((x) => x.id == 3, orElse: () => currentBible.translations.first);
-                              ref.read(bibleStateProvider.notifier).selectTranslation(t);
-                            },
-                            theme: currentTheme,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 22),
-
-                      // 2. Reading Theme Presets (Light, Sepia, Dark)
-                      Text(
-                        isEnglish ? 'THEME PRESETS' : 'ገጽታ',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
-                          color: currentTheme.secondaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _buildThemeModeCard(
-                            label: isEnglish ? 'Light' : 'ብርሃን',
-                            subLabel: isEnglish ? 'Alabaster' : 'Light',
-                            mode: ReaderThemeMode.light,
-                            bgColor: const Color(0xFFFAF9F6),
-                            cardColor: Colors.white,
-                            textColor: const Color(0xFF18181B),
-                            isSelected: currentTheme.mode == ReaderThemeMode.light,
-                            onTap: () => ref.read(themeConfigProvider.notifier).setThemeMode(ReaderThemeMode.light),
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 10),
-                          _buildThemeModeCard(
-                            label: isEnglish ? 'Sepia' : 'ወረቀት',
-                            subLabel: isEnglish ? 'Parchment' : 'Sepia',
-                            mode: ReaderThemeMode.sepia,
-                            bgColor: const Color(0xFFF4EFE6),
-                            cardColor: const Color(0xFFEFE8DC),
-                            textColor: const Color(0xFF26221E),
-                            isSelected: currentTheme.mode == ReaderThemeMode.sepia,
-                            onTap: () => ref.read(themeConfigProvider.notifier).setThemeMode(ReaderThemeMode.sepia),
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 10),
-                          _buildThemeModeCard(
-                            label: isEnglish ? 'Dark' : 'ጨለማ',
-                            subLabel: isEnglish ? 'Obsidian' : 'Dark',
-                            mode: ReaderThemeMode.dark,
-                            bgColor: const Color(0xFF0E1014),
-                            cardColor: const Color(0xFF171A21),
-                            textColor: const Color(0xFFF3F4F6),
-                            isSelected: currentTheme.mode == ReaderThemeMode.dark,
-                            onTap: () => ref.read(themeConfigProvider.notifier).setThemeMode(ReaderThemeMode.dark),
-                            theme: currentTheme,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 22),
-
-                      // 3. Font Family Varieties (Serif, Sans, Abyssinica, Power Ge'ez)
-                      Text(
-                        isEnglish ? 'FONT FAMILY' : 'የፊደል ቅርጽ',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
-                          color: currentTheme.secondaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _buildFontFamilyCard(
-                            label: isEnglish ? 'Serif' : 'ሴሪፍ',
-                            subLabel: 'Noto Serif',
-                            sampleText: 'በመጀመሪያ',
-                            sampleStyle: const TextStyle(fontFamily: 'NotoSerifEthiopic', fontWeight: FontWeight.w700),
-                            isSelected: currentTheme.fontFamily == 'Serif',
-                            onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('Serif'),
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFontFamilyCard(
-                            label: isEnglish ? 'Sans' : 'ሳንስ',
-                            subLabel: 'Noto Sans',
-                            sampleText: 'በመጀመሪያ',
-                            sampleStyle: const TextStyle(fontFamily: 'NotoSansEthiopic', fontWeight: FontWeight.w700),
-                            isSelected: currentTheme.fontFamily == 'Sans',
-                            onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('Sans'),
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFontFamilyCard(
-                            label: isEnglish ? 'Abyssinica' : 'አቢሲኒካ',
-                            subLabel: 'Abyssinica',
-                            sampleText: 'በመጀመሪያ',
-                            sampleStyle: const TextStyle(fontFamily: 'AbyssinicaSIL', fontWeight: FontWeight.w700),
-                            isSelected: currentTheme.fontFamily == 'Abyssinica',
-                            onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('Abyssinica'),
-                            theme: currentTheme,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildFontFamilyCard(
-                            label: isEnglish ? 'Power Ge\'ez' : 'ፓወር ግዕዝ',
-                            subLabel: 'Power Ge\'ez',
-                            sampleText: 'በመጀመሪያ',
-                            sampleStyle: const TextStyle(
-                              fontFamily: 'Power Ge\'ez Unicode',
-                              fontFamilyFallback: [
-                                'PowerGeez',
-                                'Power Ge\'ez',
-                                'Nyala',
-                                'WashRa',
-                                'NotoSerifEthiopic',
-                                'AbyssinicaSIL',
-                              ],
-                              fontWeight: FontWeight.w700,
-                            ),
-                            isSelected: currentTheme.fontFamily == 'PowerGeez',
-                            onTap: () => ref.read(themeConfigProvider.notifier).setFontFamily('PowerGeez'),
-                            theme: currentTheme,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 22),
-
-                      // 4. Layout and Numerals Toggles
-                      Text(
-                        isEnglish ? 'LAYOUT & NUMERALS' : 'አቀራረብ',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
-                          color: currentTheme.secondaryTextColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: currentTheme.backgroundColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: currentTheme.cardBorderColor),
-                        ),
-                        child: Column(
-                          children: [
-                            SwitchListTile(
-                              dense: true,
-                              activeThumbColor: currentTheme.accentColor,
-                              title: Text(
-                                isEnglish ? 'Continuous Paragraph Mode' : 'በአንቀጽ ንባብ',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: currentTheme.textColor,
-                                ),
-                              ),
-                              value: currentTheme.isParagraphMode,
-                              onChanged: (val) {
-                                ref.read(themeConfigProvider.notifier).toggleParagraphMode(val);
-                              },
-                            ),
-                            Divider(height: 1, color: currentTheme.cardBorderColor),
-                            SwitchListTile(
-                              dense: true,
-                              activeThumbColor: currentTheme.accentColor,
-                              title: Text(
-                                isEnglish ? 'Ge\'ez Numerals (፩፣ ፪፣ ፫)' : 'የግዕዝ ቁጥሮች (፩፣ ፪፣ ፫)',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: currentTheme.textColor,
-                                ),
-                              ),
-                              value: currentTheme.useGeezNumerals,
-                              onChanged: (_) {
-                                ref.read(themeConfigProvider.notifier).toggleGeezNumerals();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // 5. Font Size Adjustment
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            isEnglish ? 'FONT SIZE' : 'የፊደል መጠን',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
-                              color: currentTheme.secondaryTextColor,
-                            ),
-                          ),
-                          Text(
-                            '${currentTheme.fontSize.toInt()} pt',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: currentTheme.accentColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.text_decrease_rounded),
-                            color: currentTheme.secondaryTextColor,
-                            onPressed: () {
-                              ref.read(themeConfigProvider.notifier).setFontSize(currentTheme.fontSize - 1);
-                            },
-                          ),
-                          Expanded(
-                            child: SliderTheme(
-                              data: SliderThemeData(
-                                activeTrackColor: currentTheme.accentColor,
-                                thumbColor: currentTheme.accentColor,
-                                overlayColor: currentTheme.accentColor.withValues(alpha: 0.15),
-                                inactiveTrackColor: currentTheme.cardBorderColor,
-                                trackHeight: 3,
-                              ),
-                              child: Slider(
-                                value: currentTheme.fontSize.clamp(14.0, 32.0),
-                                min: 14.0,
-                                max: 32.0,
-                                onChanged: (val) {
-                                  ref.read(themeConfigProvider.notifier).setFontSize(val);
-                                },
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.text_increase_rounded),
-                            color: currentTheme.secondaryTextColor,
-                            onPressed: () {
-                              ref.read(themeConfigProvider.notifier).setFontSize(currentTheme.fontSize + 1);
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-
-                      // 6. Quick Shortcuts (Parallel Study & Settings)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: currentTheme.cardBorderColor),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              ),
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const ParallelReaderScreen()),
-                                );
-                              },
-                              icon: Icon(Icons.compare_arrows_rounded, size: 18, color: currentTheme.accentColor),
-                              label: Text(
-                                isEnglish ? 'Parallel Study' : 'ማነፃፀሪያ',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: currentTheme.textColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: currentTheme.cardBorderColor),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              ),
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                                );
-                              },
-                              icon: Icon(CupertinoIcons.gear_alt, size: 18, color: currentTheme.secondaryTextColor),
-                              label: Text(
-                                isEnglish ? 'All Settings' : 'ሙሉ ቅንብሮች',
-                                style: GoogleFonts.notoSansEthiopic(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: currentTheme.textColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildTranslationOptionChip({
-    required String label,
-    required String subLabel,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required ReaderThemeConfig theme,
-  }) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? theme.accentColor.withValues(alpha: 0.12)
-                : theme.backgroundColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? theme.accentColor : theme.cardBorderColor,
-              width: isSelected ? 1.5 : 1.0,
-            ),
-          ),
-          child: Column(
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isSelected ? theme.accentColor : theme.textColor,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subLabel,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? theme.accentColor : theme.secondaryTextColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemeModeCard({
-    required String label,
-    required String subLabel,
-    required ReaderThemeMode mode,
-    required Color bgColor,
-    required Color cardColor,
-    required Color textColor,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required ReaderThemeConfig theme,
-  }) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? theme.accentColor : theme.cardBorderColor,
-              width: isSelected ? 2.0 : 1.0,
-            ),
-            boxShadow: [
-              if (isSelected)
-                BoxShadow(
-                  color: theme.accentColor.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isSelected ? theme.accentColor : textColor.withValues(alpha: 0.2),
-                    width: 1.5,
-                  ),
-                ),
-                child: isSelected
-                    ? Icon(Icons.check_rounded, size: 14, color: theme.accentColor)
-                    : null,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: textColor,
-                ),
-              ),
-              Text(
-                subLabel,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: textColor.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFontFamilyCard({
-    required String label,
-    required String subLabel,
-    required String sampleText,
-    required TextStyle sampleStyle,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required ReaderThemeConfig theme,
-  }) {
-    return Expanded(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? theme.accentColor.withValues(alpha: 0.12)
-                : theme.backgroundColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? theme.accentColor : theme.cardBorderColor,
-              width: isSelected ? 1.8 : 1.0,
-            ),
-          ),
-          child: Column(
-            children: [
-              Text(
-                sampleText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: sampleStyle.copyWith(
-                  fontSize: 13,
-                  color: isSelected ? theme.accentColor : theme.textColor,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  color: isSelected ? theme.accentColor : theme.textColor,
-                ),
-              ),
-              Text(
-                subLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? theme.accentColor : theme.secondaryTextColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTestamentDropdown(
-    BuildContext context,
-    BibleViewState bibleState,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    final currentBook = bibleState.currentBook;
-    final bookNum = currentBook?.bookNumber ?? 1;
-    final isOt = currentBook?.isOldTestament ?? (bookNum <= 39);
-    final isCanon81Deut = (bibleState.currentTranslation?.id == 2) &&
-        ((isOt && bookNum > 39) || bookNum > 66);
-    final isEnglish = ref.watch(isEnglishUiProvider);
-
-    String testamentTitle;
-    if (isEnglish) {
-      testamentTitle = isOt ? 'OT' : 'NT';
-      if (isCanon81Deut) {
-        testamentTitle = 'Canon 81';
-      }
-    } else {
-      testamentTitle = isOt ? 'ብሉይ' : 'ሐዲስ';
-      if (isCanon81Deut) {
-        testamentTitle = 'ቀኖና 81';
-      }
-    }
-
-    return PopupMenuButton<String>(
-      tooltip: isEnglish ? 'Select Testament' : 'ኪዳን ምረጥ',
-      offset: const Offset(0, 36),
-      color: themeConfig.surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: themeConfig.cardBorderColor),
-      ),
-      elevation: 8,
-      initialValue: isCanon81Deut ? 'CANON81' : (isOt ? 'OT' : 'NT'),
-      onSelected: (String key) {
-        HapticFeedback.selectionClick();
-        final books = bibleState.books;
-        if (books.isEmpty) return;
-
-        Book? targetBook;
-        if (key == 'OT') {
-          targetBook = books.firstWhere((b) => b.isOldTestament, orElse: () => books.first);
-        } else if (key == 'NT') {
-          targetBook = books.firstWhere((b) => b.isNewTestament, orElse: () => books.last);
-        } else if (key == 'CANON81') {
-          targetBook = books.firstWhere(
-            (b) => (b.isOldTestament && b.bookNumber > 39) || b.bookNumber > 66,
-            orElse: () => books.first,
-          );
-        }
-        if (targetBook != null) {
-          ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: 1);
-        }
-      },
-      itemBuilder: (context) {
-        final is81 = bibleState.currentTranslation?.id == 2;
-        return [
-          PopupMenuItem<String>(
-            value: 'OT',
-            child: Row(
-              children: [
-                Icon(
-                  (isOt && !isCanon81Deut)
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 18,
-                  color: (isOt && !isCanon81Deut)
-                      ? themeConfig.accentColor
-                      : themeConfig.secondaryTextColor,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን',
-                        style: isEnglish
-                            ? GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: (isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
-                                color: (isOt && !isCanon81Deut)
-                                    ? themeConfig.accentColor
-                                    : themeConfig.textColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 13,
-                                fontWeight: (isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
-                                color: (isOt && !isCanon81Deut)
-                                    ? themeConfig.accentColor
-                                    : themeConfig.textColor,
-                              ),
-                      ),
-                      Text(
-                        isEnglish
-                            ? '39 Books • Law, History, Poetry & Prophets'
-                            : (is81 ? '፶፬ መጻሕፍት • ኦሪት፣ ታሪክ፣ መዝሙርና ነቢያት' : '፴፱ መጻሕፍት • ኦሪት፣ ታሪክ፣ መዝሙርና ነቢያት'),
-                        style: isEnglish
-                            ? GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                color: themeConfig.secondaryTextColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 10,
-                                color: themeConfig.secondaryTextColor,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'NT',
-            child: Row(
-              children: [
-                Icon(
-                  (!isOt && !isCanon81Deut)
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 18,
-                  color: (!isOt && !isCanon81Deut)
-                      ? themeConfig.accentColor
-                      : themeConfig.secondaryTextColor,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን',
-                        style: isEnglish
-                            ? GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: (!isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
-                                color: (!isOt && !isCanon81Deut)
-                                    ? themeConfig.accentColor
-                                    : themeConfig.textColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 13,
-                                fontWeight: (!isOt && !isCanon81Deut) ? FontWeight.w800 : FontWeight.w600,
-                                color: (!isOt && !isCanon81Deut)
-                                    ? themeConfig.accentColor
-                                    : themeConfig.textColor,
-                              ),
-                      ),
-                      Text(
-                        isEnglish
-                            ? '27 Books • Gospels, Acts, Epistles & Revelation'
-                            : '፳፯ መጻሕፍት • ወንጌላት፣ ሐዋርያት፣ መልእክታትና ራእይ',
-                        style: isEnglish
-                            ? GoogleFonts.plusJakartaSans(
-                                fontSize: 10,
-                                color: themeConfig.secondaryTextColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 10,
-                                color: themeConfig.secondaryTextColor,
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (is81)
-            PopupMenuItem<String>(
-              value: 'CANON81',
-              child: Row(
-                children: [
-                  Icon(
-                    isCanon81Deut
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 18,
-                    color: isCanon81Deut
-                        ? themeConfig.accentColor
-                        : themeConfig.secondaryTextColor,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'ቀኖና 81 (ተረፈ ብሉይ)',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 13,
-                            fontWeight: isCanon81Deut ? FontWeight.w800 : FontWeight.w600,
-                            color: isCanon81Deut
-                                ? themeConfig.accentColor
-                                : themeConfig.textColor,
-                          ),
-                        ),
-                        Text(
-                          'መጽሐፈ ሄኖክ፣ ኩፋሌ፣ መቃብያን፣ ጦቢት፣ ዮዲት...',
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 10,
-                            color: themeConfig.secondaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ];
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
-        decoration: BoxDecoration(
-          color: themeConfig.accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: themeConfig.accentColor.withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              testamentTitle,
-              style: isEnglish
-                  ? GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.accentColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.accentColor,
-                    ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.arrow_drop_down_rounded,
-              size: 16,
-              color: themeConfig.accentColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTranslationDropdown(
     BuildContext context,
     BibleViewState bibleState,
@@ -1488,7 +570,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final currentId = current?.id ?? 2;
     final isEnglish = ref.watch(isEnglishUiProvider);
     String shortTitle = isEnglish ? '81 Canon' : '81 ቀኖና';
-    if (currentId == 1) {
+    if (currentId == 4) {
+      shortTitle = isEnglish ? 'Ge\'ez 81' : 'ግዕዝ 81';
+    } else if (currentId == 1) {
       shortTitle = '1954';
     } else if (currentId == 3) {
       shortTitle = 'KJV';
@@ -1496,318 +580,230 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       shortTitle = current.shortName;
     }
 
-    return PopupMenuButton<int>(
-      tooltip: isEnglish ? 'Switch Translation' : 'ትርጉም ቀይር',
-      offset: const Offset(0, 36),
-      color: themeConfig.surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: themeConfig.cardBorderColor),
-      ),
-      elevation: 8,
-      initialValue: currentId,
-      onSelected: (int translationId) {
-        HapticFeedback.selectionClick();
-        final target = bibleState.translations.firstWhere(
-          (t) => t.id == translationId,
-          orElse: () => bibleState.translations.first,
-        );
-        ref.read(bibleStateProvider.notifier).selectTranslation(target);
-      },
-      itemBuilder: (context) => [
-        _buildTranslationPopupItem(
-          id: 2,
-          title: '81 ቀኖና',
-          subtitle: 'ኦርቶዶክሳዊ ቀኖናዊ መጻሕፍት',
-          isSelected: currentId == 2,
-          themeConfig: themeConfig,
-        ),
-        _buildTranslationPopupItem(
-          id: 1,
-          title: '1954 ቀዳማዊ ኃይለ ሥላሴ',
-          subtitle: 'የቀዳማዊ ኃይለ ሥላሴ ፷፮ መጻሕፍት',
-          isSelected: currentId == 1,
-          themeConfig: themeConfig,
-        ),
-        _buildTranslationPopupItem(
-          id: 3,
-          title: 'King James Version (KJV)',
-          subtitle: 'Authorized Version • English',
-          isSelected: currentId == 3,
-          themeConfig: themeConfig,
-        ),
-      ],
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
-        decoration: BoxDecoration(
-          color: themeConfig.accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: themeConfig.accentColor.withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              shortTitle,
-              style: isEnglish
-                  ? GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.accentColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.accentColor,
-                    ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.arrow_drop_down_rounded,
-              size: 16,
-              color: themeConfig.accentColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PopupMenuItem<int> _buildTranslationPopupItem({
-    required int id,
-    required String title,
-    required String subtitle,
-    required bool isSelected,
-    required ReaderThemeConfig themeConfig,
-  }) {
-    return PopupMenuItem<int>(
-      value: id,
-      child: Row(
-        children: [
-          Icon(
-            isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-            size: 18,
-            color: isSelected ? themeConfig.accentColor : themeConfig.secondaryTextColor,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                    color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.notoSansEthiopic(
-                    fontSize: 10,
-                    color: themeConfig.secondaryTextColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBookDropdown(
-    BuildContext context,
-    String bookName,
-    BibleViewState bibleState,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    final isEnglish = ref.watch(isEnglishUiProvider);
-
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        BookSelectorScreen.show(
-          context,
-          initialStep: 0,
-          onVerseSelected: (vNum) {
-            _scrollToApproximateVerse(vNum, bibleState.verses.length);
-          },
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
-        decoration: BoxDecoration(
-          color: themeConfig.accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: themeConfig.accentColor.withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 96),
-              child: Text(
-                bookName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: isEnglish
-                    ? GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: themeConfig.accentColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: themeConfig.accentColor,
-                      ),
-              ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.arrow_drop_down_rounded,
-              size: 16,
-              color: themeConfig.accentColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChapterDropdown(
-    BuildContext context,
-    String chapterStr,
-    BibleViewState bibleState,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    final isEnglish = ref.watch(isEnglishUiProvider);
-    final label = isEnglish ? 'Ch. $chapterStr' : 'ምዕ. $chapterStr';
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        BookSelectorScreen.show(
-          context,
-          initialStep: 1,
-          onVerseSelected: (vNum) {
-            _scrollToApproximateVerse(vNum, bibleState.verses.length);
-          },
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4.5),
-        decoration: BoxDecoration(
-          color: themeConfig.accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: themeConfig.accentColor.withValues(alpha: 0.22),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: isEnglish
-                  ? GoogleFonts.plusJakartaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.accentColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: themeConfig.accentColor,
-                    ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.arrow_drop_down_rounded,
-              size: 16,
-              color: themeConfig.accentColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildThemeToggleButton(
-    BuildContext context,
-    BibleViewState bibleState,
-    ReaderThemeConfig themeConfig,
-    bool isDark,
-  ) {
-    final isEnglish = ref.watch(isEnglishUiProvider);
-    IconData themeIcon;
-    String themeTooltip;
-    switch (themeConfig.mode) {
-      case ReaderThemeMode.light:
-        themeIcon = Icons.wb_sunny_outlined;
-        themeTooltip = isEnglish
-            ? 'Theme: Light (Tap to switch • Long-press for reader settings)'
-            : 'ገጽታ፡ ብርሃን (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
-        break;
-      case ReaderThemeMode.sepia:
-        themeIcon = Icons.menu_book_rounded;
-        themeTooltip = isEnglish
-            ? 'Theme: Sepia (Tap to switch • Long-press for reader settings)'
-            : 'ገጽታ፡ ብራና (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
-        break;
-      case ReaderThemeMode.dark:
-        themeIcon = Icons.nightlight_round;
-        themeTooltip = isEnglish
-            ? 'Theme: Dark (Tap to switch • Long-press for reader settings)'
-            : 'ገጽታ፡ ጨለማ (ለመለወጥ ይጫኑ • አጥብቀው ሲጫኑ የንባብ ቅንብሮች)';
-        break;
-    }
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
       onTap: () {
         HapticFeedback.lightImpact();
-        final nextMode = switch (themeConfig.mode) {
-          ReaderThemeMode.light => ReaderThemeMode.sepia,
-          ReaderThemeMode.sepia => ReaderThemeMode.dark,
-          ReaderThemeMode.dark => ReaderThemeMode.light,
-        };
-        ref.read(themeConfigProvider.notifier).setThemeMode(nextMode);
+        _showTranslationPickerBottomSheet(context, bibleState, themeConfig, isDark, isEnglish);
       },
-      onLongPress: () => _openReaderSettingsModal(context, bibleState, themeConfig, isDark),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        height: 26,
-        width: 28,
-        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8.5),
         decoration: BoxDecoration(
-          color: themeConfig.accentColor.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: themeConfig.accentColor.withValues(alpha: 0.22),
-          ),
+          color: themeConfig.surfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: themeConfig.cardBorderColor),
         ),
-        child: Tooltip(
-          message: themeTooltip,
-          child: Icon(
-            themeIcon,
-            size: 14,
-            color: themeConfig.accentColor,
-          ),
+        child: Row(
+          children: [
+            Icon(Icons.menu_book_rounded, size: 15, color: themeConfig.accentColor),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                shortTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.notoSansEthiopic(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: themeConfig.textColor,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_drop_down_rounded, size: 18, color: themeConfig.secondaryTextColor),
+          ],
         ),
       ),
     );
   }
+
+  void _showTranslationPickerBottomSheet(
+    BuildContext context,
+    BibleViewState bibleState,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+    bool isEnglish,
+  ) {
+    final currentId = bibleState.currentTranslation?.id ?? 2;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: themeConfig.surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: themeConfig.cardBorderColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Title
+              Row(
+                children: [
+                  OrthodoxCrossIcon(
+                    style: EthiopianCrossStyle.lalibela,
+                    size: 16,
+                    color: themeConfig.accentColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isEnglish ? 'Select Canon / Translation' : 'የመጽሐፍ ቅዱስ ቀኖና / ትርጉም ይምረጡ',
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: themeConfig.textColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Translations list
+              ...bibleState.translations.map((t) {
+                final isSelected = t.id == currentId;
+                String displayTitle = t.name;
+                String displaySubtitle = '';
+                if (t.id == 2) {
+                  displayTitle = isEnglish ? '81 Orthodox Canon' : '81 ቀኖና (ሰማንያ ወአሐዱ)';
+                  displaySubtitle = isEnglish ? 'Ethiopian Orthodox Amharic' : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ አማርኛ';
+                } else if (t.id == 4) {
+                  displayTitle = isEnglish ? 'Ancient Ge\'ez 81 Canon' : 'የቀደምት ግዕዝ 81 ቀኖና';
+                  displaySubtitle = isEnglish ? 'Classical Ge\'ez Manuscript Heritage' : 'ጥንታዊ የብራና ቅርስ በግዕዝ ቋንቋ';
+                } else if (t.id == 1) {
+                  displayTitle = isEnglish ? '1954 Haile Selassie' : '1954 ቀዳማዊ ኃይለ ሥላሴ';
+                  displaySubtitle = isEnglish ? 'Traditional Amharic (66 Books)' : 'የቀዳማዊ ኃይለ ሥላሴ ፷፮ መጻሕፍት';
+                } else if (t.id == 3) {
+                  displayTitle = 'King James Version (KJV)';
+                  displaySubtitle = 'Authorized Version • English';
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Material(
+                    color: isSelected
+                        ? themeConfig.accentColor.withValues(alpha: isDark ? 0.16 : 0.08)
+                        : themeConfig.surfaceColor,
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.pop(ctx);
+                        ref.read(bibleStateProvider.notifier).selectTranslation(t);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected
+                                ? themeConfig.accentColor
+                                : themeConfig.cardBorderColor,
+                            width: isSelected ? 1.5 : 1.0,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? themeConfig.accentColor.withValues(alpha: 0.18)
+                                    : themeConfig.surfaceColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                size: 18,
+                                color: isSelected ? themeConfig.accentColor : themeConfig.secondaryTextColor,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          displayTitle,
+                                          style: GoogleFonts.notoSansEthiopic(
+                                            fontSize: 13.5,
+                                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                            color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
+                                          ),
+                                        ),
+                                      ),
+                                      if (t.id == 2) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: themeConfig.accentColor.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            isEnglish ? 'Primary' : 'ዋና ቀኖና',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: themeConfig.accentColor,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  if (displaySubtitle.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      displaySubtitle,
+                                      style: GoogleFonts.notoSansEthiopic(
+                                        fontSize: 11.5,
+                                        color: themeConfig.secondaryTextColor,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
   Widget _buildActivePlanFloatingBar(
     BuildContext context,
@@ -1825,7 +821,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final currentBook = bibleState.currentBook;
     final currentChapter = bibleState.currentChapter;
 
-    final passageCanonId = CanonicalBookMap.getCanonicalId(1, passage.bookNumber);
+    final passageCanonId = passage.canonicalId.isNotEmpty
+        ? passage.canonicalId
+        : CanonicalBookMap.getCanonicalId(1, passage.bookNumber);
     final currentCanonId = currentBook != null
         ? CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber)
         : '';
@@ -1945,6 +943,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   books: bibleState.books,
                   currentTranslationId: currentTransId,
                   traditionalBookNumber: passage.bookNumber,
+                  canonicalId: passage.canonicalId.isNotEmpty ? passage.canonicalId : null,
+                  bookName: passage.bookName,
                 );
                 // Jump to first unread chapter of this day
                 int targetChapter = passage.startChapter;
@@ -2031,6 +1031,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     books: bibleState.books,
                     currentTranslationId: currentTransId,
                     traditionalBookNumber: nextPassage.bookNumber,
+                    canonicalId: nextPassage.canonicalId.isNotEmpty ? nextPassage.canonicalId : null,
+                    bookName: nextPassage.bookName,
                   );
                   if (targetBook != null) {
                     await ref.read(bibleStateProvider.notifier).selectBook(
@@ -2137,45 +1139,53 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final displayChapterTitle = isEnglish ? 'Chapter $chapterStr' : 'ምዕራፍ $chapterStr';
     final displayBookTitle = isEnglish && bookNameEn.isNotEmpty ? bookNameEn : bookName;
 
+    final liturgical = BahireHasabService.getCurrentLiturgicalStatus(DateTime.now());
+    final ethDate = liturgical['ethDate'] as EthiopianDate;
+    final evangelist = isEnglish ? (liturgical['evangelistEn'] as String) : (liturgical['evangelist'] as String);
+    final isFastDay = liturgical['isFastDay'] as bool? ?? false;
+    final fastSuffix = isFastDay ? (isEnglish ? ' • Fasting Day' : ' • የጾም ቀን') : '';
+    final liturgicalText = isEnglish
+        ? '❖ ${ethDate.format(includeDayName: true, isEnglish: true)} • $evangelist$fastSuffix ❖'
+        : '❖ ${themeConfig.useGeezNumerals ? ethDate.toGeezString() : ethDate.format(includeDayName: true)} • $evangelist$fastSuffix ❖';
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 1. Testament Dropdown
-              _buildTestamentDropdown(context, bibleState, themeConfig, isDark),
-              const SizedBox(width: 4),
-              // 2. Book Dropdown
-              _buildBookDropdown(context, compactBookName, bibleState, themeConfig, isDark),
-              const SizedBox(width: 4),
-              // 3. Chapter Dropdown
-              _buildChapterDropdown(context, chapterStr, bibleState, themeConfig, isDark),
-              const SizedBox(width: 4),
-              // 4. Canon / Translation Dropdown
-              _buildTranslationDropdown(context, bibleState, themeConfig, isDark),
-              const SizedBox(width: 4),
-              // 5. Modern Theme Selector Toggle (toggles Light -> Sepia -> Dark)
-              _buildThemeToggleButton(context, bibleState, themeConfig, isDark),
-            ],
+        // 1. Living Liturgical Sub-Header Pill
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            decoration: BoxDecoration(
+              color: themeConfig.goldAccent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: themeConfig.goldAccent.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              liturgicalText,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.notoSansEthiopic(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: themeConfig.goldAccent,
+                letterSpacing: 0.3,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        Divider(height: 1, color: themeConfig.cardBorderColor),
-        const SizedBox(height: 14),
 
-        // Editorial Chapter Title: Book on Left, Chapter on Right (Signature Accent Color, Same Size)
+        // 2. Clean Navigation Controls
         Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
           children: [
+            // A. Primary Scripture Selector Capsule (Book & Chapter)
             Expanded(
-              child: GestureDetector(
+              flex: 5,
+              child: InkWell(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  HapticFeedback.lightImpact();
                   BookSelectorScreen.show(
                     context,
                     initialStep: 0,
@@ -2184,21 +1194,175 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                     },
                   );
                 },
-                child: Text(
-                  displayBookTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: _getScriptureTextStyle(
-                    themeConfig,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: themeConfig.accentColor,
-                    height: 1.25,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8.5),
+                  decoration: BoxDecoration(
+                    color: themeConfig.surfaceColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: themeConfig.cardBorderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_stories_outlined, size: 15, color: themeConfig.accentColor),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '$compactBookName • $displayChapterTitle',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.arrow_drop_down_rounded, size: 18, color: themeConfig.secondaryTextColor),
+                    ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
+
+            // B. Canon / Translation Dropdown Capsule (Same style as Book Navigator)
+            Expanded(
+              flex: 4,
+              child: _buildTranslationDropdown(context, bibleState, themeConfig, isDark),
+            ),
+            const SizedBox(width: 4),
+
+            // C. Search Action Icon (Replaces Parallel)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.search_rounded, size: 21, color: themeConfig.accentColor),
+              tooltip: isEnglish ? 'Search Scripture' : 'ጥቅስ ፈልግ',
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                if (widget.onOpenSearch != null) {
+                  widget.onOpenSearch!();
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SearchScreen(
+                        onNavigateToReader: (_) => Navigator.pop(context),
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+
+            // D. 1-Tap Theme Mode Toggle (Replaces Settings)
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                themeConfig.mode == ReaderThemeMode.dark
+                    ? Icons.dark_mode_rounded
+                    : themeConfig.mode == ReaderThemeMode.sepia
+                        ? Icons.auto_stories_outlined
+                        : Icons.light_mode_rounded,
+                size: 20,
+                color: themeConfig.accentColor,
+              ),
+              tooltip: isEnglish ? 'Toggle Theme' : 'ገጽታ ቀይር',
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                final notifier = ref.read(themeConfigProvider.notifier);
+                if (themeConfig.mode == ReaderThemeMode.light) {
+                  notifier.setMode(ReaderThemeMode.sepia);
+                } else if (themeConfig.mode == ReaderThemeMode.sepia) {
+                  notifier.setMode(ReaderThemeMode.dark);
+                } else {
+                  notifier.setMode(ReaderThemeMode.light);
+                }
+              },
+            ),
+          ],
+        ),
+
+        // 3. Authentic Manuscript Harag (ሐረግ) Ornamental Vector Divider
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        themeConfig.goldAccent.withValues(alpha: 0.0),
+                        themeConfig.goldAccent.withValues(alpha: 0.6),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: OrthodoxCrossIcon(
+                  style: EthiopianCrossStyle.lalibela,
+                  size: 16,
+                  color: themeConfig.goldAccent,
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        themeConfig.goldAccent.withValues(alpha: 0.6),
+                        themeConfig.goldAccent.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 4. Dignified Chapter Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                BookSelectorScreen.show(
+                  context,
+                  initialStep: 0,
+                  onVerseSelected: (vNum) {
+                    _scrollToApproximateVerse(vNum, bibleState.verses.length);
+                  },
+                );
+              },
+              child: Text(
+                displayBookTitle,
+                style: _getScriptureTextStyle(
+                  themeConfig,
+                  fontSize: 18.5,
+                  fontWeight: FontWeight.w900,
+                  color: themeConfig.accentColor,
+                  height: 1.25,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                '—',
+                style: TextStyle(
+                  color: themeConfig.goldAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
             GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -2214,8 +1378,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 displayChapterTitle,
                 style: _getScriptureTextStyle(
                   themeConfig,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 18.5,
+                  fontWeight: FontWeight.w900,
                   color: themeConfig.accentColor,
                   height: 1.25,
                 ),
@@ -2293,14 +1457,22 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                                       : themeConfig.secondaryTextColor,
                                 ),
                         ),
-                        TextSpan(
+                        ..._buildRubricatedSpans(
                           text: verse.text,
-                          style: _getScriptureTextStyle(
+                          baseStyle: _getScriptureTextStyle(
                             themeConfig,
                             fontSize: themeConfig.fontSize,
                             height: themeConfig.lineHeight,
                             color: themeConfig.textColor,
                           ),
+                          rubricStyle: _getScriptureTextStyle(
+                            themeConfig,
+                            fontSize: themeConfig.fontSize,
+                            height: themeConfig.lineHeight,
+                            color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                            fontWeight: FontWeight.w700,
+                          ),
+                          isEnglish: ref.watch(isEnglishUiProvider),
                         ),
                       ],
                     ),
@@ -2425,22 +1597,29 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                                     : themeConfig.secondaryTextColor,
                               ),
                       ),
-                      TextSpan(
+                      ..._buildRubricatedSpans(
                         text: verse.text,
-                        style: _getScriptureTextStyle(
+                        baseStyle: _getScriptureTextStyle(
                           themeConfig,
                           fontSize: themeConfig.fontSize,
                           height: themeConfig.lineHeight,
                           color: themeConfig.textColor,
                         ),
+                        rubricStyle: _getScriptureTextStyle(
+                          themeConfig,
+                          fontSize: themeConfig.fontSize,
+                          height: themeConfig.lineHeight,
+                          color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                          fontWeight: FontWeight.w700,
+                        ),
+                        isEnglish: ref.watch(isEnglishUiProvider),
                       ),
                     ],
                   ),
                 ),
 
                 // Inline metadata row (Bookmark / Personal Note)
-                if (verse.isBookmarked ||
-                    (verse.note != null && verse.note!.isNotEmpty))
+                if (verse.isBookmarked || (verse.note != null && verse.note!.isNotEmpty))
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Wrap(

@@ -115,7 +115,7 @@ class CanonicalBookMap {
 
   /// Resolves the canonical code for a given book number in a translation.
   static String getCanonicalId(int translationId, int bookNumber) {
-    if (translationId == 2) {
+    if (translationId == 2 || translationId == 4) {
       return eotc81ToCanonical[bookNumber] ?? '';
     } else {
       return bible66ToCanonical[bookNumber] ?? '';
@@ -126,7 +126,7 @@ class CanonicalBookMap {
   /// Returns `null` if the book only exists in the Orthodox 81 Canon (e.g. Enoch, Jubilees, Meqabyan).
   static int? getBookNumber(int translationId, String canonicalId) {
     if (canonicalId.isEmpty) return null;
-    if (translationId == 2) {
+    if (translationId == 2 || translationId == 4) {
       for (final entry in eotc81ToCanonical.entries) {
         if (entry.value == canonicalId) return entry.key;
       }
@@ -176,7 +176,7 @@ class CanonicalBookMap {
     if (books.isEmpty) return null;
 
     // 1. Try canonical ID if provided
-    String? targetCanon = canonicalId;
+    String? targetCanon = (canonicalId != null && canonicalId.trim().isNotEmpty) ? canonicalId.trim() : null;
     if (targetCanon == null && traditionalBookNumber != null) {
       targetCanon = getCanonicalId(1, traditionalBookNumber);
     }

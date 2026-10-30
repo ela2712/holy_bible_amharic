@@ -871,15 +871,19 @@ class SettingsScreen extends ConsumerWidget {
   }) {
     final subtitleText = translation.id == 2
         ? (isEnglish
-            ? 'Ethiopian Orthodox Tewahedo 81 Books Canon'
+            ? 'Ethiopian Orthodox Tewahedo 81 Books Canon (Amharic)'
             : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና')
-        : (translation.id == 1
+        : (translation.id == 4
             ? (isEnglish
-                ? 'Emperor Haile Selassie 1954 Translation (66 Books)'
-                : 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)')
-            : (isEnglish
-                ? 'Authorized King James Version (Classic English)'
-                : 'የኪንግ ጀምስ 1611 የእንግሊዝኛ ትርጉም'));
+                ? 'Ancient Classical Ge\'ez 81 Books Canon (Manuscript Heritage)'
+                : 'የቀደምት ግዕዝ 81 መጻሕፍት ቀኖና (ጥንታዊ የብራና ቅርስ)')
+            : (translation.id == 1
+                ? (isEnglish
+                    ? 'Emperor Haile Selassie 1954 Translation (66 Books)'
+                    : 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)')
+                : (isEnglish
+                    ? 'Authorized King James Version (Classic English)'
+                    : 'የኪንግ ጀምስ 1611 የእንግሊዝኛ ትርጉም')));
 
     return GestureDetector(
       onTap: onTap,

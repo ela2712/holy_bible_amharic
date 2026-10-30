@@ -417,10 +417,66 @@ We are building a modern, distraction-free, cross-platform (Android, iOS, Window
   - Also copied to project root: `app-release.apk` for easy access.
 - **Local Wi-Fi Distribution Server (`tools/serve_apk.js`):**
   - Active background HTTP server on port 8080 (`http://10.18.100.251:8080`).
-  - Provides a clean mobile download page with a direct one-tap download button for sideloading directly to physical Android devices over Wi-Fi.
+  
+---
 
+## 8. Latest Milestones & Updates (October 30, 2026) — EOTC-First Architecture, Ge'ez 81, & UI Polish
 
+### A. Authentic Ge'ez 81 Canon Integration (`assets/data/geez_81.json`)
+- **Dataset Integration:**
+  - Integrated the complete 81-book ancient Ge'ez biblical text (`assets/data/geez_81.json`), encompassing **30,558 verses** with 0 missing books.
+  - Registered as translation `id: 4` (`'የቀደምት ግዕዝ 81 ቀኖና'`) in `BibleRepository` with short name `'ግዕዝ'`.
+- **Ge'ez Typography & Orthographic Normalization (`lib/core/utils/geez_normalizer.dart`):**
+  - Resolved OCR artifacts, severed line fragments, and irregular spaces before Ge'ez word separators (`፡`) and full stops (`።`).
+  - Added `GeezNormalizer.cleanTypography(String text)` ensuring punctuation spacing adheres strictly to authentic Ethiopic manuscript typography.
+  - Repaired Ezra chapter offset and Jeremiah gap placeholders in the source dataset.
+- **First-Class Translation Access:**
+  - Fully accessible in the main reader via the Canon Selector dropdown.
+  - Integrated into the Parallel 3-translation comparison tab (`StudyToolsSheet`), enabling side-by-side study between Amharic 81, Ge'ez 81, Amharic 1954, and KJV.
 
+### B. Canonical Cross-References Database (`assets/data/cross_references.json`)
+- **Dataset Architecture:**
+  - Built an offline, indexed dataset of **5,200+ bidirectional cross-references** connecting Old and New Testament passages across canonical books.
+  - Integrated into `BibleRepository.getCrossReferences(bookNumber, chapter, verseNumber)` with canonical mapping resolution via `CanonicalBookMap`.
+- **Interactive UI Integration (`StudyToolsSheet`):**
+  - Clicking any verse opens the Study Tools bottom sheet, where Tab 1 displays all related cross-references with preview snippets.
+  - Tapping any cross-reference automatically navigates the reader directly to the target passage and triggers a smooth scroll and glowing highlight animation.
 
+### C. Bahire Hasab Authentic Computus & Liturgical Calendar Sync (`lib/services/bahire_hasab_service.dart`)
+- **Authentic EOTC Computus Implementation:**
+  - Full implementation of ancient Ethiopian Orthodox computus formulas: Amete Alem, Evangelist of the year (ማቴዎስ፣ ማርቆስ፣ ሉቃስ፣ ዮሐንስ), Medeb, Wenber, Abeqte, Metqi, Mebaja Hamer.
+  - Computes exact dates for movable fasts and feasts: Tsome Nenewe (ጾመ ነነዌ), Abiy Tsom (ዐቢይ ጾም), Debre Zeyt, Hosanna, Siklet (ስቅለት), Tensae / Fasika (ትንሣኤ / ፋሲካ), Rikbe Kahnat, Draget, Ascension (ዕርገት), Paraclete / Pentecost (ጰራቅሊጦስ), Tsome Hawaryat (ጾመ ሐዋርያት), and Tsome Dihnet (ጾመ ድኅነት).
+- **Refined Fasting Indicator Logic:**
+  - Dynamically calculates fasting obligations based on Wednesday/Friday rules and movable/fixed fasting seasons.
+  - Strict UI refinement: The fast banner and tag appear **only on genuine fast days (`የጾም ቀን`)**. Non-fasting days show clean typography with no confusing `"የፍስክ ቀን"` tag.
+  - Synchronized across `HomeDashboardScreen`, `HomeReaderScreen` liturgical header, and `ReadingPlansScreen`.
 
+### D. Sacred Hareg & Ethiopian Cross Card Maker (`lib/ui/screens/verse_card_maker_screen.dart`, `lib/ui/widgets/ethiopian_cross_painter.dart`)
+- **Ancient Manuscript Aesthetics:**
+  - Enhanced the Verse Card Maker with authentic Ethiopian manuscript "Hareg" (ሐረግ) decorative borders and patterns.
+  - Integrated custom vector Ethiopian Crosses (`EthiopianCrossPainter` supporting Lalibela, Gondar, and Axumite cross geometries).
+  - High-resolution off-screen PNG rendering and instant multiplatform share sheet via `SharePlus` and `XFile`.
 
+### E. Whole-App Reader UI & Navigation Streamlining (User Feedback Implementation)
+1. **Removed Inline "Parallel" Chips:**
+   - Removed repetitive inline "parallel" chips from individual verse rows in `HomeReaderScreen`.
+   - Distraction-free reading experience: clicking any verse directly opens `StudyToolsSheet` containing both Parallel comparison and Cross-References.
+2. **Top Bar Actions Refactored:**
+   - Replaced settings button with a 1-tap **Theme Mode Toggle** cycling instantly between Light $\rightarrow$ Sepia $\rightarrow$ Dark modes.
+   - Replaced parallel launcher button with a dedicated **Search Icon** pushing `SearchScreen`.
+   - Completely removed floating corner search buttons and shell floating action buttons for a cleaner reading surface.
+3. **Canon Selector Dropdown Harmonization:**
+   - Redesigned the top Canon Selector capsule in `HomeReaderScreen` to match the exact visual style, border radius (`14pt`), and dropdown arrow of the Book Navigator capsule.
+   - Tapping it opens `_showTranslationPickerBottomSheet`, an elegant modal bottom sheet allowing quick switching between 81 Orthodox Canon, Ge'ez 81, 1954 H.S., and KJV.
+4. **Locked Bottom Navigation Bar:**
+   - Made the bottom navigation bar permanently visible and locked (`MainNavigationShell` and `HomeReaderScreen`). It no longer hides or slides off-screen during reading scroll.
+5. **Resolved "የግእዝ ቅርስ":**
+   - Removed the broken 3rd tab (`"የግዕዝ ቅርስ"`) from `StudyToolsSheet`. Ge'ez is directly accessible in the Parallel tab and as a primary reading translation.
+   - Cleaned the redundant `"የግዕዝ ቅርስ"` badge from `SettingsScreen`.
+6. **Eradicated "የፍስክ ቀን":**
+   - Removed all instances of `"የፍስክ ቀን"` across the app. Only genuine fast days display the liturgical fast indicator.
+
+### F. Verification & Quality Gates
+- **`flutter analyze`:** **0 issues found** (clean static analysis across all files).
+- **`flutter test`:** **48/48 unit and widget tests passing** (including Ge'ez typography tests, KJV mapping tests, FTUE tests, Bahire Hasab tests, and cross-navigation tests).
+- **Git Safety:** 100% adherence to user constraints — zero automated git commits or pushes.

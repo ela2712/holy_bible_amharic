@@ -232,8 +232,8 @@ class FtueWelcomeSheet extends ConsumerWidget {
                       ),
                       title: isEnglish ? 'Intuitive Reading & Study' : 'የንባብ ምልክቶችና ማስታወሻ',
                       description: isEnglish
-                          ? 'Tap any verse for personal notes, 3-translation parallel comparison & verse cards; swipe horizontally to switch chapters.'
-                          : 'ጥቅሶችን በመጫን ማስታወሻ፣ የ 3 ትርጉም ማነፃፀሪያ እና የጥቅስ ካርድ ያግኙ፤ በጣቶችዎ በማንሸራተት ምዕራፎችን ይቀይሩ።',
+                          ? 'Tap any verse for personal notes, 4-translation parallel comparison (Amharic 81, Ge\'ez 81, 1954, KJV), cross-references & verse cards; swipe horizontally to switch chapters.'
+                          : 'ጥቅሶችን በመጫን ማስታወሻ፣ የ 4 ትርጉም ማነፃፀሪያ (81 ቀኖና፣ ግዕዝ 81፣ 1954፣ KJV)፣ ተዛማጅ ጥቅሶች እና የጥቅስ ካርድ ያግኙ፤ በጣቶችዎ በማንሸራተት ምዕራፎችን ይቀይሩ።',
                     ),
                     const SizedBox(height: 12),
 

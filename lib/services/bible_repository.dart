@@ -8,6 +8,8 @@ import '../models/translation.dart';
 import '../models/book.dart';
 import '../models/verse.dart';
 import '../models/annotation.dart';
+import '../models/cross_reference.dart';
+import '../data/cross_references_data.dart';
 
 class BibleRepository {
   static final BibleRepository instance = BibleRepository._init();
@@ -26,6 +28,15 @@ class BibleRepository {
       language: 'am',
       canon: 'orthodox_81',
       isDefault: true,
+    ),
+    const Translation(
+      id: 4,
+      code: 'gez_81',
+      name: 'የቀደምት ግዕዝ 81 ቀኖና (Ancient Ge\'ez Canon)',
+      shortName: 'ግዕዝ',
+      language: 'gez',
+      canon: 'orthodox_81',
+      isDefault: false,
     ),
     const Translation(
       id: 1,
@@ -56,6 +67,9 @@ class BibleRepository {
   // All verses flattened for full-text search: Map<translationId, List<Map<String, dynamic>>>
   final Map<int, List<Map<String, dynamic>>> _searchIndex = {};
 
+  // Cross references cache: Key: '${book}-${chapter}-${verse}' -> List<Map<String, dynamic>>
+  Map<String, dynamic>? _crossRefsCache;
+
   Future<void> ensureInitialized() async {
     if (_isInitialized) return;
 
@@ -63,7 +77,9 @@ class BibleRepository {
       if (kDebugMode) print('Initializing BibleRepository datasets...');
       await _load1954Bible();
       await _load81CanonBible();
+      await _loadGeezBible();
       await _loadKjvBible();
+      await _loadCrossReferences();
       _isInitialized = true;
       if (kDebugMode) print('BibleRepository initialization completed successfully!');
     } catch (e, stack) {
@@ -313,6 +329,176 @@ class BibleRepository {
 
     _booksByTranslation[3] = books;
     _searchIndex[3] = searchList;
+  }
+
+  Future<void> _loadGeezBible() async {
+    final jsonStr = await rootBundle.loadString('assets/data/geez_81.json');
+    final rawBooks = json.decode(jsonStr) as List<dynamic>;
+
+    final books = <Book>[];
+    final searchList = <Map<String, dynamic>>[];
+    int bookIdCounter = 400;
+
+    for (int i = 0; i < rawBooks.length; i++) {
+      final b = rawBooks[i] as Map<String, dynamic>;
+      final bookNum = b['book_number'] as int? ?? (i + 1);
+      final testament = b['testament']?.toString().toUpperCase() == 'NT' ? 'NT' : 'OT';
+      final chapters = b['chapters'] as List<dynamic>? ?? [];
+      final bookId = bookIdCounter++;
+
+      final book = Book(
+        id: bookId,
+        translationId: 4,
+        bookNumber: bookNum,
+        name: b['name'] as String? ?? 'መጽሐፍ $bookNum',
+        shortName: 'ግዕዝ',
+        nameEn: b['name_en'] as String? ?? '',
+        testament: testament,
+        orderIndex: bookNum,
+        totalChapters: chapters.length,
+      );
+      books.add(book);
+
+      for (int cIdx = 0; cIdx < chapters.length; cIdx++) {
+        final chObj = chapters[cIdx] as Map<String, dynamic>;
+        final chNum = chObj['chapter'] as int? ?? (cIdx + 1);
+        final rawVerses = chObj['verses'] as List<dynamic>? ?? [];
+        final verseList = <Verse>[];
+
+        for (int vIdx = 0; vIdx < rawVerses.length; vIdx++) {
+          final rawStr = rawVerses[vIdx]?.toString() ?? '';
+          final vText = GeezNormalizer.cleanTypography(rawStr);
+          if (vText.isNotEmpty) {
+            final vNum = vIdx + 1;
+            final normalized = GeezNormalizer.normalize(vText);
+            verseList.add(Verse(
+              id: bookId * 100000 + chNum * 1000 + vNum,
+              bookId: bookId,
+              chapter: chNum,
+              verse: vNum,
+              text: vText,
+              textNormalized: normalized,
+            ));
+
+            searchList.add({
+              'id': bookId * 100000 + chNum * 1000 + vNum,
+              'book_id': bookId,
+              'book_number': bookNum,
+              'book_name': book.name,
+              'testament': book.testament,
+              'chapter': chNum,
+              'verse': vNum,
+              'text': vText,
+              'text_normalized': normalized,
+            });
+          }
+        }
+        _versesCache['${bookId}_$chNum'] = verseList;
+      }
+    }
+
+    _booksByTranslation[4] = books;
+    _searchIndex[4] = searchList;
+  }
+
+  Future<void> _loadCrossReferences() async {
+    if (_crossRefsCache != null) return;
+    try {
+      final jsonStr = await rootBundle.loadString('assets/data/cross_references.json');
+      _crossRefsCache = json.decode(jsonStr) as Map<String, dynamic>;
+    } catch (e) {
+      if (kDebugMode) print('Error loading cross references: $e');
+      _crossRefsCache = {};
+    }
+  }
+
+  /// Returns comprehensive scriptural cross-references for a verse.
+  Future<List<CrossReferenceItem>> getCrossReferencesForVerse({
+    required int bookNumber,
+    required int chapter,
+    required int verse,
+    int translationId = 2,
+  }) async {
+    await ensureInitialized();
+    await _loadCrossReferences();
+
+    // Map source bookNumber to 81 canon index if needed
+    int eotcBookNum = bookNumber;
+    if (translationId == 1 || translationId == 3) {
+      final canonId = CanonicalBookMap.getCanonicalId(translationId, bookNumber);
+      eotcBookNum = CanonicalBookMap.getBookNumber(2, canonId) ?? bookNumber;
+    }
+
+    // 1. First get any curated EOTC patristic references
+    final curated = CrossReferencesData.getCrossReferencesForVerse(
+      eotcBookNum,
+      chapter,
+      verse,
+    );
+
+    final key = '$eotcBookNum-$chapter-$verse';
+    final rawList = _crossRefsCache?[key] as List<dynamic>?;
+
+    if (rawList == null || rawList.isEmpty) {
+      return curated;
+    }
+
+    final items = <CrossReferenceItem>[...curated];
+    final seen = <String>{for (final c in curated) '${c.targetBookNumber}_${c.targetChapter}_${c.targetVerse}'};
+
+    for (final r in rawList) {
+      if (r is! Map<String, dynamic>) continue;
+      final targetEotcNum = (r['b'] as num?)?.toInt() ?? 1;
+      final targetCh = (r['c'] as num?)?.toInt() ?? 1;
+      final targetV = (r['v'] as num?)?.toInt() ?? 1;
+      final targetEndV = (r['to'] as num?)?.toInt();
+      final weight = (r['w'] as num?)?.toInt() ?? 5;
+
+      // Find book name in user's active translation
+      final targetCanon = CanonicalBookMap.getCanonicalId(2, targetEotcNum);
+      final activeTargetNum = CanonicalBookMap.getBookNumber(translationId, targetCanon) ?? targetEotcNum;
+
+      final dedupKey = '${activeTargetNum}_${targetCh}_$targetV';
+      if (seen.contains(dedupKey)) continue;
+      seen.add(dedupKey);
+
+      final targetBook = await getBookByNumber(translationId, activeTargetNum);
+      final targetBookName = targetBook?.name ?? 'መጽሐፍ $activeTargetNum';
+
+      // Load preview text
+      String previewText = '';
+      if (targetBook != null) {
+        final verses = await getVerses(bookId: targetBook.id, chapter: targetCh);
+        final found = verses.where((v) => v.verse == targetV).firstOrNull;
+        if (found != null) {
+          previewText = found.text;
+        }
+      }
+
+      String themeAm = 'ቀጥተኛ ትስስር';
+      if (weight >= 8) {
+        themeAm = 'ትንቢትና ፍጻሜ';
+      } else if (weight >= 5) {
+        themeAm = 'ተዛማጅ ቃል';
+      }
+
+      items.add(CrossReferenceItem(
+        fromBookNumber: bookNumber,
+        fromChapter: chapter,
+        fromVerse: verse,
+        targetBookNumber: activeTargetNum,
+        targetBookName: targetBookName,
+        targetChapter: targetCh,
+        targetVerse: targetV,
+        targetVerseEnd: targetEndV,
+        connectionType: themeAm,
+        sourceCitation: 'የመጽሐፍ ቅዱስ ማጣቀሻ (TSK Canonical Cross-Reference)',
+        explanation: 'ተዛማጅና ተጓዳኝ የቅዱሳት መጻሕፍት ክፍል',
+        targetPreviewText: previewText,
+      ));
+    }
+
+    return items;
   }
 
   // --- Read API ---

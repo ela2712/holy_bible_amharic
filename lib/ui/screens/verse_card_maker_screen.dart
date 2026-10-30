@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/geez_numbers.dart';
 import '../../providers/app_language_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../widgets/ethiopian_cross_painter.dart';
@@ -71,6 +72,8 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
   EthiopianCrossStyle _crossStyle = EthiopianCrossStyle.lalibela;
   double _crossOpacity = 0.18;
   bool _showHaragBorder = true;
+  bool _useGeezNumerals = false;
+  bool _useRubrication = true;
   String _fontFamily = 'Serif'; // 'Serif', 'Sans', 'Abyssinica'
   double _fontSize = 18.0;
   TextAlign _alignment = TextAlign.center;
@@ -78,17 +81,18 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
   Uint8List? _customBackgroundBytes;
 
   static const List<CardThemePreset> _presets = [
-    // 1. Parchment (ብራና)
+    // 1. Ancient Parchment (ጥንታዊ ብራና)
     CardThemePreset(
-      name: 'ብራና',
-      nameEn: 'Parchment',
-      backgroundColors: [Color(0xFFF7F2E7), Color(0xFFEBE0CC)],
-      textColor: Color(0xFF1F1A14),
-      accentColor: Color(0xFF065F46),
-      watermarkColor: Color(0xFF047857),
-      haragPrimary: Color(0xFF047857),
-      haragSecondary: Color(0xFF0D9488),
+      name: 'ጥንታዊ ብራና',
+      nameEn: 'Ancient Parchment',
+      backgroundColors: [Color(0xFFF9F5EB), Color(0xFFEFE5CE), Color(0xFFE2D3B3)],
+      textColor: Color(0xFF1E1712),
+      accentColor: Color(0xFF991B1B), // Vermilion rubrication accent
+      watermarkColor: Color(0xFFB48A3C), // Gondar gold
+      haragPrimary: Color(0xFF991B1B), // Vermilion cinnabar ink
+      haragSecondary: Color(0xFF047857), // Malachite green ink
     ),
+
     // 2. Lalibela (ላሊበላ)
     CardThemePreset(
       name: 'ላሊበላ',
@@ -225,6 +229,77 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
     }
   }
 
+  String _formatCitation(String originalRef, bool useGeez) {
+    if (!useGeez) return originalRef;
+    final regex = RegExp(r'(\d+)\s*[:፡]\s*(\d+)(?:\s*[-–]\s*(\d+))?');
+    final match = regex.firstMatch(originalRef);
+    if (match == null) return originalRef;
+
+    final chNum = int.tryParse(match.group(1) ?? '') ?? 1;
+    final vNum = int.tryParse(match.group(2) ?? '') ?? 1;
+    final endVStr = match.group(3);
+    final endVNum = endVStr != null ? int.tryParse(endVStr) : null;
+
+    final chGeez = GeezNumbers.toGeez(chNum);
+    final vGeez = GeezNumbers.toGeez(vNum);
+    String geezRefPart = '$chGeez፥$vGeez';
+    if (endVNum != null) {
+      geezRefPart += '–${GeezNumbers.toGeez(endVNum)}';
+    }
+
+    return originalRef.replaceRange(match.start, match.end, geezRefPart);
+  }
+
+  Widget _buildScriptureContent({
+    required String text,
+    required TextStyle baseStyle,
+    required Color rubricColor,
+    required bool useRubrication,
+    required TextAlign alignment,
+  }) {
+    if (!useRubrication) {
+      return Text(
+        '«$text»',
+        textAlign: alignment,
+        style: baseStyle,
+      );
+    }
+
+    final regex = RegExp(r'(እግዚአብሔር|ኢየሱስ|ክርስቶስ|ማርያም|መንፈስ ቅዱስ|እግዚእነ|God|Jesus|Christ|Lord)');
+    final fullText = '«$text»';
+    final spans = <TextSpan>[];
+    int lastIndex = 0;
+
+    for (final match in regex.allMatches(fullText)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: fullText.substring(lastIndex, match.start),
+          style: baseStyle,
+        ));
+      }
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: baseStyle.copyWith(
+          color: rubricColor,
+          fontWeight: FontWeight.w800,
+        ),
+      ));
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < fullText.length) {
+      spans.add(TextSpan(
+        text: fullText.substring(lastIndex),
+        style: baseStyle,
+      ));
+    }
+
+    return RichText(
+      textAlign: alignment,
+      text: TextSpan(children: spans),
+    );
+  }
+
   Future<void> _captureAndShare(bool isEnglish) async {
     setState(() => _isGenerating = true);
     try {
@@ -243,9 +318,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
         name: 'verse_card_${DateTime.now().millisecondsSinceEpoch}.png',
       );
 
+      final effectiveRef = _formatCitation(widget.reference, _useGeezNumerals);
       final shareText = isEnglish
-          ? '${widget.reference}\n«${widget.verseText}»\n— Holy Bible App'
-          : '${widget.reference}\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ';
+          ? '$effectiveRef\n«${widget.verseText}»\n— Holy Bible App'
+          : '$effectiveRef\n«${widget.verseText}»\n— ከመጽሐፍ ቅዱስ መተግበሪያ';
 
       await Share.shareXFiles(
         [xFile],
@@ -447,10 +523,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                                 // Scripture Text
                                 Expanded(
                                   child: Center(
-                                    child: Text(
-                                      '«${widget.verseText}»',
-                                      textAlign: _alignment,
-                                      style: scriptureTextStyle,
+                                    child: _buildScriptureContent(
+                                      text: widget.verseText,
+                                      baseStyle: scriptureTextStyle,
+                                      rubricColor: preset.accentColor,
+                                      useRubrication: _useRubrication,
+                                      alignment: _alignment,
                                     ),
                                   ),
                                 ),
@@ -466,7 +544,7 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        widget.reference,
+                                        _formatCitation(widget.reference, _useGeezNumerals),
                                         textAlign: TextAlign.center,
                                         style: isEnglish
                                             ? GoogleFonts.inter(
@@ -790,6 +868,52 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                       onSelected: (val) => setState(() => _showHaragBorder = val),
                     ),
                   ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Authentic Manuscript Options: Ge'ez Numerals & Sacred Rubrication
+            _buildSectionTitle(
+              isEnglish ? 'Manuscript Heritage Options:' : 'የብራና ቅርስ አማራጮች፦',
+              isEnglish,
+              themeConfig,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: FilterChip(
+                    selected: _useGeezNumerals,
+                    backgroundColor: themeConfig.surfaceColor,
+                    selectedColor: themeConfig.accentColor.withValues(alpha: 0.18),
+                    checkmarkColor: themeConfig.accentColor,
+                    avatar: Icon(Icons.pin_outlined, size: 16, color: themeConfig.accentColor),
+                    label: Text(
+                      isEnglish ? "Ge'ez Numeral (፫፥፲፮)" : 'ግዕዝ ቁጥር (፫፥፲፮)',
+                      style: isEnglish
+                          ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor)
+                          : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor),
+                    ),
+                    onSelected: (val) => setState(() => _useGeezNumerals = val),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilterChip(
+                    selected: _useRubrication,
+                    backgroundColor: themeConfig.surfaceColor,
+                    selectedColor: const Color(0xFFDC2626).withValues(alpha: 0.18),
+                    checkmarkColor: const Color(0xFFDC2626),
+                    avatar: const Icon(Icons.format_color_text_rounded, size: 16, color: Color(0xFFDC2626)),
+                    label: Text(
+                      isEnglish ? 'Rubrication (Red Ink)' : 'ቀይ ጽሕፈት (ቀይ ቀለም)',
+                      style: isEnglish
+                          ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor)
+                          : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor),
+                    ),
+                    onSelected: (val) => setState(() => _useRubrication = val),
+                  ),
                 ),
               ],
             ),

@@ -10,6 +10,9 @@ import '../../providers/theme_provider.dart';
 import 'book_selector_screen.dart';
 import 'verse_card_maker_screen.dart';
 import '../widgets/modern_bible_icons.dart';
+import '../widgets/ethiopian_cross_painter.dart';
+import '../../services/bahire_hasab_service.dart';
+import '../../core/utils/geez_numbers.dart';
 
 class HomeDashboardScreen extends ConsumerWidget {
   final Function(int tabIndex) onNavigateTab;
@@ -56,7 +59,11 @@ class HomeDashboardScreen extends ConsumerWidget {
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        // Hero: Editorial Daily Verse Card
+                        // 1. Royal EOTC Bahire Hasab Liturgical Banner
+                        _buildBahireHasabCard(context, ref, themeConfig, isDark, isEnglish),
+                        const SizedBox(height: 18),
+
+                        // 2. Hero: Editorial Daily Verse Card
                         _buildDailyVerseHero(context, ref, repo, themeConfig, isEnglish),
                         const SizedBox(height: 20),
 
@@ -155,8 +162,16 @@ class HomeDashboardScreen extends ConsumerWidget {
                       ),
                       child: Text(
                         isEnglish
-                            ? (bibleState.currentTranslation?.id == 3 ? 'KJV' : '81 Canon')
-                            : '81 ቀኖና',
+                            ? (bibleState.currentTranslation?.id == 4
+                                ? 'Ge\'ez 81'
+                                : (bibleState.currentTranslation?.id == 3
+                                    ? 'KJV'
+                                    : (bibleState.currentTranslation?.id == 1 ? '1954 H.S.' : '81 Canon')))
+                            : (bibleState.currentTranslation?.id == 4
+                                ? 'ግዕዝ 81'
+                                : (bibleState.currentTranslation?.id == 1
+                                    ? '1954'
+                                    : (bibleState.currentTranslation?.id == 3 ? 'KJV' : '81 ቀኖና'))),
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
@@ -253,6 +268,425 @@ class HomeDashboardScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBahireHasabCard(
+    BuildContext context,
+    WidgetRef ref,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+    bool isEnglish,
+  ) {
+    final now = DateTime.now();
+    final status = BahireHasabService.getCurrentLiturgicalStatus(now);
+    final ethDate = status['ethDate'] as EthiopianDate;
+    final evangelist = isEnglish ? (status['evangelistEn'] as String) : (status['evangelist'] as String);
+    final isFastDay = status['isFastDay'] as bool? ?? false;
+    final fastLabel = isEnglish ? (status['fastLabelEn'] as String) : (status['fastLabel'] as String);
+    final daysToNext = status['daysToNextEvent'] as int? ?? 0;
+    final nextTitle = isEnglish ? (status['nextEventTitleEn'] as String) : (status['nextEventTitle'] as String);
+    final lectionary = status['dailyLectionary'] as Map<String, dynamic>?;
+    final synaxarium = status['dailySynaxarium'] as SynaxariumEntry?;
+
+    final dateFormatted = isEnglish
+        ? ethDate.format(includeDayName: true, isEnglish: true)
+        : (themeConfig.useGeezNumerals ? ethDate.toGeezString() : ethDate.format());
+
+    final daysToNextStr = themeConfig.useGeezNumerals && !isEnglish
+        ? GeezNumbers.toGeez(daysToNext)
+        : '$daysToNext';
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF161412), const Color(0xFF221A15)]
+              : [const Color(0xFFFCF9F3), const Color(0xFFF4ECE0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.35 : 0.45),
+          width: 1.3,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.12 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Orthodox Cross Icon + Liturgical Badge + Fasting Status Chip
+            Row(
+              children: [
+                OrthodoxCrossIcon(
+                  size: 20,
+                  color: themeConfig.goldAccent,
+                  style: EthiopianCrossStyle.lalibela,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isEnglish ? 'LITURGICAL CALENDAR' : 'ባሕረ ሐሳብና የዕለቱ ሥርዓት',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: themeConfig.goldAccent,
+                  ),
+                ),
+                if (isFastDay) ...[
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC2626).withValues(alpha: isDark ? 0.22 : 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFDC2626).withValues(alpha: 0.45),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.lens,
+                          size: 9,
+                          color: Color(0xFFEF4444),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          isEnglish ? 'Fast Day' : 'የጾም ቀን',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFEF4444),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Date in Authentic Ge'ez Numerals
+            Text(
+              dateFormatted,
+              style: isEnglish
+                  ? GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.textColor,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 18.5,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.textColor,
+                      letterSpacing: -0.2,
+                    ),
+            ),
+            const SizedBox(height: 4),
+
+            // Evangelist & Fast Category Subtitle
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                  decoration: BoxDecoration(
+                    color: themeConfig.accentColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    evangelist,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.accentColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    fastLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.notoSansEthiopic(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: themeConfig.secondaryTextColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Countdown to Next Major Feast or Fast (e.g. ጾመ ነቢያት)
+            if (daysToNext > 0 && nextTitle.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.10 : 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: themeConfig.goldAccent.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.hourglass_top_rounded, size: 15, color: themeConfig.goldAccent),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isEnglish
+                            ? '$daysToNextStr days until $nextTitle'
+                            : 'እስከ $nextTitle መግቢያ $daysToNextStr ቀናት ቀርተዋል',
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: themeConfig.textColor,
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Daily Synaxarium (የዕለቱ ስንክሳር) Commemoration
+            if (synaxarium != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.12 : 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.35 : 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: themeConfig.goldAccent.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: OrthodoxCrossIcon(
+                        size: 16,
+                        color: themeConfig.goldAccent,
+                        style: EthiopianCrossStyle.gondar,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                isEnglish ? 'DAILY SYNAXARIUM' : 'የዕለቱ ስንክሳር',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: themeConfig.goldAccent,
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: themeConfig.goldAccent.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Text(
+                                  synaxarium.getDisplayPassage(isEnglish),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    color: themeConfig.goldAccent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            synaxarium.getDisplayTitle(isEnglish),
+                            style: isEnglish
+                                ? GoogleFonts.inter(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: themeConfig.textColor,
+                                  )
+                                : GoogleFonts.notoSansEthiopic(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: themeConfig.textColor,
+                                  ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            synaxarium.getDisplayDescription(isEnglish),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.notoSansEthiopic(
+                              fontSize: 11.5,
+                              color: themeConfig.secondaryTextColor,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: themeConfig.goldAccent),
+                      tooltip: isEnglish ? 'Read passage' : 'ምንባብ አንብብ',
+                      onPressed: () {
+                        final bibleState = ref.read(bibleStateProvider);
+                        final targetBook = CanonicalBookMap.resolveBook(
+                          books: bibleState.books,
+                          currentTranslationId: bibleState.currentTranslation?.id ?? 2,
+                          traditionalBookNumber: synaxarium.bookNumber,
+                          bookName: synaxarium.bookName,
+                        );
+                        if (targetBook != null) {
+                          ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: synaxarium.chapter);
+                        }
+                        onNavigateTab(0);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Appointed EOTC Daily Lectionary Reading
+            if (lectionary != null) ...[
+              const SizedBox(height: 16),
+              Divider(height: 1, color: themeConfig.cardBorderColor),
+              const SizedBox(height: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: themeConfig.accentColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.menu_book_rounded, color: themeConfig.accentColor, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEnglish
+                              ? (lectionary['titleEn'] as String)
+                              : (lectionary['title'] as String),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                            color: themeConfig.secondaryTextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isEnglish
+                              ? (lectionary['passageEn'] as String)
+                              : (lectionary['passage'] as String),
+                          style: isEnglish
+                              ? GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: themeConfig.textColor,
+                                )
+                              : GoogleFonts.notoSansEthiopic(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: themeConfig.textColor,
+                                ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          isEnglish
+                              ? (lectionary['descriptionEn'] as String)
+                              : (lectionary['description'] as String),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.notoSansEthiopic(
+                            fontSize: 11.5,
+                            color: themeConfig.secondaryTextColor,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: themeConfig.accentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () {
+                      final bookNum = lectionary['bookNumber'] as int? ?? 1;
+                      final chapter = lectionary['chapter'] as int? ?? 1;
+                      final bibleState = ref.read(bibleStateProvider);
+                      final targetBook = CanonicalBookMap.resolveBook(
+                        books: bibleState.books,
+                        currentTranslationId: bibleState.currentTranslation?.id ?? 2,
+                        traditionalBookNumber: bookNum,
+                        canonicalId: lectionary['canonicalId'] as String?,
+                        bookName: lectionary['bookName'] as String?,
+                      );
+                      if (targetBook != null) {
+                        ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
+                      }
+                      onNavigateTab(0);
+                    },
+                    child: Text(
+                      isEnglish ? 'Read' : 'አንብብ',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1152,6 +1586,7 @@ class HomeDashboardScreen extends ConsumerWidget {
   }
 
   String _shortTransLabel(String name) {
+    if (name.contains('ግዕዝ') || name.contains('gez') || name.contains('Ge\'ez')) return 'ግዕዝ 81';
     if (name.contains('81')) return '81 ቀኖና';
     if (name.contains('King James') || name.contains('KJV')) return 'KJV';
     return '1954 ትርጉም';
@@ -1163,6 +1598,7 @@ class HomeDashboardScreen extends ConsumerWidget {
     BibleViewState bibleState,
     ReaderThemeConfig themeConfig,
   ) {
+    final isEnglish = ref.watch(isEnglishUiProvider);
     showModalBottomSheet(
       context: context,
       backgroundColor: themeConfig.surfaceColor,
@@ -1176,16 +1612,30 @@ class HomeDashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'የመጽሐፍ ቅዱስ ትርጉም ይምረጡ',
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: themeConfig.textColor,
-              ),
+              isEnglish ? 'Select Bible Translation' : 'የመጽሐፍ ቅዱስ ትርጉም ይምረጡ',
+              style: isEnglish
+                  ? GoogleFonts.inter(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.textColor,
+                    )
+                  : GoogleFonts.notoSansEthiopic(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: themeConfig.textColor,
+                    ),
             ),
             const SizedBox(height: 14),
             ...bibleState.translations.map((t) {
               final selected = t.id == bibleState.currentTranslation?.id;
+              final subtitle = t.id == 2
+                  ? (isEnglish ? 'Ethiopian Orthodox 81 Books Canon (Amharic)' : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና')
+                  : (t.id == 4
+                      ? (isEnglish ? 'Ancient Classical Ge\'ez 81 Books Canon' : 'የቀደምት ግዕዝ 81 መጻሕፍት ቀኖና (ጥንታዊ ቅርስ)')
+                      : (t.id == 1
+                          ? (isEnglish ? 'Emperor Haile Selassie 1954 (66 Books)' : 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)')
+                          : (isEnglish ? 'Authorized King James Version (English)' : 'የኪንግ ጀምስ 1611 የእንግሊዝኛ ትርጉም')));
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
@@ -1199,24 +1649,53 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 child: ListTile(
-                  title: Text(
-                    t.name,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14.5,
-                      color: themeConfig.textColor,
-                    ),
+                  title: Row(
+                    children: [
+                      Text(
+                        t.name,
+                        style: isEnglish
+                            ? GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14.5,
+                                color: themeConfig.textColor,
+                              )
+                            : GoogleFonts.notoSansEthiopic(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14.5,
+                                color: themeConfig.textColor,
+                              ),
+                      ),
+                      if (t.id == 4) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF854D0E).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isEnglish ? 'Ge\'ez' : 'ግዕዝ',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF854D0E),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   subtitle: Text(
-                    t.id == 2
-                        ? 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና'
-                        : (t.id == 1
-                            ? 'የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም (66 መጻሕፍት)'
-                            : 'Authorized King James Version (Classic English)'),
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 12,
-                      color: themeConfig.secondaryTextColor,
-                    ),
+                    subtitle,
+                    style: isEnglish
+                        ? GoogleFonts.inter(
+                            fontSize: 12,
+                            color: themeConfig.secondaryTextColor,
+                          )
+                        : GoogleFonts.notoSansEthiopic(
+                            fontSize: 12,
+                            color: themeConfig.secondaryTextColor,
+                          ),
                   ),
                   trailing: selected
                       ? Icon(Icons.check_circle_rounded, color: themeConfig.accentColor)

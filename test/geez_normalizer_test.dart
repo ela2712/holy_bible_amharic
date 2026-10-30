@@ -47,4 +47,22 @@ void main() {
       expect(GeezNormalizer.normalize('«ሰላም፥ ለእናንተ፡ ይሁን።»'), 'ሰላም ለእናንተ ይሁን');
     });
   });
+
+  group('GeezNormalizer Typography & Formatting Tests', () {
+    test('cleans newlines, indentation, and spaces before punctuation', () {
+      const rawVerse =
+          'ወምድርሰ ፡ ኢታስተርኢ ፡ ወኢኮነት ፡ ድሉተ ፡ ወጽልመት ፡ መልዕልተ ፡ ቀላይ ፡ ወመንፈሰ ፡ እግዚአብሔር ፡ ይጼልል ፡\n                  መልዕልተ ፡ ማይ ።';
+      const expected =
+          'ወምድርሰ፡ ኢታስተርኢ፡ ወኢኮነት፡ ድሉተ፡ ወጽልመት፡ መልዕልተ፡ ቀላይ፡ ወመንፈሰ፡ እግዚአብሔር፡ ይጼልል፡ መልዕልተ፡ ማይ።';
+      expect(GeezNormalizer.cleanTypography(rawVerse), expected);
+    });
+
+    test('prevents isolated full stop and removes brackets', () {
+      const rawVerse =
+          'ወርእዮ ፡ እግዚአብሔር ፡ [ለብርሃን] ፡ ከመ ፡ ሠናይ ፡ ወፈለጠ ፡ እግዚአብሔር ፡ ማእከለ ፡ ብርሃን ፡ ወማእከለ ፡ ጽልመት\n                  ።';
+      const expected =
+          'ወርእዮ፡ እግዚአብሔር፡ ለብርሃን፡ ከመ፡ ሠናይ፡ ወፈለጠ፡ እግዚአብሔር፡ ማእከለ፡ ብርሃን፡ ወማእከለ፡ ጽልመት።';
+      expect(GeezNormalizer.cleanTypography(rawVerse), expected);
+    });
+  });
 }

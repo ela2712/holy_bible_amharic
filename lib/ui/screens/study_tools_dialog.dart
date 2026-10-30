@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/cross_reference.dart';
 import '../../models/verse.dart';
 import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
@@ -74,6 +75,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
   bool _showNoteEditor = false;
   bool _showCustomKeyboard = false;
   late TextEditingController _noteController;
+  int _selectedToolTab = 0; // 0: Parallel Translations, 1: Cross References, 2: Ge'ez Heritage
 
   static const List<Map<String, dynamic>> _highlightColors = [
     {'hex': '#FDE68A', 'color': Color(0xFFFDE68A)},
@@ -92,7 +94,9 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
     if (widget.verse.note != null && widget.verse.note!.isNotEmpty) {
       _showNoteEditor = true;
     }
-    if (widget.initialTabIndex == 2) {
+    if (widget.initialTabIndex == 1) {
+      _selectedToolTab = 1;
+    } else if (widget.initialTabIndex == 2) {
       _showNoteEditor = true;
     }
   }
@@ -481,42 +485,113 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                   ),
                 ),
 
-              // 5. Section Header for Parallel Canons
+              // 5. Tool Segmented Navigation Tabs
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
-                child: Row(
-                  children: [
-                    Icon(Icons.compare_arrows_rounded, size: 16, color: themeConfig.accentColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      isEnglish ? 'PARALLEL TRANSLATIONS (81 CANON • 1954 • KJV)' : 'የቀኖና እና የትርጉም ማነፃፀሪያ (81 ቀኖና • 1954 • KJV)',
-                      style: isEnglish
-                          ? GoogleFonts.plusJakartaSans(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              color: themeConfig.accentColor,
-                            )
-                          : GoogleFonts.notoSansEthiopic(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: themeConfig.accentColor,
-                            ),
-                    ),
-                  ],
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                child: Container(
+                  height: 42,
+                  padding: const EdgeInsets.all(3.5),
+                  decoration: BoxDecoration(
+                    color: themeConfig.surfaceColor,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: themeConfig.cardBorderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildToolTabButton(
+                        index: 0,
+                        icon: Icons.compare_arrows_rounded,
+                        label: isEnglish ? 'Parallel' : 'ተጓዳኝ ትርጉሞች',
+                        themeConfig: themeConfig,
+                        isEnglish: isEnglish,
+                      ),
+                      _buildToolTabButton(
+                        index: 1,
+                        icon: Icons.alt_route_rounded,
+                        label: isEnglish ? 'Cross Refs' : 'ተዛማጅ ጥቅሶች',
+                        themeConfig: themeConfig,
+                        isEnglish: isEnglish,
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
               const Divider(height: 1),
 
-              // 6. Parallel Content Stream
+              // 6. Selected Tab Content Stream
               Expanded(
-                child: _buildParallelTranslationsList(scrollController, themeConfig, isEnglish),
+                child: _selectedToolTab == 0
+                    ? _buildParallelTranslationsList(scrollController, themeConfig, isEnglish)
+                    : _buildCrossReferencesList(scrollController, themeConfig, isEnglish),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildToolTabButton({
+    required int index,
+    required IconData icon,
+    required String label,
+    required ReaderThemeConfig themeConfig,
+    required bool isEnglish,
+  }) {
+    final isSelected = _selectedToolTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _selectedToolTab = index);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          decoration: BoxDecoration(
+            color: isSelected ? themeConfig.accentColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: themeConfig.accentColor.withValues(alpha: 0.28),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: isEnglish
+                      ? GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
+                        )
+                      : GoogleFonts.notoSansEthiopic(
+                          fontSize: 11.5,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -552,7 +627,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                   Navigator.pop(context);
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => const ParallelReaderScreen(),
+                      builder: (_) => ParallelReaderScreen(
+                        initialBookNumber: widget.bookNumber,
+                        initialChapter: widget.verse.chapter,
+                        initialTargetVerse: widget.verse.verse,
+                        initialTranslationId: ref.read(bibleStateProvider).currentTranslation?.id ?? 2,
+                      ),
                     ),
                   );
                 },
@@ -598,8 +678,8 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                             ),
                             Text(
                               isEnglish
-                                  ? 'Compare 81 Orthodox Canon, 1954, and KJV side-by-side'
-                                  : 'የ81 ቀኖና፣ የ1954 እና የKJV ትርጉሞችን ጎን ለጎን ያነጻጽሩ',
+                                  ? 'Compare 81 Orthodox Canon, Ancient Ge\'ez, 1954, and KJV side-by-side'
+                                  : 'የ81 ቀኖና፣ የቀደምት ግዕዝ፣ የ1954 እና የKJV ትርጉሞችን ጎን ለጎን ያነጻጽሩ',
                               style: isEnglish
                                   ? GoogleFonts.inter(
                                       fontSize: 11,
@@ -634,7 +714,39 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
 
             const SizedBox(height: 12),
 
-            // 2. 1954 Translation
+            // 2. Ancient Ge'ez 81 Canon
+            () {
+              final textGeez = parallels['የቀደምት ግዕዝ 81 ቀኖና'] ??
+                  parallels['የቀደምት ግዕዝ 81 ቀኖና (Ancient Ge\'ez Canon)'] ??
+                  parallels['gez_81'] ??
+                  parallels.entries
+                      .firstWhere(
+                        (e) => e.key.contains('ግዕዝ') || e.key.contains('gez') || e.key.contains("Ge'ez"),
+                        orElse: () => const MapEntry('', ''),
+                      )
+                      .value;
+              if (textGeez.isNotEmpty) {
+                return _buildParallelCard(
+                  title: isEnglish ? "Ancient Ge'ez 81 Canon" : 'የቀደምት ግዕዝ 81 ቀኖና',
+                  badgeColor: const Color(0xFF854D0E),
+                  text: textGeez,
+                  isEthiopic: true,
+                  themeConfig: themeConfig,
+                  isEnglish: isEnglish,
+                );
+              } else {
+                return _buildDeuterocanonNoticeCard(
+                  title: isEnglish ? "Ancient Ge'ez 81 Canon" : 'የቀደምት ግዕዝ 81 ቀኖና',
+                  badgeColor: const Color(0xFF854D0E),
+                  themeConfig: themeConfig,
+                  isEnglish: isEnglish,
+                );
+              }
+            }(),
+
+            const SizedBox(height: 12),
+
+            // 3. 1954 Translation
             () {
               final text1954 = parallels['የቀዳማዊ ኃይለ ሥላሴ 1954 ትርጉም'] ??
                   parallels['1954'];
@@ -659,7 +771,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
 
             const SizedBox(height: 12),
 
-            // 3. KJV Translation
+            // 4. KJV Translation
             () {
               final textKjv = parallels['King James Version'] ??
                   parallels['KJV'];
@@ -686,6 +798,189 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
       },
     );
   }
+
+  Widget _buildCrossReferencesList(
+    ScrollController scrollController,
+    ReaderThemeConfig themeConfig,
+    bool isEnglish,
+  ) {
+    return FutureBuilder<List<CrossReferenceItem>>(
+      future: widget.repository.getCrossReferencesForVerse(
+        bookNumber: widget.bookNumber,
+        chapter: widget.verse.chapter,
+        verse: widget.verse.verse,
+        translationId: ref.read(bibleStateProvider).currentTranslation?.id ?? 2,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: themeConfig.accentColor));
+        }
+
+        final items = snapshot.data ?? [];
+        if (items.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.alt_route_rounded, size: 44, color: themeConfig.secondaryTextColor.withValues(alpha: 0.5)),
+                  const SizedBox(height: 14),
+                  Text(
+                    isEnglish
+                        ? 'No direct cross-references found for this verse'
+                        : 'ለዚህ ጥቅስ ምንም ተጨማሪ ማጣቀሻ አልተገኘም',
+                    textAlign: TextAlign.center,
+                    style: isEnglish
+                        ? GoogleFonts.inter(fontSize: 13.5, color: themeConfig.secondaryTextColor)
+                        : GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.secondaryTextColor),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.separated(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 36),
+          itemCount: items.length + 1,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: themeConfig.accentColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        isEnglish ? '${items.length} Cross References' : '${items.length} ተዛማጅ ጥቅሶች ተገኝተዋል',
+                        style: isEnglish
+                            ? GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: themeConfig.accentColor)
+                            : GoogleFonts.notoSansEthiopic(fontSize: 11, fontWeight: FontWeight.w800, color: themeConfig.accentColor),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final item = items[index - 1];
+            final isProphecy = item.connectionType.contains('ትንቢት');
+            final badgeColor = isProphecy ? const Color(0xFFD97706) : themeConfig.accentColor;
+
+            return InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.pop(context);
+                widget.onJumpToReference?.call(
+                  item.targetBookNumber,
+                  item.targetChapter,
+                  item.targetVerse,
+                );
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: themeConfig.surfaceColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: themeConfig.cardBorderColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: Text(
+                                item.targetReference,
+                                style: isEnglish
+                                    ? GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: badgeColor)
+                                    : GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: badgeColor),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: themeConfig.cardBorderColor.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                item.connectionType,
+                                style: isEnglish
+                                    ? GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: themeConfig.secondaryTextColor)
+                                    : GoogleFonts.notoSansEthiopic(fontSize: 10, fontWeight: FontWeight.w700, color: themeConfig.secondaryTextColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon: Icon(Icons.copy_rounded, size: 16, color: themeConfig.secondaryTextColor),
+                              tooltip: isEnglish ? 'Copy' : 'ቅዳ',
+                              onPressed: () {
+                                final text = item.targetPreviewText.isNotEmpty
+                                    ? '${item.targetReference}\n«${item.targetPreviewText}»'
+                                    : item.targetReference;
+                                Clipboard.setData(ClipboardData(text: text));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(isEnglish ? 'Reference copied' : 'ማጣቀሻው ተገልብጧል'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.arrow_forward_ios_rounded, size: 13, color: themeConfig.accentColor),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (item.targetPreviewText.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '«${item.targetPreviewText}»',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'NotoSerifEthiopic',
+                          fontFamilyFallback: ['Noto Serif Ethiopic', 'Nyala', 'serif'],
+                          fontSize: 13.5,
+                          height: 1.5,
+                        ).copyWith(color: themeConfig.textColor.withValues(alpha: 0.9)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   Widget _buildParallelCard({
     required String title,

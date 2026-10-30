@@ -271,6 +271,38 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
     state = state.copyWith(verses: verses);
   }
 
+  Future<void> jumpToVerseLocation({
+    required int bookNumber,
+    required int chapter,
+    required int verse,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final book = state.books.firstWhere(
+        (b) => b.bookNumber == bookNumber,
+        orElse: () => state.currentBook ?? state.books.first,
+      );
+      final safeChapter = chapter.clamp(1, book.totalChapters);
+      final verses = await _repo.getVerses(bookId: book.id, chapter: safeChapter);
+      final headings = await _repo.getSectionHeadings(bookId: book.id, chapter: safeChapter);
+
+      state = state.copyWith(
+        currentBook: book,
+        currentChapter: safeChapter,
+        verses: verses,
+        headings: headings,
+        targetVerse: verse,
+        isLoading: false,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('active_book_number', book.bookNumber);
+      await prefs.setInt('active_chapter', safeChapter);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+    }
+  }
+
   void setTargetVerse(int? verse) {
     state = state.copyWith(targetVerse: verse);
   }

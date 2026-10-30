@@ -92,8 +92,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       const SettingsScreen(),
     ];
 
-    final showBottomBar = _currentIndex != 0 || _isReaderChromeVisible;
-
     // Active pill capsule color
     final activePillColor = isDark
         ? Colors.white.withValues(alpha: 0.14)
@@ -106,63 +104,12 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
     return Scaffold(
       backgroundColor: themeConfig.backgroundColor,
-      body: Stack(
-        children: [
-          // 1. Screen Body
-          IndexedStack(
-            index: _currentIndex,
-            children: screens,
-          ),
-
-          // 2. Floating Search Button for Tabs 1, 2, 3
-          if (_currentIndex != 0 && _currentIndex != 4)
-            Positioned(
-              bottom: 80,
-              right: 18,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: 1.0,
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E2128) : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isDark
-                          ? const Color(0xFF2E333D)
-                          : const Color(0xFFE2E8F0),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: ModernSearchIcon(
-                      size: 20,
-                      color: themeConfig.textColor,
-                    ),
-                    onPressed: () => _openSearch(context),
-                  ),
-                ),
-              ),
-            ),
-        ],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: screens,
       ),
-      bottomNavigationBar: AnimatedSlide(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-        offset: showBottomBar ? Offset.zero : const Offset(0, 1.2),
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: showBottomBar ? 1.0 : 0.0,
-          child: Container(
-            decoration: BoxDecoration(
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
               color: themeConfig.surfaceColor.withValues(alpha: 0.98),
               border: Border(
                 top: BorderSide(
@@ -257,9 +204,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
               ),
             ),
           ),
-        ),
-      ),
-    );
+      );
   }
 
   Widget _buildNavItem({

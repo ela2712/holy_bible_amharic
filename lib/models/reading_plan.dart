@@ -3,6 +3,7 @@ class DailyReadingPassage {
   final String title;
   final String titleEn;
   final int bookNumber;
+  final String canonicalId;
   final String bookName;
   final String bookNameEn;
   final int startChapter;
@@ -15,6 +16,7 @@ class DailyReadingPassage {
     required this.title,
     this.titleEn = '',
     required this.bookNumber,
+    this.canonicalId = '',
     required this.bookName,
     this.bookNameEn = '',
     required this.startChapter,
