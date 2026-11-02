@@ -287,8 +287,6 @@ class HomeDashboardScreen extends ConsumerWidget {
     final fastLabel = isEnglish ? (status['fastLabelEn'] as String) : (status['fastLabel'] as String);
     final daysToNext = status['daysToNextEvent'] as int? ?? 0;
     final nextTitle = isEnglish ? (status['nextEventTitleEn'] as String) : (status['nextEventTitle'] as String);
-    final lectionary = status['dailyLectionary'] as Map<String, dynamic>?;
-    final synaxarium = status['dailySynaxarium'] as SynaxariumEntry?;
 
     final dateFormatted = isEnglish
         ? ethDate.format(includeDayName: true, isEnglish: true)
@@ -471,220 +469,6 @@ class HomeDashboardScreen extends ConsumerWidget {
               ),
             ],
 
-            // Daily Synaxarium (የዕለቱ ስንክሳር) Commemoration
-            if (synaxarium != null) ...[
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.12 : 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.35 : 0.4),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: themeConfig.goldAccent.withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                      ),
-                      child: OrthodoxCrossIcon(
-                        size: 16,
-                        color: themeConfig.goldAccent,
-                        style: EthiopianCrossStyle.gondar,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                isEnglish ? 'DAILY SYNAXARIUM' : 'የዕለቱ ስንክሳር',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  color: themeConfig.goldAccent,
-                                ),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: themeConfig.goldAccent.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: Text(
-                                  synaxarium.getDisplayPassage(isEnglish),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: themeConfig.goldAccent,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            synaxarium.getDisplayTitle(isEnglish),
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: themeConfig.textColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: themeConfig.textColor,
-                                  ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            synaxarium.getDisplayDescription(isEnglish),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.notoSansEthiopic(
-                              fontSize: 11.5,
-                              color: themeConfig.secondaryTextColor,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: themeConfig.goldAccent),
-                      tooltip: isEnglish ? 'Read passage' : 'ምንባብ አንብብ',
-                      onPressed: () {
-                        final bibleState = ref.read(bibleStateProvider);
-                        final targetBook = CanonicalBookMap.resolveBook(
-                          books: bibleState.books,
-                          currentTranslationId: bibleState.currentTranslation?.id ?? 2,
-                          traditionalBookNumber: synaxarium.bookNumber,
-                          bookName: synaxarium.bookName,
-                        );
-                        if (targetBook != null) {
-                          ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: synaxarium.chapter);
-                        }
-                        onNavigateTab(0);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // Appointed EOTC Daily Lectionary Reading
-            if (lectionary != null) ...[
-              const SizedBox(height: 16),
-              Divider(height: 1, color: themeConfig.cardBorderColor),
-              const SizedBox(height: 14),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: themeConfig.accentColor.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.menu_book_rounded, color: themeConfig.accentColor, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isEnglish
-                              ? (lectionary['titleEn'] as String)
-                              : (lectionary['title'] as String),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.4,
-                            color: themeConfig.secondaryTextColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isEnglish
-                              ? (lectionary['passageEn'] as String)
-                              : (lectionary['passage'] as String),
-                          style: isEnglish
-                              ? GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: themeConfig.textColor,
-                                )
-                              : GoogleFonts.notoSansEthiopic(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: themeConfig.textColor,
-                                ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          isEnglish
-                              ? (lectionary['descriptionEn'] as String)
-                              : (lectionary['description'] as String),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.notoSansEthiopic(
-                            fontSize: 11.5,
-                            color: themeConfig.secondaryTextColor,
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeConfig.accentColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () {
-                      final bookNum = lectionary['bookNumber'] as int? ?? 1;
-                      final chapter = lectionary['chapter'] as int? ?? 1;
-                      final bibleState = ref.read(bibleStateProvider);
-                      final targetBook = CanonicalBookMap.resolveBook(
-                        books: bibleState.books,
-                        currentTranslationId: bibleState.currentTranslation?.id ?? 2,
-                        traditionalBookNumber: bookNum,
-                        canonicalId: lectionary['canonicalId'] as String?,
-                        bookName: lectionary['bookName'] as String?,
-                      );
-                      if (targetBook != null) {
-                        ref.read(bibleStateProvider.notifier).selectBook(targetBook, chapter: chapter);
-                      }
-                      onNavigateTab(0);
-                    },
-                    child: Text(
-                      isEnglish ? 'Read' : 'አንብብ',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
@@ -708,6 +492,11 @@ class HomeDashboardScreen extends ConsumerWidget {
         final verseText = verseData != null
             ? verseData['text'] as String
             : 'በመጀመሪያ ቃል ነበረ፥ ቃልም በእግዚአብሔር ዘንድ ነበረ፥ ቃልም እግዚአብሔር ነበረ።';
+        final themeLabel = verseData != null
+            ? (isEnglish
+                ? (verseData['theme_en'] as String? ?? 'DAILY SCRIPTURE')
+                : (verseData['theme'] as String? ?? 'የዕለቱ ቃል'))
+            : (isEnglish ? 'DAILY SCRIPTURE' : 'የዕለቱ ቃል');
 
         return Container(
           decoration: BoxDecoration(
@@ -766,7 +555,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                               const Icon(Icons.auto_awesome, color: Color(0xFFFBBF24), size: 14),
                               const SizedBox(width: 6),
                               Text(
-                                isEnglish ? 'DAILY SCRIPTURE' : 'የዕለቱ ቃል',
+                                themeLabel,
                                 style: isEnglish
                                     ? GoogleFonts.inter(
                                         color: Colors.white,

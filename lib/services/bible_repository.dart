@@ -9,7 +9,7 @@ import '../models/book.dart';
 import '../models/verse.dart';
 import '../models/annotation.dart';
 import '../models/cross_reference.dart';
-import '../data/cross_references_data.dart';
+import '../data/curated_daily_verses_data.dart';
 
 class BibleRepository {
   static final BibleRepository instance = BibleRepository._init();
@@ -422,50 +422,43 @@ class BibleRepository {
     await ensureInitialized();
     await _loadCrossReferences();
 
-    // Map source bookNumber to 81 canon index if needed
-    int eotcBookNum = bookNumber;
-    if (translationId == 1 || translationId == 3) {
-      final canonId = CanonicalBookMap.getCanonicalId(translationId, bookNumber);
-      eotcBookNum = CanonicalBookMap.getBookNumber(2, canonId) ?? bookNumber;
-    }
+    final canonId = CanonicalBookMap.getCanonicalId(translationId, bookNumber);
+    if (canonId.isEmpty) return [];
 
-    // 1. First get any curated EOTC patristic references
-    final curated = CrossReferencesData.getCrossReferencesForVerse(
-      eotcBookNum,
-      chapter,
-      verse,
-    );
-
-    final key = '$eotcBookNum-$chapter-$verse';
+    final key = '$canonId-$chapter-$verse';
     final rawList = _crossRefsCache?[key] as List<dynamic>?;
 
     if (rawList == null || rawList.isEmpty) {
-      return curated;
+      return [];
     }
 
-    final items = <CrossReferenceItem>[...curated];
-    final seen = <String>{for (final c in curated) '${c.targetBookNumber}_${c.targetChapter}_${c.targetVerse}'};
+    final items = <CrossReferenceItem>[];
+    final seen = <String>{};
 
     for (final r in rawList) {
       if (r is! Map<String, dynamic>) continue;
-      final targetEotcNum = (r['b'] as num?)?.toInt() ?? 1;
+      final targetCanon = r['b'] as String?;
+      if (targetCanon == null) continue;
       final targetCh = (r['c'] as num?)?.toInt() ?? 1;
       final targetV = (r['v'] as num?)?.toInt() ?? 1;
       final targetEndV = (r['to'] as num?)?.toInt();
       final weight = (r['w'] as num?)?.toInt() ?? 5;
 
-      // Find book name in user's active translation
-      final targetCanon = CanonicalBookMap.getCanonicalId(2, targetEotcNum);
-      final activeTargetNum = CanonicalBookMap.getBookNumber(translationId, targetCanon) ?? targetEotcNum;
+      // Find book number in user's active translation
+      int? activeTargetNum = CanonicalBookMap.getBookNumber(translationId, targetCanon);
+      // If book is exclusive to 81 canon or not in current translation, fallback to 81
+      activeTargetNum ??= CanonicalBookMap.getBookNumber(2, targetCanon);
+      if (activeTargetNum == null) continue;
 
       final dedupKey = '${activeTargetNum}_${targetCh}_$targetV';
       if (seen.contains(dedupKey)) continue;
       seen.add(dedupKey);
 
-      final targetBook = await getBookByNumber(translationId, activeTargetNum);
+      final targetBook = await getBookByNumber(translationId, activeTargetNum) ??
+          await getBookByNumber(2, activeTargetNum);
       final targetBookName = targetBook?.name ?? 'መጽሐፍ $activeTargetNum';
 
-      // Load preview text
+      // Load preview text from user's current translation or fallback to 81 canon
       String previewText = '';
       if (targetBook != null) {
         final verses = await getVerses(bookId: targetBook.id, chapter: targetCh);
@@ -475,11 +468,11 @@ class BibleRepository {
         }
       }
 
-      String themeAm = 'ቀጥተኛ ትስስር';
+      String themeAm = 'ተዛማጅ ጥቅስ';
       if (weight >= 8) {
         themeAm = 'ትንቢትና ፍጻሜ';
       } else if (weight >= 5) {
-        themeAm = 'ተዛማጅ ቃል';
+        themeAm = 'ቀጥተኛ ትስስር';
       }
 
       items.add(CrossReferenceItem(
@@ -492,8 +485,8 @@ class BibleRepository {
         targetVerse: targetV,
         targetVerseEnd: targetEndV,
         connectionType: themeAm,
-        sourceCitation: 'የመጽሐፍ ቅዱስ ማጣቀሻ (TSK Canonical Cross-Reference)',
-        explanation: 'ተዛማጅና ተጓዳኝ የቅዱሳት መጻሕፍት ክፍል',
+        sourceCitation: 'Treasury of Scripture Knowledge',
+        explanation: '',
         targetPreviewText: previewText,
       ));
     }
@@ -912,11 +905,58 @@ class BibleRepository {
 
   Future<Map<String, dynamic>?> getDailyVerse(int translationId) async {
     await ensureInitialized();
-    final list = _searchIndex[translationId] ?? [];
-    if (list.isEmpty) return null;
+    final books = _booksByTranslation[translationId] ?? [];
+    if (books.isEmpty) return null;
 
-    final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
-    final index = (dayOfYear * 13) % list.length;
-    return list[index];
+    final now = DateTime.now();
+    final startOfYear = DateTime(now.year, 1, 1);
+    final dayOfYear = now.difference(startOfYear).inDays + 1;
+
+    final curated = CuratedDailyVersesData.getVerseForDay(dayOfYear);
+    final targetBookNum = CanonicalBookMap.getBookNumber(translationId, curated.canonicalId);
+
+    Book? targetBook;
+    if (targetBookNum != null) {
+      for (final b in books) {
+        if (b.bookNumber == targetBookNum) {
+          targetBook = b;
+          break;
+        }
+      }
+    }
+
+    if (targetBook != null) {
+      final cacheKey = '${targetBook.id}_${curated.chapter}';
+      final verses = _versesCache[cacheKey];
+      if (verses != null && verses.isNotEmpty) {
+        Verse? matchedVerse;
+        for (final v in verses) {
+          if (v.verse == curated.verse ||
+              (v.verse <= curated.verse && curated.verse <= (v.verseEnd ?? v.verse))) {
+            matchedVerse = v;
+            break;
+          }
+        }
+        matchedVerse ??= verses.first;
+
+        return {
+          'id': matchedVerse.id,
+          'book_id': targetBook.id,
+          'book_number': targetBook.bookNumber,
+          'book_name': targetBook.name,
+          'book_name_en': targetBook.nameEn,
+          'canonical_id': curated.canonicalId,
+          'chapter': curated.chapter,
+          'verse': matchedVerse.verse,
+          'text': matchedVerse.text,
+          'theme': curated.theme,
+          'theme_en': curated.themeEn,
+        };
+      }
+    }
+
+    final list = _searchIndex[translationId] ?? [];
+    if (list.isNotEmpty) return list.first;
+    return null;
   }
 }

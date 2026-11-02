@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:holy_bible_amharic/core/utils/canonical_book_map.dart';
 import 'package:holy_bible_amharic/core/utils/geez_numbers.dart';
-import 'package:holy_bible_amharic/services/bahire_hasab_service.dart';
 import 'package:holy_bible_amharic/services/bible_repository.dart';
 
 void main() {
@@ -39,31 +38,27 @@ void main() {
       expect(GeezNumbers.toGeez(81), equals('፹፩'));
     });
 
-    test('Authentic Synaxarium commemorates daily EOTC saints', () {
-      // Meskerem 1 (Nativity of Mary / Elijah)
-      final meskerem1 = BahireHasabService.getDailySynaxarium(
-        const EthiopianDate(year: 2017, month: 1, day: 1, dayOfWeek: 3),
-      );
-      expect(meskerem1.title, contains('ልደታ ለማርያም'));
-      expect(meskerem1.passage, isNotEmpty);
+    test('Meaningfully curated 365 daily spiritual verses load authentic text across translations', () async {
+      final repo = BibleRepository.instance;
+      await repo.ensureInitialized();
 
-      // Tikimt 27 (Medhane Alem / Savior of the World)
-      final tikimt27 = BahireHasabService.getDailySynaxarium(
-        const EthiopianDate(year: 2017, month: 2, day: 27, dayOfWeek: 4),
-      );
-      expect(tikimt27.title, contains('መድኃኔ ዓለም'));
+      // Test in 81 Orthodox Canon (translationId = 2)
+      final v81 = await repo.getDailyVerse(2);
+      expect(v81, isNotNull);
+      expect(v81!['text'], isNotEmpty);
+      expect(v81['theme'], isNotEmpty);
+      expect(v81['book_name'], isNotEmpty);
 
-      // Hidar 21 (Saint Mary / Theotokos)
-      final hidar21 = BahireHasabService.getDailySynaxarium(
-        const EthiopianDate(year: 2017, month: 3, day: 21, dayOfWeek: 5),
-      );
-      expect(hidar21.title, contains('እመቤታችን'));
+      // Test in KJV (translationId = 3)
+      final vKjv = await repo.getDailyVerse(3);
+      expect(vKjv, isNotNull);
+      expect(vKjv!['text'], isNotEmpty);
+      expect(vKjv['theme_en'], isNotEmpty);
 
-      // Pagume 3 (Archangel Raphael)
-      final pagume3 = BahireHasabService.getDailySynaxarium(
-        const EthiopianDate(year: 2017, month: 13, day: 3, dayOfWeek: 6),
-      );
-      expect(pagume3.title, contains('ቅዱስ ሩፋኤል'));
+      // Test in Ge'ez (translationId = 4)
+      final vGeez = await repo.getDailyVerse(4);
+      expect(vGeez, isNotNull);
+      expect(vGeez!['text'], isNotEmpty);
     });
 
     test('Cross-references repository returns valid cross references', () async {
