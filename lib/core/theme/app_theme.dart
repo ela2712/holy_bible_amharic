@@ -25,6 +25,7 @@ class ReaderThemeConfig {
   });
 
   double get lineHeight => lineSpacing;
+  bool get isDark => mode == ReaderThemeMode.dark;
 
   ThemeData toThemeData() => AppTheme.buildTheme(this);
 
