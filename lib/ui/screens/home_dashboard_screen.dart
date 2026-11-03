@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -6,7 +7,9 @@ import '../../data/reading_plans_data.dart';
 import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/reading_progress_provider.dart';
 import 'verse_card_maker_screen.dart';
+import 'liturgical_calendar_screen.dart';
 import '../widgets/modern_bible_icons.dart';
 import '../widgets/ethiopian_cross_painter.dart';
 import '../../services/bahire_hasab_service.dart';
@@ -67,6 +70,10 @@ class HomeDashboardScreen extends ConsumerWidget {
 
                         // 2-Column Bento Grid: Resume Reading + Active Plan
                         _buildBentoGridRow(context, ref, bibleState, themeConfig, isDark, isEnglish),
+                        const SizedBox(height: 18),
+
+                        // 3. Reading Journey & Streaks Card
+                        _buildReadingStreaksCard(context, ref, bibleState, themeConfig, isDark, isEnglish),
                       ]),
                     ),
                   ),
@@ -455,6 +462,48 @@ class HomeDashboardScreen extends ConsumerWidget {
               ),
             ],
 
+            const SizedBox(height: 14),
+
+            // View Full Liturgical Calendar Button
+            InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LiturgicalCalendarScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.14 : 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: themeConfig.goldAccent.withValues(alpha: isDark ? 0.35 : 0.4),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_month_rounded, size: 16, color: themeConfig.goldAccent),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        isEnglish ? 'View Full Liturgical Calendar' : 'ሙሉውን የአጽዋማትና በዓላት ቀን መቁጠሪያ እይ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: isEnglish
+                            ? GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: themeConfig.textColor)
+                            : GoogleFonts.notoSansEthiopic(fontSize: 12.5, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 11, color: themeConfig.goldAccent),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -894,6 +943,213 @@ class HomeDashboardScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildReadingStreaksCard(
+    BuildContext context,
+    WidgetRef ref,
+    BibleViewState bibleState,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+    bool isEnglish,
+  ) {
+    final progressState = ref.watch(readingProgressProvider);
+    final streak = progressState.currentStreak;
+    final longestStreak = progressState.longestStreak;
+    final todayCount = progressState.chaptersReadToday;
+    final totalRead = progressState.totalChaptersRead;
+    final completedBooks = progressState.getCompletedBooksCount(bibleState.books);
+    final totalBooks = bibleState.books.isNotEmpty ? bibleState.books.length : 81;
+
+    final now = DateTime.now();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: themeConfig.surfaceColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: themeConfig.cardBorderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Flame + Streak Title + Longest Streak
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF97316).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFF97316), size: 22),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      streak > 0
+                          ? (isEnglish ? '$streak-Day Reading Streak!' : '$streak የቀናት ተከታታይ ንባብ!')
+                          : (isEnglish ? 'Start Your Reading Streak' : 'የንባብ ተከታታይነትዎን ይጀምሩ'),
+                      style: isEnglish
+                          ? GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor)
+                          : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor),
+                    ),
+                    Text(
+                      isEnglish
+                          ? (streak > 0 ? 'Best: $longestStreak days' : 'Read any chapter today to begin')
+                          : (streak > 0 ? 'ከፍተኛው: $longestStreak ቀናት' : 'ተከታታይነት ለመጀመር ዛሬ አንድ ምዕራፍ ያንብቡ'),
+                      style: TextStyle(fontSize: 11.5, color: themeConfig.secondaryTextColor, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              if (todayCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF047857).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF047857)),
+                      const SizedBox(width: 4),
+                      Text(
+                        isEnglish ? '$todayCount today' : 'ዛሬ $todayCount ተነቧል',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF047857)),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // 7-day Mini Activity Strip
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (i) {
+              final date = now.subtract(Duration(days: 6 - i));
+              final isActive = progressState.wasActiveOn(date);
+              final isToday = i == 6;
+              final dayInitial = isEnglish
+                  ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'][(date.weekday - 1) % 7]
+                  : ['ሰ', 'ማ', 'ረ', 'ሐ', 'ዓ', 'ቅ', 'እ'][(date.weekday - 1) % 7];
+
+              return Column(
+                children: [
+                  Text(
+                    dayInitial,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isToday ? themeConfig.accentColor : themeConfig.secondaryTextColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? themeConfig.accentColor
+                          : (isToday ? themeConfig.accentColor.withValues(alpha: 0.12) : themeConfig.backgroundColor),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isActive
+                            ? themeConfig.accentColor
+                            : (isToday ? themeConfig.accentColor : themeConfig.cardBorderColor),
+                        width: isToday || isActive ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: isActive
+                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                          : Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: isToday ? themeConfig.accentColor : themeConfig.secondaryTextColor,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+
+          const SizedBox(height: 16),
+          const Divider(height: 1),
+          const SizedBox(height: 14),
+
+          // Bottom Stats: Completed Books & Total Chapters
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEnglish ? 'BOOKS COMPLETED' : 'የተጠናቀቁ መጻሕፍት',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: themeConfig.secondaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$completedBooks / $totalBooks',
+                      style: isEnglish
+                          ? GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor)
+                          : GoogleFonts.notoSansEthiopic(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEnglish ? 'TOTAL CHAPTERS' : 'ጠቅላላ የተነበቡ ምዕራፎች',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: themeConfig.secondaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isEnglish ? '$totalRead Chapters' : '$totalRead ምዕራፎች',
+                      style: isEnglish
+                          ? GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.accentColor)
+                          : GoogleFonts.notoSansEthiopic(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.accentColor),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

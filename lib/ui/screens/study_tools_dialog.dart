@@ -793,6 +793,43 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                 );
               }
             }(),
+
+            const SizedBox(height: 18),
+
+            // Share All Translations Button
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: themeConfig.accentColor,
+                side: BorderSide(color: themeConfig.accentColor.withValues(alpha: 0.5)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () {
+                final vSpan = widget.verse.isMergedRange
+                    ? '${widget.verse.verse}–${widget.verse.verseEnd}'
+                    : '${widget.verse.verse}';
+                final refStr = '${widget.bookName} ${widget.verse.chapter}:$vSpan';
+                final buffer = StringBuffer();
+                buffer.writeln(isEnglish
+                    ? '📖 $refStr — Multi-Translation Verse Comparison\n'
+                    : '📖 $refStr — ባለብዙ ትርጉም ማነጻጸሪያ\n');
+                parallels.forEach((transName, verseText) {
+                  if (verseText.trim().isNotEmpty) {
+                    buffer.writeln('[$transName]');
+                    buffer.writeln('«$verseText»\n');
+                  }
+                });
+                buffer.writeln(isEnglish ? '— Holy Bible (Ethiopian 81 Canon)' : '— መጽሐፍ ቅዱስ (የኢትዮጵያ 81 ቀኖና)');
+                Share.share(buffer.toString());
+              },
+              icon: const Icon(Icons.share_rounded, size: 18),
+              label: Text(
+                isEnglish ? 'Share All Translations' : 'ሁሉንም ትርጉሞች አነጻጽረህ አጋራ',
+                style: isEnglish
+                    ? GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)
+                    : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
           ],
         );
       },
@@ -1018,21 +1055,43 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                   ),
                 ),
               ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: Icon(Icons.copy_rounded, size: 16, color: themeConfig.secondaryTextColor),
-                tooltip: isEnglish ? 'Copy' : 'ቅዳ',
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: '$title:\n$text'));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isEnglish ? '$title verse copied' : '$title ተገልብጧል',
-                      ),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.copy_rounded, size: 16, color: themeConfig.secondaryTextColor),
+                    tooltip: isEnglish ? 'Copy' : 'ቅዳ',
+                    onPressed: () {
+                      final vSpan = widget.verse.isMergedRange
+                          ? '${widget.verse.verse}–${widget.verse.verseEnd}'
+                          : '${widget.verse.verse}';
+                      final refStr = '${widget.bookName} ${widget.verse.chapter}:$vSpan';
+                      Clipboard.setData(ClipboardData(text: '$refStr ($title):\n$text'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isEnglish ? '$title verse copied' : '$title ተገልብጧል',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.share_outlined, size: 16, color: themeConfig.secondaryTextColor),
+                    tooltip: isEnglish ? 'Share' : 'አጋራ',
+                    onPressed: () {
+                      final vSpan = widget.verse.isMergedRange
+                          ? '${widget.verse.verse}–${widget.verse.verseEnd}'
+                          : '${widget.verse.verse}';
+                      final refStr = '${widget.bookName} ${widget.verse.chapter}:$vSpan';
+                      final attribution = isEnglish ? '— Holy Bible' : '— ከመጽሐፍ ቅዱስ';
+                      Share.share('$refStr ($title)\n«$text»\n$attribution');
+                    },
+                  ),
+                ],
               ),
             ],
           ),

@@ -11,6 +11,7 @@ import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_plan_session_provider.dart';
+import '../../providers/reading_progress_provider.dart';
 import 'book_selector_screen.dart';
 import 'search_screen.dart';
 import 'study_tools_dialog.dart';
@@ -62,8 +63,17 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
         (pos.maxScrollExtent > 0 && (pos.pixels / pos.maxScrollExtent) >= 0.80);
 
     if (isNearBottom) {
+      _markGeneralReadingProgress();
       _markActivePlanChapterReadIfApplicable();
     }
+  }
+
+  void _markGeneralReadingProgress() {
+    final bibleState = ref.read(bibleStateProvider);
+    final currentBook = bibleState.currentBook;
+    final currentChapter = bibleState.currentChapter;
+    if (currentBook == null) return;
+    ref.read(readingProgressProvider.notifier).markChapterRead(currentBook.bookNumber, currentChapter);
   }
 
   void _markActivePlanChapterReadIfApplicable() {
@@ -1699,7 +1709,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () {
-              _markActivePlanChapterReadIfApplicable();
+              _markGeneralReadingProgress();
+      _markActivePlanChapterReadIfApplicable();
               ref.read(bibleStateProvider.notifier).nextChapter();
               setState(() => _selectedVerseNumber = null);
               _scrollToApproximateVerse(1, 30);

@@ -10,6 +10,7 @@ import '../models/verse.dart';
 import '../models/annotation.dart';
 import '../models/cross_reference.dart';
 import '../data/curated_daily_verses_data.dart';
+import 'home_widget_service.dart';
 
 class BibleRepository {
   static final BibleRepository instance = BibleRepository._init();
@@ -939,7 +940,7 @@ class BibleRepository {
         }
         matchedVerse ??= verses.first;
 
-        return {
+        final result = {
           'id': matchedVerse.id,
           'book_id': targetBook.id,
           'book_number': targetBook.bookNumber,
@@ -952,6 +953,15 @@ class BibleRepository {
           'theme': curated.theme,
           'theme_en': curated.themeEn,
         };
+
+        // Sync to Android Home Screen AppWidget
+        HomeWidgetService.updateDailyVerseWidget(
+          verseText: matchedVerse.text,
+          reference: '${targetBook.name} ${curated.chapter}:${matchedVerse.verse}',
+          theme: curated.theme,
+        );
+
+        return result;
       }
     }
 

@@ -8,6 +8,7 @@ import '../../models/book.dart';
 import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/reading_progress_provider.dart';
 
 class CanonicalSectionInfo {
   final String key;
@@ -756,6 +757,10 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
     final catColor = sec.color;
     final displayName = isEnglish && book.nameEn.isNotEmpty ? book.nameEn : book.name;
 
+    final progressState = ref.watch(readingProgressProvider);
+    final isCompleted = progressState.isBookCompleted(book.bookNumber, book.totalChapters);
+    final readCount = progressState.getChaptersReadForBook(book.bookNumber);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Material(
@@ -835,6 +840,45 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
+                                ),
+                              ),
+                            )
+                          else if (isCompleted)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF047857),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    isEnglish ? 'Read' : 'ተጠናቋል',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (readCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: catColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$readCount/${book.totalChapters}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: catColor,
                                 ),
                               ),
                             ),

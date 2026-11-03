@@ -148,6 +148,50 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFF64748B),
       haragSecondary: Color(0xFF94A3B8),
     ),
+    // 7. Tigray Gold (ትግራይ)
+    CardThemePreset(
+      name: 'ትግራይ',
+      nameEn: 'Tigray Amber',
+      backgroundColors: [Color(0xFF261506), Color(0xFF45240A), Color(0xFF68340D)],
+      textColor: Color(0xFFFFFBEB),
+      accentColor: Color(0xFFFBBF24),
+      watermarkColor: Color(0xFFFBBF24),
+      haragPrimary: Color(0xFFFBBF24),
+      haragSecondary: Color(0xFFB45309),
+    ),
+    // 8. Harar Jugol (ሐረር ጁጎል)
+    CardThemePreset(
+      name: 'ሐረር ጁጎል',
+      nameEn: 'Harar Jugol',
+      backgroundColors: [Color(0xFF1E0A12), Color(0xFF421224)],
+      textColor: Color(0xFFFFF1F2),
+      accentColor: Color(0xFFFB7185),
+      watermarkColor: Color(0xFFFB7185),
+      haragPrimary: Color(0xFFF43F5E),
+      haragSecondary: Color(0xFF9F1239),
+    ),
+    // 9. Lake Tana (ጣና ቂርቆስ)
+    CardThemePreset(
+      name: 'ጣና ቂርቆስ',
+      nameEn: 'Lake Tana',
+      backgroundColors: [Color(0xFF031A2E), Color(0xFF083344)],
+      textColor: Color(0xFFF0F9FF),
+      accentColor: Color(0xFF38BDF8),
+      watermarkColor: Color(0xFF38BDF8),
+      haragPrimary: Color(0xFF0EA5E9),
+      haragSecondary: Color(0xFF0369A1),
+    ),
+    // 10. Alabaster Minimalist (ንጹሕ ብራና)
+    CardThemePreset(
+      name: 'ንጹሕ ብራና',
+      nameEn: 'Alabaster',
+      backgroundColors: [Color(0xFFFFFFFF), Color(0xFFF8F6F0)],
+      textColor: Color(0xFF1C1917),
+      accentColor: Color(0xFF991B1B),
+      watermarkColor: Color(0xFFD97706),
+      haragPrimary: Color(0xFF991B1B),
+      haragSecondary: Color(0xFFB45309),
+    ),
   ];
 
   Future<void> _pickCustomImage() async {
