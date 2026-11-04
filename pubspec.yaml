@@ -2,7 +2,7 @@ name: holy_bible_amharic
 description: "High-performance, authentic multiplatform Amharic Holy Bible app featuring Orthodox 81 Canon, 1954 Haile Selassie text, KJV parallel study, reading plans, and Ge'ez phonetic keyboard."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.13.5
