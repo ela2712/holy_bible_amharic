@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/reading_plans_data.dart';
 import '../../providers/app_language_provider.dart';
@@ -132,19 +131,10 @@ class HomeDashboardScreen extends ConsumerWidget {
                   children: [
                     Text(
                       isEnglish ? 'Holy Bible' : 'መጽሐፍ ቅዱስ',
-                      style: isEnglish
-                          ? GoogleFonts.inter(
-                              fontSize: 20,
+                      style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 20,
                               fontWeight: FontWeight.w800,
                               color: themeConfig.textColor,
-                              letterSpacing: -0.3,
-                            )
-                          : GoogleFonts.notoSansEthiopic(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: themeConfig.textColor,
-                              letterSpacing: -0.3,
-                            ),
+                              letterSpacing: -0.3,),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -180,17 +170,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                   isEnglish
                       ? 'Ethiopian Orthodox 81 Canon & Translations'
                       : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍትና ትርጉሞች',
-                  style: isEnglish
-                      ? GoogleFonts.inter(
-                          fontSize: 11,
+                  style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 11.5,
                           color: themeConfig.secondaryTextColor,
-                          fontWeight: FontWeight.w500,
-                        )
-                      : GoogleFonts.notoSansEthiopic(
-                          fontSize: 11.5,
-                          color: themeConfig.secondaryTextColor,
-                          fontWeight: FontWeight.w500,
-                        ),
+                          fontWeight: FontWeight.w500,),
                 ),
               ],
             ),
@@ -214,11 +196,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                   const SizedBox(width: 5),
                   Text(
                     shortTrans,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 12,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: themeConfig.textColor,
-                    ),
+                      color: themeConfig.textColor,),
                   ),
                   const SizedBox(width: 2),
                   Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: themeConfig.secondaryTextColor),
@@ -374,18 +354,10 @@ class HomeDashboardScreen extends ConsumerWidget {
             // Date in Authentic Ge'ez Numerals
             Text(
               dateFormatted,
-              style: isEnglish
-                  ? GoogleFonts.inter(
-                      fontSize: 18,
+              style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 18.5,
                       fontWeight: FontWeight.w800,
                       color: themeConfig.textColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 18.5,
-                      fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                      letterSpacing: -0.2,
-                    ),
+                      letterSpacing: -0.2,),
             ),
             const SizedBox(height: 4),
 
@@ -413,11 +385,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                     fastLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 12,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: themeConfig.secondaryTextColor,
-                    ),
+                      color: themeConfig.secondaryTextColor,),
                   ),
                 ),
               ],
@@ -444,17 +414,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                         isEnglish
                             ? '$daysToNextStr days until $nextTitle'
                             : 'እስከ $nextTitle መግቢያ $daysToNextStr ቀናት ቀርተዋል',
-                        style: isEnglish
-                            ? GoogleFonts.inter(
-                                fontSize: 11.5,
+                        style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: themeConfig.textColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: themeConfig.textColor,
-                              ),
+                                color: themeConfig.textColor,),
                       ),
                     ),
                   ],
@@ -493,9 +455,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                         isEnglish ? 'View Full Liturgical Calendar' : 'ሙሉውን የአጽዋማትና በዓላት ቀን መቁጠሪያ እይ',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: isEnglish
-                            ? GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: themeConfig.textColor)
-                            : GoogleFonts.notoSansEthiopic(fontSize: 12.5, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                        style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12.5, fontWeight: FontWeight.w800, color: themeConfig.textColor),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -591,19 +551,10 @@ class HomeDashboardScreen extends ConsumerWidget {
                               const SizedBox(width: 6),
                               Text(
                                 themeLabel,
-                                style: isEnglish
-                                    ? GoogleFonts.inter(
-                                        color: Colors.white,
+                                style: themeConfig.getAppStyle(isEnglish: isEnglish, color: Colors.white,
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.4,
-                                      )
-                                    : GoogleFonts.notoSansEthiopic(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.4,
-                                      ),
+                                        letterSpacing: 0.4,),
                               ),
                             ],
                           ),
@@ -651,12 +602,10 @@ class HomeDashboardScreen extends ConsumerWidget {
                     // Main Verse Quote
                     Text(
                       '“$verseText”',
-                      style: GoogleFonts.notoSansEthiopic(
-                        color: Colors.white,
+                      style: themeConfig.getAppStyle(isEnglish: isEnglish, color: Colors.white,
                         fontSize: 18,
                         height: 1.65,
-                        fontWeight: FontWeight.w600,
-                      ),
+                        fontWeight: FontWeight.w600,),
                     ),
                     const SizedBox(height: 12),
 
@@ -666,8 +615,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                       children: [
                         Text(
                           '— $reference',
-                          style: GoogleFonts.notoSansEthiopic(
-                            color: const Color(0xFFFBBF24),
+                          style: themeConfig.getAppStyle(isEnglish: isEnglish, color: const Color(0xFFFBBF24),
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                           ),
@@ -800,17 +748,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                     book != null ? book.name : (isEnglish ? 'Genesis' : 'ኦሪት ዘፍጥረት'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 15.5,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 15.5,
                             fontWeight: FontWeight.w800,
-                            color: themeConfig.textColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w800,
-                            color: themeConfig.textColor,
-                          ),
+                            color: themeConfig.textColor,),
                   ),
                   const SizedBox(height: 2),
                   Row(
@@ -906,17 +846,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                     isEnglish ? 'Devotional Plans' : 'የንባብ ዕቅዶች',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 15.5,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 15.5,
                             fontWeight: FontWeight.w800,
-                            color: themeConfig.textColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w800,
-                            color: themeConfig.textColor,
-                          ),
+                            color: themeConfig.textColor,),
                   ),
                   const SizedBox(height: 2),
                   Row(
@@ -1001,9 +933,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                       streak > 0
                           ? (isEnglish ? '$streak-Day Reading Streak!' : '$streak የቀናት ተከታታይ ንባብ!')
                           : (isEnglish ? 'Start Your Reading Streak' : 'የንባብ ተከታታይነትዎን ይጀምሩ'),
-                      style: isEnglish
-                          ? GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor)
-                          : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor),
+                      style: themeConfig.getAppStyle(isEnglish: isEnglish, fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor),
                     ),
                     Text(
                       isEnglish
@@ -1116,9 +1046,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       '$completedBooks / $totalBooks',
-                      style: isEnglish
-                          ? GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor)
-                          : GoogleFonts.notoSansEthiopic(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                      style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor),
                     ),
                   ],
                 ),
@@ -1139,9 +1067,7 @@ class HomeDashboardScreen extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       isEnglish ? '$totalRead Chapters' : '$totalRead ምዕራፎች',
-                      style: isEnglish
-                          ? GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.accentColor)
-                          : GoogleFonts.notoSansEthiopic(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.accentColor),
+                      style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.accentColor),
                     ),
                   ],
                 ),
@@ -1181,17 +1107,9 @@ class HomeDashboardScreen extends ConsumerWidget {
           children: [
             Text(
               isEnglish ? 'Select Bible Translation' : 'የመጽሐፍ ቅዱስ ትርጉም ይምረጡ',
-              style: isEnglish
-                  ? GoogleFonts.inter(
-                      fontSize: 17,
+              style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 17,
                       fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      color: themeConfig.textColor,
-                    ),
+                      color: themeConfig.textColor,),
             ),
             const SizedBox(height: 14),
             ...bibleState.translations.map((t) {
@@ -1221,17 +1139,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                     children: [
                       Text(
                         t.name,
-                        style: isEnglish
-                            ? GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
+                        style: themeConfig.getAppStyle(isEnglish: isEnglish, fontWeight: FontWeight.w700,
                                 fontSize: 14.5,
-                                color: themeConfig.textColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14.5,
-                                color: themeConfig.textColor,
-                              ),
+                                color: themeConfig.textColor,),
                       ),
                       if (t.id == 4) ...[
                         const SizedBox(width: 8),
@@ -1255,15 +1165,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   subtitle: Text(
                     subtitle,
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 12,
-                            color: themeConfig.secondaryTextColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 12,
-                            color: themeConfig.secondaryTextColor,
-                          ),
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12,
+                            color: themeConfig.secondaryTextColor,),
                   ),
                   trailing: selected
                       ? Icon(Icons.check_circle_rounded, color: themeConfig.accentColor)

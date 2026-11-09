@@ -141,8 +141,214 @@ class LiturgicalEvent {
   }
 }
 
+class FastSeasonInfo {
+  final String planId;
+  final bool isSeasonal;
+  final bool isUnlocked;
+  final int daysUntilStart;
+  final int daysRemaining;
+  final EthiopianDate? startDate;
+  final EthiopianDate? endDate;
+
+  const FastSeasonInfo({
+    required this.planId,
+    required this.isSeasonal,
+    required this.isUnlocked,
+    this.daysUntilStart = 0,
+    this.daysRemaining = 0,
+    this.startDate,
+    this.endDate,
+  });
+
+  String getCountdownText({required bool isEnglish}) {
+    if (!isSeasonal || isUnlocked) return '';
+    if (startDate != null) {
+      final dateStr = isEnglish
+          ? '${startDate!.monthNameEn} ${startDate!.day}'
+          : '${startDate!.monthName} ${GeezNumbers.toGeez(startDate!.day)}';
+      return isEnglish
+          ? 'Unlocks in $daysUntilStart ${daysUntilStart == 1 ? "day" : "days"} • $dateStr'
+          : 'ከ $daysUntilStart ቀናት በኋላ ይከፈታል • $dateStr';
+    }
+    return isEnglish
+        ? 'Unlocks in $daysUntilStart ${daysUntilStart == 1 ? "day" : "days"}'
+        : 'ከ $daysUntilStart ቀናት በኋላ ይከፈታል';
+  }
+
+  String getSeasonRangeText({required bool isEnglish}) {
+    if (startDate == null || endDate == null) return '';
+    if (isEnglish) {
+      if (startDate!.month == endDate!.month) {
+        return '${startDate!.monthNameEn} ${startDate!.day}–${endDate!.day}';
+      }
+      return '${startDate!.monthNameEn} ${startDate!.day} – ${endDate!.monthNameEn} ${endDate!.day}';
+    } else {
+      if (startDate!.month == endDate!.month) {
+        return '${startDate!.monthName} ${GeezNumbers.toGeez(startDate!.day)} - ${GeezNumbers.toGeez(endDate!.day)}';
+      }
+      return '${startDate!.monthName} ${GeezNumbers.toGeez(startDate!.day)} - ${endDate!.monthName} ${GeezNumbers.toGeez(endDate!.day)}';
+    }
+  }
+}
+
 class BahireHasabService {
   BahireHasabService._();
+
+  static const Set<String> seasonalPlanIds = {
+    'filseta_16',
+    'advent_prophets_43',
+    'great_lent_55',
+    'passion_week',
+  };
+
+  static const Set<String> eotcCuratedPlanIds = {
+    'canonical_365',
+    'deuterocanon_90',
+    'passion_week',
+    'great_lent_55',
+    'advent_prophets_43',
+    'filseta_16',
+  };
+
+  /// Total days in an Ethiopian Year (365, or 366 in leap year)
+  static int daysInEthYear(int ethYear) => isLeapYear(ethYear) ? 366 : 365;
+
+  /// Day of the year (1-based: 1 to 365/366) for an Ethiopian date
+  static int dayOfYear(EthiopianDate date) {
+    return ((date.month - 1) * 30) + date.day;
+  }
+
+  /// Calculates the exact number of days from [from] to [to].
+  /// Returns a positive number if [to] is after [from].
+  static int daysBetween(EthiopianDate from, EthiopianDate to) {
+    if (from.year == to.year) {
+      return dayOfYear(to) - dayOfYear(from);
+    }
+    if (to.year > from.year) {
+      int days = daysInEthYear(from.year) - dayOfYear(from);
+      for (int y = from.year + 1; y < to.year; y++) {
+        days += daysInEthYear(y);
+      }
+      days += dayOfYear(to);
+      return days;
+    } else {
+      return -daysBetween(to, from);
+    }
+  }
+
+  /// Returns day of week (1=Mon, ..., 7=Sun) for any Ethiopian Date
+  static int getDayOfWeek(int ethYear, int ethMonth, int ethDay) {
+    final ameteAlem = ethYear + 5500;
+    final meteneRabiet = ameteAlem ~/ 4;
+    final meskerem1Day = (ameteAlem + meteneRabiet) % 7; // 0=Mon, ..., 6=Sun
+    final dayNum = ((ethMonth - 1) * 30) + ethDay;
+    final dow0 = (meskerem1Day + (dayNum - 1)) % 7;
+    return dow0 + 1; // 1=Mon, ..., 7=Sun
+  }
+
+  /// Create an EthiopianDate with calculated day of week
+  static EthiopianDate createEthiopianDate(int year, int month, int day) {
+    return EthiopianDate(
+      year: year,
+      month: month,
+      day: day,
+      dayOfWeek: getDayOfWeek(year, month, day),
+    );
+  }
+
+  static Map<String, EthiopianDate> _getPlanSeasonDates(String planId, int ethYear) {
+    switch (planId) {
+      case 'filseta_16':
+        return {
+          'start': createEthiopianDate(ethYear, 12, 1),
+          'end': createEthiopianDate(ethYear, 12, 16),
+        };
+      case 'advent_prophets_43':
+        return {
+          'start': createEthiopianDate(ethYear, 3, 15),
+          'end': createEthiopianDate(ethYear, 4, 28),
+        };
+      case 'great_lent_55':
+        final nineveh = getNinevehDate(ethYear);
+        final start = addDays(nineveh, 14);
+        final end = addDays(nineveh, 68);
+        return {'start': start, 'end': end};
+      case 'passion_week':
+        final nineveh = getNinevehDate(ethYear);
+        final start = addDays(nineveh, 62);
+        final end = addDays(nineveh, 69);
+        return {'start': start, 'end': end};
+      default:
+        throw ArgumentError('Not a seasonal plan: $planId');
+    }
+  }
+
+  /// Accurate real-time calculation of seasonal status, lock state, and days until start
+  static FastSeasonInfo getFastSeasonInfo(String planId, EthiopianDate today) {
+    if (!seasonalPlanIds.contains(planId)) {
+      return FastSeasonInfo(
+        planId: planId,
+        isSeasonal: false,
+        isUnlocked: true,
+      );
+    }
+
+    final curRange = _getPlanSeasonDates(planId, today.year);
+    final curStart = curRange['start']!;
+    final curEnd = curRange['end']!;
+
+    final daysToStart = daysBetween(today, curStart);
+    final daysToEnd = daysBetween(today, curEnd);
+
+    if (daysToStart > 0) {
+      // Before this year's fast
+      return FastSeasonInfo(
+        planId: planId,
+        isSeasonal: true,
+        isUnlocked: false,
+        daysUntilStart: daysToStart,
+        daysRemaining: 0,
+        startDate: curStart,
+        endDate: curEnd,
+      );
+    } else if (daysToEnd >= 0) {
+      // Currently active fast! (daysToStart <= 0 and daysToEnd >= 0)
+      return FastSeasonInfo(
+        planId: planId,
+        isSeasonal: true,
+        isUnlocked: true,
+        daysUntilStart: 0,
+        daysRemaining: daysToEnd + 1,
+        startDate: curStart,
+        endDate: curEnd,
+      );
+    } else {
+      // This year's fast has already passed, next occurrence is in today.year + 1
+      final nextRange = _getPlanSeasonDates(planId, today.year + 1);
+      final nextStart = nextRange['start']!;
+      final nextEnd = nextRange['end']!;
+      final daysToNextStart = daysBetween(today, nextStart);
+
+      return FastSeasonInfo(
+        planId: planId,
+        isSeasonal: true,
+        isUnlocked: false,
+        daysUntilStart: daysToNextStart,
+        daysRemaining: 0,
+        startDate: nextStart,
+        endDate: nextEnd,
+      );
+    }
+  }
+
+  static Map<String, FastSeasonInfo> getAllSeasonalPlansInfo(EthiopianDate today) {
+    final map = <String, FastSeasonInfo>{};
+    for (final id in seasonalPlanIds) {
+      map[id] = getFastSeasonInfo(id, today);
+    }
+    return map;
+  }
+
 
   /// Accurate Gregorian to Ethiopian calendar conversion using Julian Day algorithm
   static EthiopianDate fromGregorian(DateTime gregorian) {
@@ -429,13 +635,18 @@ class BahireHasabService {
     String seasonDescription = '${ethDate.format()} • $evangelist';
     String seasonDescriptionEn = '${ethDate.format(isEnglish: true)} • $evangelistEn';
 
-    final bool isEasterFifty = (ethDate.month == easterEvent.date.month && ethDate.day > easterEvent.date.day) ||
-        (ethDate.month == apostlesFastEvent.date.month && ethDate.day < apostlesFastEvent.date.day);
+    final daysFromEaster = daysBetween(easterEvent.date, ethDate);
+    final bool isEasterFifty = daysFromEaster > 0 && daysBetween(ethDate, apostlesFastEvent.date) > 0;
 
     bool isSeasonalFast = false;
 
+    final filsetaInfo = getFastSeasonInfo('filseta_16', ethDate);
+    final adventInfo = getFastSeasonInfo('advent_prophets_43', ethDate);
+    final lentInfo = getFastSeasonInfo('great_lent_55', ethDate);
+    final passionInfo = getFastSeasonInfo('passion_week', ethDate);
+
     // 1. Fast of Assumption (ጾመ ፍልሰታ - ነሐሴ 1 - 16)
-    if (ethDate.month == 12 && ethDate.day >= 1 && ethDate.day <= 16) {
+    if (filsetaInfo.isUnlocked) {
       seasonTitle = 'ጾመ ፍልሰታ';
       seasonTitleEn = 'Fast of the Assumption';
       seasonCategory = 'ጾም';
@@ -446,21 +657,19 @@ class BahireHasabService {
       isSeasonalFast = true;
     }
     // 2. Fast of Nineveh (ጾመ ነነዌ - 3 ቀናት)
-    else if (ethDate.month == ninevehEvent.date.month &&
-        ethDate.day >= ninevehEvent.date.day &&
-        ethDate.day < ninevehEvent.date.day + 3) {
+    else if (daysBetween(ninevehEvent.date, ethDate) >= 0 &&
+        daysBetween(ethDate, addDays(ninevehEvent.date, 2)) >= 0) {
       seasonTitle = 'ጾመ ነነዌ';
       seasonTitleEn = 'Fast of Nineveh';
       seasonCategory = 'ጾም';
       seasonCategoryEn = 'Fast';
-      recommendedPlanId = 'passion_week';
+      recommendedPlanId = null;
       seasonDescription = 'የሦስት ቀናት የነነዌ ጾምና የንስሐ ጸሎት';
       seasonDescriptionEn = 'Three days of fasting and repentance of Nineveh';
       isSeasonalFast = true;
     }
     // 3. Fast of the Prophets / Advent (ጾመ ነቢያት - ኅዳር 15 - ታኅሣሥ 28)
-    else if ((ethDate.month == 3 && ethDate.day >= 15) ||
-        (ethDate.month == 4 && ethDate.day <= 28)) {
+    else if (adventInfo.isUnlocked) {
       seasonTitle = 'ጾመ ነቢያት';
       seasonTitleEn = 'Fast of the Prophets (Advent)';
       seasonCategory = 'ጾም';
@@ -482,9 +691,19 @@ class BahireHasabService {
       seasonDescription = 'የማሕሌተ ጽጌና የእመቤታችን ስደት መታሰቢያ ወቅት';
       seasonDescriptionEn = 'Season of Tsigie and flight of the Holy Family';
     }
-    // 5. Holy Passion Week / Great Lent (ዐቢይ ጾም)
-    else if (ethDate.month == lentEvent.date.month && ethDate.day >= lentEvent.date.day ||
-        (ethDate.month == easterEvent.date.month && ethDate.day <= easterEvent.date.day)) {
+    // 5. Holy Passion Week (ሰሞነ ሕማማት)
+    else if (passionInfo.isUnlocked) {
+      seasonTitle = 'ሰሞነ ሕማማት';
+      seasonTitleEn = 'Holy Passion Week';
+      seasonCategory = 'ጾም';
+      seasonCategoryEn = 'Fast';
+      recommendedPlanId = 'passion_week';
+      seasonDescription = 'የክርስቶስ የመስቀል መከራና የሰሞነ ሕማማት ምንባባት';
+      seasonDescriptionEn = 'Holy Passion Week and readings of Christ\'s crucifixion';
+      isSeasonalFast = true;
+    }
+    // 6. Great Lent (ዐቢይ ጾም)
+    else if (lentInfo.isUnlocked) {
       seasonTitle = 'ዐቢይ ጾም';
       seasonTitleEn = 'Holy Great Lent';
       seasonCategory = 'ጾም';
@@ -494,7 +713,7 @@ class BahireHasabService {
       seasonDescriptionEn = 'Great Lent, prayer and repentance season';
       isSeasonalFast = true;
     }
-    // 6. Easter 50 Days (በዓለ ኀምሳ)
+    // 7. Easter 50 Days (በዓለ ኀምሳ)
     else if (isEasterFifty) {
       seasonTitle = 'የትንሣኤ በዓለ ኀምሳ';
       seasonTitleEn = 'Holy Easter Season (50 Days)';
@@ -504,10 +723,9 @@ class BahireHasabService {
       seasonDescription = 'ክርስቶስ ተነሥቷል! የሐሤትና የምስጋና ወቅት';
       seasonDescriptionEn = 'Christ is risen! Season of joy and thanksgiving';
     }
-    // 7. Fast of the Apostles (ጾመ ሐዋርያት)
-    else if (ethDate.month == apostlesFastEvent.date.month &&
-        ethDate.day >= apostlesFastEvent.date.day &&
-        (ethDate.month < 11 || (ethDate.month == 11 && ethDate.day <= 4))) {
+    // 8. Fast of the Apostles (ጾመ ሐዋርያት)
+    else if (daysBetween(apostlesFastEvent.date, ethDate) >= 0 &&
+        daysBetween(ethDate, createEthiopianDate(ethDate.year, 11, 4)) >= 0) {
       seasonTitle = 'ጾመ ሐዋርያት';
       seasonTitleEn = 'Fast of the Apostles';
       seasonCategory = 'ጾም';

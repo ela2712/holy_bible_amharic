@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/app_language_provider.dart';
@@ -130,6 +129,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       index: 0,
                       label: isEnglish ? 'Bible' : 'ንባብ',
                       isEnglish: isEnglish,
+                      themeConfig: themeConfig,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernBibleIcon(
                         size: 21,
@@ -145,6 +145,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       index: 1,
                       label: isEnglish ? 'Home' : 'መነሻ',
                       isEnglish: isEnglish,
+                      themeConfig: themeConfig,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernLibraryIcon(
                         size: 21,
@@ -160,6 +161,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       index: 2,
                       label: isEnglish ? 'Plans' : 'ዕቅዶች',
                       isEnglish: isEnglish,
+                      themeConfig: themeConfig,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernLectionaryIcon(
                         size: 21,
@@ -175,6 +177,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       index: 3,
                       label: isEnglish ? 'Saved' : 'ማህደር',
                       isEnglish: isEnglish,
+                      themeConfig: themeConfig,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernHighlightsIcon(
                         size: 21,
@@ -190,6 +193,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                       index: 4,
                       label: isEnglish ? 'Settings' : 'ቅንብሮች',
                       isEnglish: isEnglish,
+                      themeConfig: themeConfig,
                       activePillColor: activePillColor,
                       iconBuilder: (isActive) => ModernSettingsIcon(
                         size: 21,
@@ -211,6 +215,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     required int index,
     required String label,
     required bool isEnglish,
+    required ReaderThemeConfig themeConfig,
     required Color activePillColor,
     required Widget Function(bool isActive) iconBuilder,
     required Color activeColor,
@@ -242,19 +247,13 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             const SizedBox(height: 3),
             Text(
               label,
-              style: isEnglish
-                  ? GoogleFonts.inter(
-                      fontSize: 10.5,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? activeColor : inactiveColor,
-                      letterSpacing: 0.15,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 10.5,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? activeColor : inactiveColor,
-                      letterSpacing: 0.15,
-                    ),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? activeColor : inactiveColor,
+                letterSpacing: 0.15,
+              ),
             ),
           ],
         ),

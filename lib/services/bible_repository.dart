@@ -71,13 +71,33 @@ class BibleRepository {
   // Cross references cache: Key: '${book}-${chapter}-${verse}' -> List<Map<String, dynamic>>
   Map<String, dynamic>? _crossRefsCache;
 
+  Future<void> ensureTranslationLoaded(int translationId) async {
+    if (_booksByTranslation.containsKey(translationId)) return;
+    switch (translationId) {
+      case 1:
+        await _load1954Bible();
+        break;
+      case 2:
+        await _load81CanonBible();
+        break;
+      case 3:
+        await _loadKjvBible();
+        break;
+      case 4:
+        await _loadGeezBible();
+        break;
+      default:
+        await _load81CanonBible();
+    }
+  }
+
   Future<void> ensureInitialized() async {
     if (_isInitialized) return;
 
     try {
       if (kDebugMode) print('Initializing BibleRepository datasets...');
-      await _load1954Bible();
       await _load81CanonBible();
+      await _load1954Bible();
       await _loadGeezBible();
       await _loadKjvBible();
       await _loadCrossReferences();
@@ -92,6 +112,7 @@ class BibleRepository {
   }
 
   Future<void> _load1954Bible() async {
+    if (_booksByTranslation.containsKey(1)) return;
     final jsonStr = await rootBundle.loadString('assets/data/amharic_1954.json');
     final data = json.decode(jsonStr) as Map<String, dynamic>;
     final rawBooks = data['books'] as List<dynamic>;
@@ -176,6 +197,7 @@ class BibleRepository {
   }
 
   Future<void> _load81CanonBible() async {
+    if (_booksByTranslation.containsKey(2)) return;
     final jsonStr = await rootBundle.loadString('assets/data/orthodox_81.json');
     final rawBooks = json.decode(jsonStr) as List<dynamic>;
 
@@ -265,6 +287,7 @@ class BibleRepository {
   }
 
   Future<void> _loadKjvBible() async {
+    if (_booksByTranslation.containsKey(3)) return;
     final jsonStr = await rootBundle.loadString('assets/data/kjv.json');
     final rawBooks = json.decode(jsonStr) as List<dynamic>;
 
@@ -333,6 +356,7 @@ class BibleRepository {
   }
 
   Future<void> _loadGeezBible() async {
+    if (_booksByTranslation.containsKey(4)) return;
     final jsonStr = await rootBundle.loadString('assets/data/geez_81.json');
     final rawBooks = json.decode(jsonStr) as List<dynamic>;
 
@@ -498,7 +522,6 @@ class BibleRepository {
   // --- Read API ---
 
   Future<List<Translation>> getTranslations() async {
-    await ensureInitialized();
     return _translations;
   }
 
@@ -506,7 +529,7 @@ class BibleRepository {
     required int translationId,
     String? testament,
   }) async {
-    await ensureInitialized();
+    await ensureTranslationLoaded(translationId);
     final list = _booksByTranslation[translationId] ?? [];
     if (testament == null || testament.isEmpty) return list;
     return list.where((b) => b.testament.toUpperCase() == testament.toUpperCase()).toList();
@@ -523,7 +546,7 @@ class BibleRepository {
   }
 
   Future<Book?> getBookByNumber(int translationId, int bookNumber) async {
-    await ensureInitialized();
+    await ensureTranslationLoaded(translationId);
     final books = _booksByTranslation[translationId] ?? [];
     for (final b in books) {
       if (b.bookNumber == bookNumber) return b;
@@ -535,7 +558,19 @@ class BibleRepository {
     required int bookId,
     required int chapter,
   }) async {
-    await ensureInitialized();
+    if (!_versesCache.containsKey('${bookId}_$chapter')) {
+      if (bookId >= 100 && bookId < 200) {
+        await ensureTranslationLoaded(2);
+      } else if (bookId < 100) {
+        await ensureTranslationLoaded(1);
+      } else if (bookId >= 200 && bookId < 300) {
+        await ensureTranslationLoaded(3);
+      } else if (bookId >= 300) {
+        await ensureTranslationLoaded(4);
+      } else {
+        await ensureInitialized();
+      }
+    }
     final baseVerses = _versesCache['${bookId}_$chapter'] ?? [];
     if (baseVerses.isEmpty) return [];
 
@@ -581,7 +616,7 @@ class BibleRepository {
     int limit = 50,
     int offset = 0,
   }) async {
-    await ensureInitialized();
+    await ensureTranslationLoaded(translationId);
     if (query.trim().isEmpty) return [];
 
     final normalizedQuery = GeezNormalizer.normalize(query);

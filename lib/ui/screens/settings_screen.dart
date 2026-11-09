@@ -63,17 +63,12 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(width: 14),
                     Text(
                       isEnglish ? 'Settings' : 'ማስተካከያዎች',
-                      style: isEnglish
-                          ? GoogleFonts.inter(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: themeConfig.textColor,
-                            )
-                          : GoogleFonts.notoSansEthiopic(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: themeConfig.textColor,
-                            ),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: themeConfig.textColor,
+                      ),
                     ),
                   ],
                 ),
@@ -290,7 +285,7 @@ class SettingsScreen extends ConsumerWidget {
                                     label: 'ሴሪፍ',
                                     subLabel: 'Noto Serif',
                                     sampleText: 'በመጀመሪያ',
-                                    sampleStyle: GoogleFonts.notoSerifEthiopic(fontWeight: FontWeight.w700),
+                                    sampleStyle: const TextStyle(fontFamily: 'NotoSerifEthiopic', fontWeight: FontWeight.w700),
                                     isSelected: themeConfig.fontFamily == 'Serif',
                                     themeConfig: themeConfig,
                                     onTap: () => themeNotifier.setFontFamily('Serif'),
@@ -300,7 +295,7 @@ class SettingsScreen extends ConsumerWidget {
                                     label: 'ሳንስ',
                                     subLabel: 'Noto Sans',
                                     sampleText: 'በመጀመሪያ',
-                                    sampleStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
+                                    sampleStyle: const TextStyle(fontFamily: 'NotoSansEthiopic', fontWeight: FontWeight.w700),
                                     isSelected: themeConfig.fontFamily == 'Sans',
                                     themeConfig: themeConfig,
                                     onTap: () => themeNotifier.setFontFamily('Sans'),
@@ -314,7 +309,7 @@ class SettingsScreen extends ConsumerWidget {
                                     label: 'አቢሲኒካ',
                                     subLabel: 'Abyssinica',
                                     sampleText: 'በመጀመሪያ',
-                                    sampleStyle: GoogleFonts.abyssinicaSil(fontWeight: FontWeight.w700),
+                                    sampleStyle: const TextStyle(fontFamily: 'AbyssinicaSIL', fontWeight: FontWeight.w700),
                                     isSelected: themeConfig.fontFamily == 'Abyssinica',
                                     themeConfig: themeConfig,
                                     onTap: () => themeNotifier.setFontFamily('Abyssinica'),
@@ -366,17 +361,12 @@ class SettingsScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 isEnglish ? 'Font Size' : 'የፊደል መጠን',
-                                style: isEnglish
-                                    ? GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: themeConfig.textColor,
-                                      )
-                                    : GoogleFonts.notoSansEthiopic(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: themeConfig.textColor,
-                                      ),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: themeConfig.textColor,
+                                ),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -418,31 +408,22 @@ class SettingsScreen extends ConsumerWidget {
                           contentPadding: EdgeInsets.zero,
                           title: Text(
                             isEnglish ? 'Ge\'ez Numerals' : 'የግዕዝ ቁጥሮች',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: themeConfig.textColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: themeConfig.textColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: themeConfig.textColor,
+                            ),
                           ),
                           subtitle: Text(
                             isEnglish
                                 ? 'Displays chapter and verse numbers as ፩, ፪, ፫, ፬...'
                                 : '፩, ፪, ፫, ፬... በምዕራፍና በቁጥሮች ላይ ያሳያል',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: themeConfig.secondaryTextColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 12,
-                                    color: themeConfig.secondaryTextColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 12,
+                              color: themeConfig.secondaryTextColor,
+                            ),
                           ),
                           activeThumbColor: themeConfig.accentColor,
                           value: themeConfig.useGeezNumerals,
@@ -458,31 +439,22 @@ class SettingsScreen extends ConsumerWidget {
                           contentPadding: EdgeInsets.zero,
                           title: Text(
                             isEnglish ? 'Continuous Paragraph Mode' : 'ተከታታይ አንቀጽ',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: themeConfig.textColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: themeConfig.textColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: themeConfig.textColor,
+                            ),
                           ),
                           subtitle: Text(
                             isEnglish
                                 ? 'Flows scripture as continuous paragraphs without line breaks'
                                 : 'ቁጥሮችን ሳይቆራርጡ እንደ መጽሐፍ አንቀጽ ያነባል',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: themeConfig.secondaryTextColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 12,
-                                    color: themeConfig.secondaryTextColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 12,
+                              color: themeConfig.secondaryTextColor,
+                            ),
                           ),
                           activeThumbColor: themeConfig.accentColor,
                           value: themeConfig.isParagraphMode,
@@ -511,31 +483,22 @@ class SettingsScreen extends ConsumerWidget {
                           contentPadding: EdgeInsets.zero,
                           title: Text(
                             isEnglish ? 'Daily Verse Notification' : 'የዕለት ጥቅስ ማሳወቂያ',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: themeConfig.textColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                    color: themeConfig.textColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: themeConfig.textColor,
+                            ),
                           ),
                           subtitle: Text(
                             isEnglish
                                 ? 'Receive an inspiring scripture every morning at scheduled time'
                                 : 'በተመረጠው ሰዓት አነቃቂ የዕለት ጥቅስ ማስታወሻ ይደርስዎታል',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: themeConfig.secondaryTextColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 12,
-                                    color: themeConfig.secondaryTextColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 12,
+                              color: themeConfig.secondaryTextColor,
+                            ),
                           ),
                           activeThumbColor: themeConfig.accentColor,
                           value: notifState.isEnabled,
@@ -606,17 +569,12 @@ class SettingsScreen extends ConsumerWidget {
                                       const SizedBox(width: 10),
                                       Text(
                                         isEnglish ? 'Delivery Time' : 'የሚላክበት ሰዓት',
-                                        style: isEnglish
-                                            ? GoogleFonts.inter(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 13.5,
-                                                color: themeConfig.textColor,
-                                              )
-                                            : GoogleFonts.notoSansEthiopic(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 13.5,
-                                                color: themeConfig.textColor,
-                                              ),
+                                        style: themeConfig.getAppStyle(
+                                          isEnglish: isEnglish,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13.5,
+                                          color: themeConfig.textColor,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -634,17 +592,12 @@ class SettingsScreen extends ConsumerWidget {
                                       children: [
                                         Text(
                                           notifState.formatDisplayTime(isEnglish),
-                                          style: isEnglish
-                                              ? GoogleFonts.inter(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 12.5,
-                                                  color: themeConfig.accentColor,
-                                                )
-                                              : GoogleFonts.notoSansEthiopic(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 12.5,
-                                                  color: themeConfig.accentColor,
-                                                ),
+                                          style: themeConfig.getAppStyle(
+                                            isEnglish: isEnglish,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12.5,
+                                            color: themeConfig.accentColor,
+                                          ),
                                         ),
                                         const SizedBox(width: 4),
                                         Icon(
@@ -715,32 +668,23 @@ class SettingsScreen extends ConsumerWidget {
                                     isEnglish
                                         ? 'About 81 Canon & App Features'
                                         : 'ስለ 81 ቀኖና እና የመተግበሪያው ገጽታዎች',
-                                    style: isEnglish
-                                        ? GoogleFonts.inter(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: themeConfig.textColor,
-                                          )
-                                        : GoogleFonts.notoSansEthiopic(
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w700,
-                                            color: themeConfig.textColor,
-                                          ),
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: themeConfig.textColor,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     isEnglish
                                         ? 'View the welcome guide, gestures & homophone search'
                                         : 'የመተግበሪያው መመሪያ፣ የንባብ ምልክቶችና የፊደላት ፍለጋ',
-                                    style: isEnglish
-                                        ? GoogleFonts.inter(
-                                            fontSize: 11.5,
-                                            color: themeConfig.secondaryTextColor,
-                                          )
-                                        : GoogleFonts.notoSansEthiopic(
-                                            fontSize: 11.5,
-                                            color: themeConfig.secondaryTextColor,
-                                          ),
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
+                                      fontSize: 11.5,
+                                      color: themeConfig.secondaryTextColor,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -775,17 +719,12 @@ class SettingsScreen extends ConsumerWidget {
                               ? 'Holy Bible — Ethiopian Orthodox 81 Canon'
                               : 'መጽሐፍ ቅዱስ — 81 ቀኖና',
                           textAlign: TextAlign.center,
-                          style: isEnglish
-                              ? GoogleFonts.inter(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: themeConfig.textColor,
-                                )
-                              : GoogleFonts.notoSansEthiopic(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: themeConfig.textColor,
-                                ),
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: themeConfig.textColor,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -793,17 +732,12 @@ class SettingsScreen extends ConsumerWidget {
                               ? 'Ethiopian Orthodox Tewahedo Church'
                               : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን',
                           textAlign: TextAlign.center,
-                          style: isEnglish
-                              ? GoogleFonts.inter(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: themeConfig.secondaryTextColor,
-                                )
-                              : GoogleFonts.notoSansEthiopic(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: themeConfig.secondaryTextColor,
-                                ),
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: themeConfig.secondaryTextColor,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -811,7 +745,8 @@ class SettingsScreen extends ConsumerWidget {
                               ? 'Version 1.0.0 (Build 1)'
                               : 'ስሪት 1.0.0 (ቅጂ 1)',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: themeConfig.getAppStyle(
+                            isEnglish: true,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             color: themeConfig.secondaryTextColor.withValues(alpha: 0.65),
@@ -834,17 +769,12 @@ class SettingsScreen extends ConsumerWidget {
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
         title,
-        style: isEnglish
-            ? GoogleFonts.inter(
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-                color: themeConfig.accentColor,
-              )
-            : GoogleFonts.notoSansEthiopic(
-                fontWeight: FontWeight.w800,
-                fontSize: 12.5,
-                color: themeConfig.accentColor,
-              ),
+        style: themeConfig.getAppStyle(
+          isEnglish: isEnglish,
+          fontWeight: FontWeight.w800,
+          fontSize: isEnglish ? 12 : 12.5,
+          color: themeConfig.accentColor,
+        ),
       ),
     );
   }
@@ -920,17 +850,12 @@ class SettingsScreen extends ConsumerWidget {
                     children: [
                       Text(
                         translation.name,
-                        style: isEnglish
-                            ? GoogleFonts.inter(
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                fontSize: 14,
-                                color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                fontSize: 14.5,
-                                color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                              ),
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                          fontSize: isEnglish ? 14 : 14.5,
+                          color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
+                        ),
                       ),
                       if (translation.id == 2) ...[
                         const SizedBox(width: 8),
@@ -942,17 +867,12 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                           child: Text(
                             isEnglish ? 'Primary' : 'ዋና ቀኖና',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: themeConfig.accentColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: themeConfig.accentColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: themeConfig.accentColor,
+                            ),
                           ),
                         ),
                       ],
@@ -961,15 +881,11 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 3),
                   Text(
                     subtitleText,
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 11.5,
-                            color: themeConfig.secondaryTextColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 12,
-                            color: themeConfig.secondaryTextColor,
-                          ),
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
+                      fontSize: isEnglish ? 11.5 : 12,
+                      color: themeConfig.secondaryTextColor,
+                    ),
                   ),
                 ],
               ),
@@ -1031,33 +947,23 @@ class SettingsScreen extends ConsumerWidget {
             alignment: Alignment.center,
             child: Text(
               isEnglish ? 'Aa' : 'ሀሁ',
-              style: isEnglish
-                  ? GoogleFonts.inter(
-                      color: previewInk,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      color: previewInk,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                color: previewInk,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             label,
-            style: isEnglish
-                ? GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                    color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                  )
-                : GoogleFonts.notoSansEthiopic(
-                    fontSize: 11.5,
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-                    color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                  ),
+            style: themeConfig.getAppStyle(
+              isEnglish: isEnglish,
+              fontSize: 11.5,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+              color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
+            ),
           ),
         ],
       ),
@@ -1099,7 +1005,7 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.notoSansEthiopic(
+                    style: themeConfig.getAppStyle(
                       fontSize: 13,
                       fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                       color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
@@ -1111,7 +1017,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
               Text(
                 subLabel,
-                style: GoogleFonts.plusJakartaSans(
+                style: themeConfig.getAppStyle(
+                  isEnglish: true,
                   fontSize: 10,
                   color: themeConfig.secondaryTextColor,
                 ),
@@ -1173,17 +1080,12 @@ class SettingsScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: isEnglish
-                    ? GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                      ),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -1191,15 +1093,11 @@ class SettingsScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: isEnglish
-                    ? GoogleFonts.inter(
-                        fontSize: 10,
-                        color: themeConfig.secondaryTextColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 9.5,
-                        color: themeConfig.secondaryTextColor,
-                      ),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: isEnglish ? 10 : 9.5,
+                  color: themeConfig.secondaryTextColor,
+                ),
               ),
             ],
           ),

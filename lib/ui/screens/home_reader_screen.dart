@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../core/utils/geez_numbers.dart';
@@ -507,7 +506,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                         const SizedBox(width: 6),
                         Text(
                           '${themeConfig.fontSize.toInt()} pt',
-                          style: GoogleFonts.inter(
+                          style: themeConfig.getAppStyle(
+                            isEnglish: true,
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             color: themeConfig.textColor,
@@ -566,7 +566,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 shortTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.notoSansEthiopic(
+                style: themeConfig.getAppStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
                   color: themeConfig.textColor,
@@ -634,7 +634,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   const SizedBox(width: 8),
                   Text(
                     isEnglish ? 'Select Canon / Translation' : 'የመጽሐፍ ቅዱስ ቀኖና / ትርጉም ይምረጡ',
-                    style: GoogleFonts.notoSansEthiopic(
+                    style: themeConfig.getAppStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: themeConfig.textColor,
@@ -714,7 +714,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                                       Flexible(
                                         child: Text(
                                           displayTitle,
-                                          style: GoogleFonts.notoSansEthiopic(
+                                          style: themeConfig.getAppStyle(
                                             fontSize: 13.5,
                                             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                             color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
@@ -745,7 +745,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       displaySubtitle,
-                                      style: GoogleFonts.notoSansEthiopic(
+                                      style: themeConfig.getAppStyle(
                                         fontSize: 11.5,
                                         color: themeConfig.secondaryTextColor,
                                       ),
@@ -869,7 +869,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   headerLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.notoSansEthiopic(
+                  style: themeConfig.getAppStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: (isInChapterRange && isDone)
@@ -881,7 +881,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   passage.getPassageReference(isEnglish),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.notoSansEthiopic(
+                  style: themeConfig.getAppStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: themeConfig.textColor,
@@ -940,7 +940,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               icon: const Icon(Icons.arrow_forward_rounded, size: 16),
               label: Text(
                 isEnglish ? 'Resume Plan' : 'ወደ ዕቅዱ ሂድ',
-                style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+                style: themeConfig.getAppStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
               ),
             )
           else if (!isAtFinalChapter && currentChapter < passage.endChapter)
@@ -966,7 +966,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               icon: const Icon(Icons.arrow_forward_rounded, size: 16),
               label: Text(
                 isEnglish ? 'Next (Ch ${currentChapter + 1}) →' : 'ቀጣይ (ምዕ ${currentChapter + 1}) →',
-                style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+                style: themeConfig.getAppStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
               ),
             )
           else
@@ -1037,7 +1037,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 isDone
                     ? (isEnglish ? 'Day Completed ✓' : 'ቀኑ ተጠናቋል ✓')
                     : (isEnglish ? 'Complete Day' : 'ቀኑን አጠናቅቅ'),
-                style: GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w800),
+                style: themeConfig.getAppStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
               ),
             ),
 
@@ -1131,7 +1131,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             child: Text(
               liturgicalText,
               textAlign: TextAlign.center,
-              style: GoogleFonts.notoSansEthiopic(
+              style: themeConfig.getAppStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 color: themeConfig.goldAccent,
@@ -1175,7 +1175,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           '$compactBookName • $displayChapterTitle',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.notoSansEthiopic(
+                          style: themeConfig.getAppStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w800,
                             color: themeConfig.textColor,
@@ -1408,14 +1408,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                         TextSpan(
                           text: '$verseNumStr ',
                           style: themeConfig.useGeezNumerals
-                              ? GoogleFonts.notoSansEthiopic(
-                                  fontSize: themeConfig.fontSize * 0.70,
-                                  fontWeight: FontWeight.w800,
-                                  color: isSelected
-                                      ? themeConfig.accentColor
-                                      : themeConfig.secondaryTextColor,
-                                )
-                              : GoogleFonts.plusJakartaSans(
+                              ? themeConfig.getAppStyle(fontSize: themeConfig.fontSize * 0.70, fontWeight: FontWeight.w800, color: isSelected ? themeConfig.accentColor : themeConfig.secondaryTextColor)
+                              : themeConfig.getAppStyle(
+                                  isEnglish: true,
                                   fontSize: themeConfig.fontSize * 0.65,
                                   fontWeight: FontWeight.w800,
                                   color: isSelected
@@ -1462,11 +1457,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               padding: const EdgeInsets.only(top: 18, bottom: 10),
               child: Text(
                 h.title,
-                style: GoogleFonts.notoSansEthiopic(
-                  fontSize: themeConfig.fontSize * 0.90,
-                  fontWeight: FontWeight.w800,
-                  color: themeConfig.accentColor,
-                ),
+                style: _getScriptureTextStyle(themeConfig, fontSize: themeConfig.fontSize * 0.90, fontWeight: FontWeight.w800, color: themeConfig.accentColor, isEnglish: isEnglishTrans),
               ),
             ),
           );
@@ -1514,11 +1505,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             padding: const EdgeInsets.only(top: 18.0, bottom: 8.0),
             child: Text(
               h.title,
-              style: GoogleFonts.notoSansEthiopic(
-                fontSize: themeConfig.fontSize * 0.88,
-                fontWeight: FontWeight.w800,
-                color: themeConfig.accentColor,
-              ),
+              style: _getScriptureTextStyle(themeConfig, fontSize: themeConfig.fontSize * 0.88, fontWeight: FontWeight.w800, color: themeConfig.accentColor, isEnglish: isEnglishTrans),
             ),
           ),
 
@@ -1552,14 +1539,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                       TextSpan(
                         text: '$verseNumStr  ',
                         style: themeConfig.useGeezNumerals
-                            ? GoogleFonts.notoSansEthiopic(
-                                fontSize: themeConfig.fontSize * 0.72,
-                                fontWeight: FontWeight.w800,
-                                color: isSelected
-                                    ? themeConfig.accentColor
-                                    : themeConfig.secondaryTextColor,
-                              )
-                            : GoogleFonts.plusJakartaSans(
+                            ? themeConfig.getAppStyle(fontSize: themeConfig.fontSize * 0.72, fontWeight: FontWeight.w800, color: isSelected ? themeConfig.accentColor : themeConfig.secondaryTextColor)
+                            : themeConfig.getAppStyle(
+                                isEnglish: true,
                                 fontSize: themeConfig.fontSize * 0.68,
                                 fontWeight: FontWeight.w800,
                                 color: isSelected
@@ -1606,7 +1588,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                             '📝 ${verse.note}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.notoSansEthiopic(
+                            style: themeConfig.getAppStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: themeConfig.goldAccent,
@@ -1653,9 +1635,11 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               isEnglish
                   ? 'Chapter ${bibleState.currentChapter - 1}'
                   : 'ምዕራፍ ${bibleState.currentChapter - 1}',
-              style: isEnglish
-                  ? GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)
-                  : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
           )
         else
@@ -1681,9 +1665,11 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               isEnglish
                   ? 'Chapter ${bibleState.currentChapter + 1}'
                   : 'ምዕራፍ ${bibleState.currentChapter + 1}',
-              style: isEnglish
-                  ? GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 13)
-                  : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
             label: const Icon(Icons.east_rounded, size: 16),
           )
@@ -1707,9 +1693,11 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
           const SizedBox(height: 12),
           Text(
             isEnglish ? 'Loading chapter...' : 'ምዕራፉን በመጫን ላይ...',
-            style: isEnglish
-                ? GoogleFonts.plusJakartaSans(fontSize: 15, color: themeConfig.textColor)
-                : GoogleFonts.notoSansEthiopic(fontSize: 15, color: themeConfig.textColor),
+            style: themeConfig.getAppStyle(
+              isEnglish: isEnglish,
+              fontSize: 15,
+              color: themeConfig.textColor,
+            ),
           ),
         ],
       ),

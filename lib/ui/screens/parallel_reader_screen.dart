@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../models/verse.dart';
@@ -315,32 +314,22 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                           children: [
                             Text(
                               isEnglish ? 'PARALLEL CANON & TRANSLATION STUDY' : 'የቀኖና እና ትርጉም ማነፃፀሪያ',
-                              style: isEnglish
-                                  ? GoogleFonts.plusJakartaSans(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.0,
-                                      color: themeConfig.accentColor,
-                                    )
-                                  : GoogleFonts.notoSansEthiopic(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: themeConfig.accentColor,
-                                    ),
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontSize: isEnglish ? 10 : 10.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: isEnglish ? 1.0 : null,
+                                color: themeConfig.accentColor,
+                              ),
                             ),
                             Text(
                               chapterTitle,
-                              style: isEnglish
-                                  ? GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: themeConfig.textColor,
-                                    )
-                                  : GoogleFonts.notoSansEthiopic(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: themeConfig.textColor,
-                                    ),
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.textColor,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -450,17 +439,12 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
             const SizedBox(width: 6),
             Text(
               label,
-              style: isEnglish
-                  ? GoogleFonts.inter(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : themeConfig.textColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : themeConfig.textColor,
-                    ),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : themeConfig.textColor,
+              ),
             ),
           ],
         ),
@@ -479,9 +463,11 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
           padding: const EdgeInsets.all(24),
           child: Text(
             isEnglish ? 'No verses found for this chapter' : 'ለዚህ ምዕራፍ ምንም ጥቅሶች አልተገኙም',
-            style: isEnglish
-                ? GoogleFonts.inter(fontSize: 14, color: themeConfig.secondaryTextColor)
-                : GoogleFonts.notoSansEthiopic(fontSize: 14, color: themeConfig.secondaryTextColor),
+            style: themeConfig.getAppStyle(
+              isEnglish: isEnglish,
+              fontSize: 14,
+              color: themeConfig.secondaryTextColor,
+            ),
           ),
         ),
       );
@@ -528,7 +514,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                     ),
                     child: Text(
                       item.label,
-                      style: GoogleFonts.plusJakartaSans(
+                      style: themeConfig.getAppStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
                         color: themeConfig.accentColor,
@@ -692,7 +678,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                 ),
                 child: Text(
                   badgeLabel,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: themeConfig.getAppStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
                     color: badgeColor,
@@ -704,18 +690,12 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
           const SizedBox(height: 6),
           Text(
             verseText ?? (isEnglish ? 'Verse not found in this canon' : 'ጥቅሱ በዚህ ቀኖና አልተገኘም'),
-            style: isEthiopic
-                ? const TextStyle(
-                    fontFamily: 'NotoSerifEthiopic',
-                    fontFamilyFallback: ['Noto Serif Ethiopic', 'Nyala', 'serif'],
-                    fontSize: 15.5,
-                    height: 1.6,
-                  ).copyWith(color: themeConfig.textColor)
-                : GoogleFonts.inter(
-                    fontSize: 14.5,
-                    height: 1.55,
-                    color: themeConfig.textColor,
-                  ),
+            style: themeConfig.getAppStyle(
+              isEnglish: !isEthiopic,
+              fontSize: isEthiopic ? 15.5 : 14.5,
+              height: isEthiopic ? 1.6 : 1.55,
+              color: themeConfig.textColor,
+            ),
           ),
         ],
       ),
@@ -748,7 +728,7 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
             ),
             child: Text(
               badgeLabel,
-              style: GoogleFonts.plusJakartaSans(
+              style: themeConfig.getAppStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 color: badgeColor,
@@ -765,17 +745,12 @@ class _ParallelReaderScreenState extends ConsumerState<ParallelReaderScreen> {
                   isEnglish
                       ? 'Exclusively in 81 Orthodox Canon (Deuterocanon)'
                       : 'በ81 ቀኖና ብቻ የሚገኝ መጽሐፍ ነው',
-                  style: isEnglish
-                      ? GoogleFonts.inter(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: themeConfig.secondaryTextColor,
-                        )
-                      : GoogleFonts.notoSansEthiopic(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: themeConfig.secondaryTextColor,
-                        ),
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: themeConfig.secondaryTextColor,
+                  ),
                 ),
               ),
             ],

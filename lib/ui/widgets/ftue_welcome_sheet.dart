@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/app_language_provider.dart';
@@ -149,19 +148,13 @@ class FtueWelcomeSheet extends ConsumerWidget {
                     Text(
                       isEnglish ? 'Welcome to Holy Bible' : 'እንኳን ደህና መጡ',
                       textAlign: TextAlign.center,
-                      style: isEnglish
-                          ? GoogleFonts.inter(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: themeConfig.textColor,
-                              letterSpacing: -0.3,
-                            )
-                          : GoogleFonts.notoSansEthiopic(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: themeConfig.textColor,
-                              letterSpacing: -0.3,
-                            ),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: themeConfig.textColor,
+                        letterSpacing: -0.3,
+                      ),
                     ),
                     const SizedBox(height: 5),
 
@@ -171,17 +164,12 @@ class FtueWelcomeSheet extends ConsumerWidget {
                           ? 'Ethiopian Orthodox Tewahedo 81 Books Canon'
                           : 'የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ 81 መጻሕፍት ቀኖና',
                       textAlign: TextAlign.center,
-                      style: isEnglish
-                          ? GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: themeConfig.accentColor,
-                            )
-                          : GoogleFonts.notoSansEthiopic(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: themeConfig.accentColor,
-                            ),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: themeConfig.accentColor,
+                      ),
                     ),
                     const SizedBox(height: 22),
 
@@ -281,19 +269,13 @@ class FtueWelcomeSheet extends ConsumerWidget {
                     children: [
                       Text(
                         isEnglish ? 'Start Reading' : 'ወደ ንባብ ግባ',
-                        style: isEnglish
-                            ? GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.2,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: 0.2,
-                              ),
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
@@ -351,34 +333,23 @@ class FtueWelcomeSheet extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: isEnglish
-                      ? GoogleFonts.inter(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: themeConfig.textColor,
-                        )
-                      : GoogleFonts.notoSansEthiopic(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: themeConfig.textColor,
-                        ),
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: themeConfig.textColor,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   description,
-                  style: isEnglish
-                      ? GoogleFonts.inter(
-                          fontSize: 11.5,
-                          height: 1.35,
-                          fontWeight: FontWeight.w400,
-                          color: themeConfig.secondaryTextColor,
-                        )
-                      : GoogleFonts.notoSansEthiopic(
-                          fontSize: 11.5,
-                          height: 1.4,
-                          fontWeight: FontWeight.w400,
-                          color: themeConfig.secondaryTextColor,
-                        ),
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: 11.5,
+                    height: 1.38,
+                    fontWeight: FontWeight.w400,
+                    color: themeConfig.secondaryTextColor,
+                  ),
                 ),
               ],
             ),

@@ -1,3 +1,4 @@
+import '../services/bahire_hasab_service.dart';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -83,7 +84,71 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
   static const String _prefActivePlanId = 'active_reading_plan_id_v2';
   static const String _prefActivePlanDay = 'active_reading_plan_day_v2';
 
+
+  static const String _prefEotcCycleYear = 'eotc_liturgical_cycle_year';
+
+  /// Checks if a new Ethiopian liturgical year has arrived (Meskerem 1).
+  /// If so, automatically resets all EOTC curated reading plans for the new cycle!
+  Future<bool> checkAndApplyAnnualCycleReset({EthiopianDate? simulatedDate}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayEth = simulatedDate ?? BahireHasabService.fromGregorian(DateTime.now());
+    final lastCycleYear = prefs.getInt(_prefEotcCycleYear);
+
+    if (lastCycleYear == null) {
+      await prefs.setInt(_prefEotcCycleYear, todayEth.year);
+      return false;
+    }
+
+    if (todayEth.year > lastCycleYear) {
+      for (final planId in BahireHasabService.eotcCuratedPlanIds) {
+        await prefs.remove('plan_${planId}_completed');
+        final plan = ReadingPlansData.getPlanById(planId);
+        if (plan != null) {
+          for (final passage in plan.passages) {
+            await prefs.remove('plan_${planId}_day_${passage.day}_chapters');
+          }
+        }
+      }
+
+      final savedActiveId = prefs.getString(_prefActivePlanId);
+      if (savedActiveId != null && BahireHasabService.eotcCuratedPlanIds.contains(savedActiveId)) {
+        await prefs.remove(_prefActivePlanId);
+        await prefs.remove(_prefActivePlanDay);
+      }
+
+      await prefs.setInt(_prefEotcCycleYear, todayEth.year);
+
+      if (!state.isLoading) {
+        final updatedCompleted = Map<String, Set<int>>.from(state.completedDaysByPlan);
+        final updatedChapters = Map<String, Map<int, Set<int>>>.from(state.completedChaptersByPlanAndDay);
+        for (final planId in BahireHasabService.eotcCuratedPlanIds) {
+          updatedCompleted[planId] = <int>{};
+          updatedChapters.remove(planId);
+        }
+        final clearActive = state.activeSessionPlan != null &&
+            BahireHasabService.eotcCuratedPlanIds.contains(state.activeSessionPlan!.id);
+
+        state = state.copyWith(
+          completedDaysByPlan: updatedCompleted,
+          completedChaptersByPlanAndDay: updatedChapters,
+          clearSession: clearActive,
+        );
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  bool isPlanLocked(String planId, [EthiopianDate? currentDate]) {
+    final todayEth = currentDate ?? BahireHasabService.fromGregorian(DateTime.now());
+    final seasonInfo = BahireHasabService.getFastSeasonInfo(planId, todayEth);
+    return seasonInfo.isSeasonal && !seasonInfo.isUnlocked;
+  }
+
   Future<void> loadAll() async {
+    await checkAndApplyAnnualCycleReset();
+
     final prefs = await SharedPreferences.getInstance();
 
     // 1. Load custom plans
@@ -177,7 +242,13 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
     );
   }
 
-  Future<void> startReadingSession(ReadingPlan plan, int day) async {
+  Future<bool> startReadingSession(ReadingPlan plan, int day, {EthiopianDate? simulatedDate}) async {
+    final todayEth = simulatedDate ?? BahireHasabService.fromGregorian(DateTime.now());
+    final seasonInfo = BahireHasabService.getFastSeasonInfo(plan.id, todayEth);
+    if (seasonInfo.isSeasonal && !seasonInfo.isUnlocked) {
+      return false;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefActivePlanId, plan.id);
     await prefs.setInt(_prefActivePlanDay, day);
@@ -186,6 +257,7 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
       activeSessionPlan: plan,
       activeSessionDay: day,
     );
+    return true;
   }
 
   Future<void> clearActiveSession() async {

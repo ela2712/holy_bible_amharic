@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/cross_reference.dart';
@@ -214,17 +213,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                       ),
                       child: Text(
                         reference,
-                        style: isEnglish
-                            ? GoogleFonts.inter(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
-                                color: themeConfig.accentColor,
-                              )
-                            : GoogleFonts.notoSansEthiopic(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                                color: themeConfig.accentColor,
-                              ),
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
+                          fontSize: isEnglish ? 13.5 : 14,
+                          fontWeight: isEnglish ? FontWeight.w800 : FontWeight.w900,
+                          color: themeConfig.accentColor,
+                        ),
                       ),
                     ),
                     const Spacer(),
@@ -332,17 +326,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                         children: [
                           Text(
                             isEnglish ? 'Highlight:' : 'ቀለም፦',
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: themeConfig.secondaryTextColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: themeConfig.secondaryTextColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: themeConfig.secondaryTextColor,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           ..._highlightColors.map((c) {
@@ -378,17 +367,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                                 ),
                                 child: Text(
                                   isEnglish ? 'Clear' : 'አጥፋ',
-                                  style: isEnglish
-                                      ? GoogleFonts.inter(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.redAccent,
-                                        )
-                                      : GoogleFonts.notoSansEthiopic(
-                                          fontSize: 10.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.redAccent,
-                                        ),
+                                  style: themeConfig.getAppStyle(
+                                    isEnglish: isEnglish,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.redAccent,
+                                  ),
                                 ),
                               ),
                             ),
@@ -418,17 +402,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                           children: [
                             Text(
                               isEnglish ? 'Personal Study Note' : 'የግል ማስታወሻ',
-                              style: isEnglish
-                                  ? GoogleFonts.inter(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: themeConfig.accentColor,
-                                    )
-                                  : GoogleFonts.notoSansEthiopic(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: themeConfig.accentColor,
-                                    ),
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w800,
+                                color: themeConfig.accentColor,
+                              ),
                             ),
                             IconButton(
                               visualDensity: VisualDensity.compact,
@@ -444,9 +423,11 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                         TextField(
                           controller: _noteController,
                           maxLines: 2,
-                          style: isEnglish
-                              ? GoogleFonts.inter(fontSize: 13.5, color: themeConfig.textColor)
-                              : GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.textColor),
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 13.5,
+                            color: themeConfig.textColor,
+                          ),
                           decoration: InputDecoration(
                             hintText: isEnglish
                                 ? 'Write your personal study note here...'
@@ -474,9 +455,11 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                             icon: const Icon(Icons.check_rounded, size: 16),
                             label: Text(
                               isEnglish ? 'Save Note' : 'ማስታወሻ አስቀምጥ',
-                              style: isEnglish
-                                  ? GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)
-                                  : GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w700),
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
@@ -575,17 +558,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: isEnglish
-                      ? GoogleFonts.inter(
-                          fontSize: 11.5,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
-                        )
-                      : GoogleFonts.notoSansEthiopic(
-                          fontSize: 11.5,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
-                        ),
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: 11.5,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                    color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
+                  ),
                 ),
               ),
             ],
@@ -664,31 +642,22 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                           children: [
                             Text(
                               isEnglish ? 'Compare Full Chapter in Parallel' : 'ሙሉ ምዕራፍ ጎን ለጎን አነጻጽር',
-                              style: isEnglish
-                                  ? GoogleFonts.inter(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 13.5,
-                                      color: themeConfig.accentColor,
-                                    )
-                                  : GoogleFonts.notoSansEthiopic(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 13.5,
-                                      color: themeConfig.accentColor,
-                                    ),
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13.5,
+                                color: themeConfig.accentColor,
+                              ),
                             ),
                             Text(
                               isEnglish
                                   ? 'Compare 81 Orthodox Canon, Ancient Ge\'ez, 1954, and KJV side-by-side'
                                   : 'የ81 ቀኖና፣ የቀደምት ግዕዝ፣ የ1954 እና የKJV ትርጉሞችን ጎን ለጎን ያነጻጽሩ',
-                              style: isEnglish
-                                  ? GoogleFonts.inter(
-                                      fontSize: 11,
-                                      color: themeConfig.secondaryTextColor,
-                                    )
-                                  : GoogleFonts.notoSansEthiopic(
-                                      fontSize: 11,
-                                      color: themeConfig.secondaryTextColor,
-                                    ),
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontSize: 11,
+                                color: themeConfig.secondaryTextColor,
+                              ),
                             ),
                           ],
                         ),
@@ -825,9 +794,11 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
               icon: const Icon(Icons.share_rounded, size: 18),
               label: Text(
                 isEnglish ? 'Share All Translations' : 'ሁሉንም ትርጉሞች አነጻጽረህ አጋራ',
-                style: isEnglish
-                    ? GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)
-                    : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -868,9 +839,11 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                         ? 'No direct cross-references found for this verse'
                         : 'ለዚህ ጥቅስ ምንም ተጨማሪ ማጣቀሻ አልተገኘም',
                     textAlign: TextAlign.center,
-                    style: isEnglish
-                        ? GoogleFonts.inter(fontSize: 13.5, color: themeConfig.secondaryTextColor)
-                        : GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.secondaryTextColor),
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
+                      fontSize: 13.5,
+                      color: themeConfig.secondaryTextColor,
+                    ),
                   ),
                 ],
               ),
@@ -897,9 +870,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                       ),
                       child: Text(
                         isEnglish ? '${items.length} Cross References' : '${items.length} ተዛማጅ ጥቅሶች ተገኝተዋል',
-                        style: isEnglish
-                            ? GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w800, color: themeConfig.accentColor)
-                            : GoogleFonts.notoSansEthiopic(fontSize: 11, fontWeight: FontWeight.w800, color: themeConfig.accentColor),
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: themeConfig.accentColor,
+                        ),
                       ),
                     ),
                   ],
@@ -945,9 +921,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                               ),
                               child: Text(
                                 item.targetReference,
-                                style: isEnglish
-                                    ? GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: badgeColor)
-                                    : GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w800, color: badgeColor),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: badgeColor,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -959,9 +938,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                               ),
                               child: Text(
                                 item.connectionType,
-                                style: isEnglish
-                                    ? GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: themeConfig.secondaryTextColor)
-                                    : GoogleFonts.notoSansEthiopic(fontSize: 10, fontWeight: FontWeight.w700, color: themeConfig.secondaryTextColor),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: themeConfig.secondaryTextColor,
+                                ),
                               ),
                             ),
                           ],
@@ -1048,7 +1030,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                 ),
                 child: Text(
                   title,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: themeConfig.getAppStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: badgeColor,
@@ -1098,18 +1080,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
           const SizedBox(height: 10),
           Text(
             text,
-            style: isEthiopic
-                ? const TextStyle(
-                    fontFamily: 'NotoSerifEthiopic',
-                    fontFamilyFallback: ['Noto Serif Ethiopic', 'Nyala', 'serif'],
-                    fontSize: 15,
-                    height: 1.65,
-                  ).copyWith(color: themeConfig.textColor)
-                : GoogleFonts.inter(
-                    fontSize: 14.5,
-                    height: 1.55,
-                    color: themeConfig.textColor,
-                  ),
+            style: themeConfig.getAppStyle(
+              isEnglish: !isEthiopic,
+              fontSize: isEthiopic ? 15 : 14.5,
+              height: isEthiopic ? 1.65 : 1.55,
+              color: themeConfig.textColor,
+            ),
           ),
         ],
       ),
@@ -1140,7 +1116,7 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
             ),
             child: Text(
               title,
-              style: GoogleFonts.plusJakartaSans(
+              style: themeConfig.getAppStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w800,
                 color: badgeColor,
@@ -1157,17 +1133,12 @@ class _StudyToolsSheetState extends ConsumerState<StudyToolsSheet> {
                   isEnglish
                       ? 'Exclusively in 81 Orthodox Canon (Deuterocanonical book)'
                       : 'በ81 ቀኖና ብቻ የሚገኝ መጽሐፍ ነው',
-                  style: isEnglish
-                      ? GoogleFonts.inter(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: themeConfig.secondaryTextColor,
-                        )
-                      : GoogleFonts.notoSansEthiopic(
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                          color: themeConfig.secondaryTextColor,
-                        ),
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: themeConfig.secondaryTextColor,
+                  ),
                 ),
               ),
             ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class BuiltInGeezKeyboard extends StatefulWidget {
   final TextEditingController controller;
@@ -141,7 +140,12 @@ class _BuiltInGeezKeyboardState extends State<BuiltInGeezKeyboard> {
                         onPressed: () => _onVowelSelected(v),
                         child: Text(
                           v,
-                          style: GoogleFonts.notoSansEthiopic(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontFamily: theme.textTheme.bodyMedium?.fontFamily,
+                            fontFamilyFallback: const ['NotoSansEthiopic', 'NotoSerifEthiopic'],
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -185,7 +189,9 @@ class _BuiltInGeezKeyboardState extends State<BuiltInGeezKeyboard> {
                       alignment: Alignment.center,
                       child: Text(
                         base,
-                        style: GoogleFonts.notoSansEthiopic(
+                        style: TextStyle(
+                          fontFamily: theme.textTheme.bodyMedium?.fontFamily,
+                          fontFamilyFallback: const ['NotoSansEthiopic', 'NotoSerifEthiopic'],
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: isSelected

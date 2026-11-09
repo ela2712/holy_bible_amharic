@@ -79,14 +79,16 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
   Future<void> init() async {
     state = state.copyWith(isLoading: true);
     try {
-      await _repo.ensureInitialized();
-      final translations = await _repo.getTranslations();
       final prefs = await SharedPreferences.getInstance();
 
       // Default to Orthodox 81 Canon (id: 2) as the main translation
       final savedTransId = prefs.getInt('active_translation_id') ?? 2;
       final savedBookNum = prefs.getInt('active_book_number') ?? 1;
       final savedChapter = prefs.getInt('active_chapter') ?? 1;
+
+      // Fast initial load: load only the active translation immediately
+      await _repo.ensureTranslationLoaded(savedTransId);
+      final translations = await _repo.getTranslations();
 
       Translation activeTrans = translations.firstWhere(
         (t) => t.id == savedTransId,
@@ -109,6 +111,7 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
         chapter: safeChapter,
       );
 
+      // Render reader UI immediately in < 250ms
       state = state.copyWith(
         translations: translations,
         currentTranslation: activeTrans,
@@ -119,6 +122,11 @@ class BibleStateNotifier extends StateNotifier<BibleViewState> {
         headings: headings,
         isLoading: false,
       );
+
+      // Preload remaining datasets in the background without blocking the UI
+      Future.microtask(() async {
+        await _repo.ensureInitialized();
+      });
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../core/utils/geez_numbers.dart';
@@ -314,7 +313,8 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                       children: [
                         Text(
                           isEnglish ? 'SCRIPTURE NAVIGATOR' : 'የቅዱሳት መጻሕፍት ማውጫ',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.3,
@@ -324,17 +324,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                         const SizedBox(height: 2),
                         Text(
                           isEnglish ? 'Select Book, Chapter & Verse' : 'መጽሐፍ፣ ምዕራፍና ቁጥር መምረጫ',
-                          style: isEnglish
-                              ? GoogleFonts.inter(
-                                  fontSize: 17,
+                          style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 18,
                                   fontWeight: FontWeight.w900,
-                                  color: themeConfig.textColor,
-                                )
-                              : GoogleFonts.notoSansEthiopic(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: themeConfig.textColor,
-                                ),
+                                  color: themeConfig.textColor,),
                         ),
                       ],
                     ),
@@ -422,18 +414,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: isEnglish
-                ? GoogleFonts.inter(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected
-                        ? Colors.white
-                        : isEnabled
-                            ? themeConfig.textColor
-                            : themeConfig.secondaryTextColor.withValues(alpha: 0.4),
-                  )
-                : GoogleFonts.notoSansEthiopic(
-                    fontSize: 12,
+            style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: isSelected
                         ? Colors.white
@@ -489,9 +470,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             ),
             child: TextField(
               controller: _searchController,
-              style: isEnglish
-                  ? GoogleFonts.inter(fontSize: 13.5, color: themeConfig.textColor)
-                  : GoogleFonts.notoSansEthiopic(fontSize: 13.5, color: themeConfig.textColor),
+              style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 13.5, color: themeConfig.textColor),
               decoration: InputDecoration(
                 hintText: isEnglish ? 'Search books by name or abbreviation...' : 'መጽሐፍትን በስም ወይም በአህጽሮት ይፈልጉ...',
                 hintStyle: TextStyle(fontSize: 12.5, color: themeConfig.secondaryTextColor),
@@ -559,9 +538,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                       const SizedBox(height: 12),
                       Text(
                         isEnglish ? 'No matching books found' : 'ምንም መጽሐፍ አልተገኘም',
-                        style: isEnglish
-                            ? GoogleFonts.inter(fontSize: 14, color: themeConfig.secondaryTextColor)
-                            : GoogleFonts.notoSansEthiopic(fontSize: 14, color: themeConfig.secondaryTextColor),
+                        style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 14, color: themeConfig.secondaryTextColor),
                       ),
                     ],
                   ),
@@ -597,17 +574,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             children: [
               Text(
                 label,
-                style: isEnglish
-                    ? GoogleFonts.inter(
-                        fontSize: 13,
+                style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: isSelected ? Colors.white : themeConfig.textColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: isSelected ? Colors.white : themeConfig.textColor,
-                      ),
+                        color: isSelected ? Colors.white : themeConfig.textColor,),
               ),
               const SizedBox(width: 6),
               Container(
@@ -711,17 +680,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
           const SizedBox(width: 8),
           Text(
             title,
-            style: isEnglish
-                ? GoogleFonts.inter(
-                    fontSize: 13,
+            style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 13.5,
                     fontWeight: FontWeight.w800,
-                    color: sec.color,
-                  )
-                : GoogleFonts.notoSansEthiopic(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: sec.color,
-                  ),
+                    color: sec.color,),
           ),
           const Spacer(),
           Container(
@@ -795,11 +756,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                     themeConfig.useGeezNumerals && !isEnglish
                         ? GeezNumbers.toGeez(book.bookNumber)
                         : '${book.bookNumber}',
-                    style: GoogleFonts.notoSansEthiopic(
-                      fontSize: 12.5,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12.5,
                       fontWeight: FontWeight.w800,
-                      color: catColor,
-                    ),
+                      color: catColor,),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -814,17 +773,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                           Expanded(
                             child: Text(
                               displayName,
-                              style: isEnglish
-                                  ? GoogleFonts.inter(
-                                      fontSize: 14.5,
+                              style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 14.5,
                                       fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
-                                      color: isCurrent ? catColor : themeConfig.textColor,
-                                    )
-                                  : GoogleFonts.notoSansEthiopic(
-                                      fontSize: 14.5,
-                                      fontWeight: isCurrent ? FontWeight.w900 : FontWeight.w700,
-                                      color: isCurrent ? catColor : themeConfig.textColor,
-                                    ),
+                                      color: isCurrent ? catColor : themeConfig.textColor,),
                             ),
                           ),
                           if (isCurrent)
@@ -945,17 +896,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
             children: [
               Text(
                 isEnglish ? '$bookDisplayName — Select Chapter' : '$bookDisplayName — ምዕራፍ ይምረጡ',
-                style: isEnglish
-                    ? GoogleFonts.inter(
-                        fontSize: 14.5,
+                style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: themeConfig.textColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: themeConfig.textColor,
-                      ),
+                        color: themeConfig.textColor,),
               ),
               Text(
                 isEnglish ? '${book.totalChapters} Chapters' : '${book.totalChapters} ምዕራፎች',
@@ -995,17 +938,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   ),
                   child: Text(
                     label,
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 15,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: isCurrent ? Colors.white : themeConfig.textColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: isCurrent ? Colors.white : themeConfig.textColor,
-                          ),
+                            color: isCurrent ? Colors.white : themeConfig.textColor,),
                   ),
                 ),
               );
@@ -1045,9 +980,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
               isEnglish
                   ? 'Open $bookDisplayName Chapter $_selectedChapter from Verse 1'
                   : '$bookDisplayName ምዕራፍ $_selectedChapterን ከመጀመሪያው ክፈት',
-              style: isEnglish
-                  ? GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13)
-                  : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700, fontSize: 13),
+              style: themeConfig.getAppStyle(isEnglish: isEnglish, fontWeight: FontWeight.w700, fontSize: 13),
             ),
           ),
         ),
@@ -1055,17 +988,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           child: Text(
             isEnglish ? 'Or jump directly to a verse:' : 'ወይም ወደ ተለየ ቁጥር በቀጥታ ይዝለሉ፦',
-            style: isEnglish
-                ? GoogleFonts.inter(
-                    fontSize: 12.5,
+            style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: themeConfig.secondaryTextColor,
-                  )
-                : GoogleFonts.notoSansEthiopic(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: themeConfig.secondaryTextColor,
-                  ),
+                    color: themeConfig.secondaryTextColor,),
           ),
         ),
         Expanded(
@@ -1094,17 +1019,9 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                   ),
                   child: Text(
                     label,
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 14,
+                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: themeConfig.textColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: themeConfig.textColor,
-                          ),
+                            color: themeConfig.textColor,),
                   ),
                 ),
               );

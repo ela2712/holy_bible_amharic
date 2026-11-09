@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/annotation.dart';
 import '../../providers/app_language_provider.dart';
@@ -95,17 +94,12 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                 children: [
                   Text(
                     isEnglish ? 'Saved Vault' : 'የእኔ ማህደር',
-                    style: isEnglish
-                        ? GoogleFonts.inter(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: themeConfig.textColor,
-                          )
-                        : GoogleFonts.notoSansEthiopic(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: themeConfig.textColor,
-                          ),
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: themeConfig.textColor,
+                    ),
                   ),
                   Row(
                     children: [
@@ -215,17 +209,12 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
               const SizedBox(width: 6),
               Text(
                 '$label ($count)',
-                style: isEnglish
-                    ? GoogleFonts.inter(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : themeConfig.textColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : themeConfig.textColor,
-                      ),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: isEnglish ? 11.5 : 12,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : themeConfig.textColor,
+                ),
               ),
             ],
           ),
@@ -240,6 +229,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
     required String subtitle,
     required ReaderThemeConfig themeConfig,
   }) {
+    final isEnglish = ref.watch(isEnglishUiProvider);
     return Center(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(32, 0, 32, 90),
@@ -258,7 +248,8 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: GoogleFonts.notoSansEthiopic(
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 color: themeConfig.textColor,
@@ -268,7 +259,8 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: GoogleFonts.notoSansEthiopic(
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
                 fontSize: 13,
                 height: 1.5,
                 color: themeConfig.secondaryTextColor,
@@ -324,7 +316,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                           const SizedBox(width: 5),
                           Text(
                             '${b.bookName} ${b.chapter}:${b.verse}',
-                            style: GoogleFonts.notoSansEthiopic(
+                            style: themeConfig.getAppStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
                               color: themeConfig.accentColor,
@@ -362,7 +354,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                 const SizedBox(height: 8),
                 Text(
                   b.verseText,
-                  style: GoogleFonts.notoSerifEthiopic(
+                  style: themeConfig.getAppStyle(
                     fontSize: 15,
                     height: 1.65,
                     color: themeConfig.textColor,
@@ -420,7 +412,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                     const SizedBox(width: 8),
                     Text(
                       '${h.bookName} ${h.chapter}:${h.verse}',
-                      style: GoogleFonts.notoSansEthiopic(
+                      style: themeConfig.getAppStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: themeConfig.textColor,
@@ -451,7 +443,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                   ),
                   child: Text(
                     h.verseText,
-                    style: GoogleFonts.notoSerifEthiopic(
+                    style: themeConfig.getAppStyle(
                       fontSize: 14.5,
                       height: 1.6,
                       color: themeConfig.textColor,
@@ -505,7 +497,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                       ),
                       child: Text(
                         '${n.bookName} ${n.chapter}:${n.verse}',
-                        style: GoogleFonts.notoSansEthiopic(
+                        style: themeConfig.getAppStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: themeConfig.accentColor,
@@ -540,7 +532,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                   ),
                   child: Text(
                     n.noteText,
-                    style: GoogleFonts.notoSansEthiopic(
+                    style: themeConfig.getAppStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: themeConfig.textColor,
@@ -552,7 +544,7 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                   '«${n.verseText}»',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.notoSerifEthiopic(
+                  style: themeConfig.getAppStyle(
                     fontSize: 13,
                     color: themeConfig.secondaryTextColor,
                   ),

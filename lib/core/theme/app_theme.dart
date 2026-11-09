@@ -32,7 +32,7 @@ class ReaderThemeConfig {
   ThemeData toThemeData() => AppTheme.buildTheme(this);
 
   TextStyle getAppStyle({
-    required bool isEnglish,
+    bool isEnglish = false,
     double? fontSize,
     FontWeight? fontWeight,
     Color? color,
@@ -83,7 +83,9 @@ class ReaderThemeConfig {
     } else {
       switch (fontFamily) {
         case 'Sans':
-          return GoogleFonts.notoSansEthiopic(
+          return TextStyle(
+            fontFamily: 'NotoSansEthiopic',
+            fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif'],
             fontSize: fontSize,
             fontWeight: fontWeight,
             color: color,
@@ -92,7 +94,9 @@ class ReaderThemeConfig {
             fontStyle: fontStyle,
           );
         case 'Abyssinica':
-          return GoogleFonts.abyssinicaSil(
+          return TextStyle(
+            fontFamily: 'AbyssinicaSIL',
+            fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'],
             fontSize: fontSize,
             fontWeight: fontWeight,
             color: color,
@@ -120,7 +124,9 @@ class ReaderThemeConfig {
           );
         case 'Serif':
         default:
-          return GoogleFonts.notoSerifEthiopic(
+          return TextStyle(
+            fontFamily: 'NotoSerifEthiopic',
+            fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'serif'],
             fontSize: fontSize,
             fontWeight: fontWeight,
             color: color,
@@ -243,44 +249,45 @@ class AppTheme {
     final isDark = config.mode == ReaderThemeMode.dark;
     final baseTheme = isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
 
-    TextTheme textTheme;
+    String targetFontFamily;
+    List<String> targetFontFallback;
     switch (config.fontFamily) {
       case 'Abyssinica':
-        textTheme = baseTheme.textTheme.apply(
-          fontFamily: 'AbyssinicaSIL',
-          fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'],
-        );
+        targetFontFamily = 'AbyssinicaSIL';
+        targetFontFallback = const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'];
         break;
       case 'Sans':
-        textTheme = baseTheme.textTheme.apply(
-          fontFamily: 'NotoSansEthiopic',
-          fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif'],
-        );
+        targetFontFamily = 'NotoSansEthiopic';
+        targetFontFallback = const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif'];
         break;
       case 'PowerGeez':
-        textTheme = baseTheme.textTheme.apply(
-          fontFamily: 'Power Ge\'ez Unicode',
-          fontFamilyFallback: const [
-            'PowerGeez',
-            'Power Ge\'ez',
-            'Nyala',
-            'WashRa',
-            'NotoSerifEthiopic',
-            'AbyssinicaSIL',
-          ],
-        );
+        targetFontFamily = 'Power Ge\'ez Unicode';
+        targetFontFallback = const [
+          'PowerGeez',
+          'Power Ge\'ez',
+          'Nyala',
+          'WashRa',
+          'NotoSerifEthiopic',
+          'AbyssinicaSIL',
+        ];
         break;
       case 'Serif':
       default:
-        textTheme = baseTheme.textTheme.apply(
-          fontFamily: 'NotoSerifEthiopic',
-          fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'serif'],
-        );
+        targetFontFamily = 'NotoSerifEthiopic';
+        targetFontFallback = const ['Noto Serif Ethiopic', 'Nyala', 'serif'];
         break;
     }
 
+    final textTheme = baseTheme.textTheme.apply(
+      fontFamily: targetFontFamily,
+      bodyColor: config.textColor,
+      displayColor: config.textColor,
+    );
+
     return baseTheme.copyWith(
       scaffoldBackgroundColor: config.backgroundColor,
+      textTheme: textTheme,
+      primaryTextTheme: textTheme,
       colorScheme: ColorScheme.fromSeed(
         seedColor: config.accentColor,
         brightness: isDark ? Brightness.dark : Brightness.light,
@@ -294,8 +301,9 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: config.getAppStyle(
-          isEnglish: false,
+        titleTextStyle: TextStyle(
+          fontFamily: targetFontFamily,
+          fontFamilyFallback: targetFontFallback,
           color: config.textColor,
           fontSize: 18,
           fontWeight: FontWeight.w700,
@@ -312,10 +320,6 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: config.cardBorderColor,
         thickness: 1,
-      ),
-      textTheme: textTheme.apply(
-        bodyColor: config.textColor,
-        displayColor: config.textColor,
       ),
     );
   }

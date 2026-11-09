@@ -443,13 +443,17 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
           children: [
             Text(
               isEnglish ? 'Verse Card Maker' : 'የጥቅስ ምስል አዘጋጅ',
-              style: isEnglish
-                  ? GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w900, color: themeConfig.textColor)
-                  : GoogleFonts.notoSansEthiopic(fontSize: 17, fontWeight: FontWeight.w900, color: themeConfig.textColor),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: themeConfig.textColor,
+              ),
             ),
             Text(
               isEnglish ? 'SCRIPTURE CARD CREATOR' : 'የመጽሐፍ ቅዱስ ጥቅስ ምስል',
-              style: GoogleFonts.plusJakartaSans(
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
                 fontSize: 9.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.1,
@@ -479,9 +483,11 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                   : const Icon(Icons.ios_share_rounded, size: 16),
               label: Text(
                 isEnglish ? 'Share' : 'አጋራ',
-                style: isEnglish
-                    ? GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w800)
-                    : GoogleFonts.notoSansEthiopic(fontSize: 12.5, fontWeight: FontWeight.w800),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ),
@@ -622,19 +628,13 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                                       child: Text(
                                         _formatCitation(widget.reference, _useGeezNumerals),
                                         textAlign: TextAlign.center,
-                                        style: isEnglish
-                                            ? GoogleFonts.inter(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w900,
-                                                color: preset.accentColor,
-                                                letterSpacing: 0.4,
-                                              )
-                                            : GoogleFonts.notoSansEthiopic(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w900,
-                                                color: preset.accentColor,
-                                                letterSpacing: 0.4,
-                                              ),
+                                        style: themeConfig.getAppStyle(
+                                          isEnglish: isEnglish,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                          color: preset.accentColor,
+                                          letterSpacing: 0.4,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -665,9 +665,11 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                   icon: const Icon(Icons.add_photo_alternate_rounded, size: 16),
                   label: Text(
                     isEnglish ? 'Gallery Photo' : 'ከጋለሪ ምረጥ',
-                    style: isEnglish
-                        ? GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)
-                        : GoogleFonts.notoSansEthiopic(fontSize: 12, fontWeight: FontWeight.w700),
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -689,9 +691,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                           const SizedBox(width: 5),
                           Text(
                             isEnglish ? 'Custom Photo Applied' : 'የግል ፎቶ ተመርጧል',
-                            style: isEnglish
-                                ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.accentColor)
-                                : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.accentColor),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: themeConfig.accentColor,
+                            ),
                           ),
                         ],
                       ),
@@ -736,17 +741,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                       child: Center(
                         child: Text(
                           item.getDisplayName(isEnglish),
-                          style: isEnglish
-                              ? GoogleFonts.inter(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: item.textColor,
-                                )
-                              : GoogleFonts.notoSansEthiopic(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: item.textColor,
-                                ),
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                            color: item.textColor,
+                          ),
                         ),
                       ),
                     ),
@@ -931,17 +931,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                               ),
                               child: Text(
                                 r.getDisplayLabel(isEnglish),
-                                style: isEnglish
-                                    ? GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: isSelected ? Colors.white : themeConfig.textColor,
-                                      )
-                                    : GoogleFonts.notoSansEthiopic(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: isSelected ? Colors.white : themeConfig.textColor,
-                                      ),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSelected ? Colors.white : themeConfig.textColor,
+                                ),
                               ),
                             ),
                           );
@@ -966,9 +961,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                         _showHaragBorder
                             ? (isEnglish ? 'Border On' : 'ሐረግ አለ')
                             : (isEnglish ? 'Border Off' : 'ሐረግ የለም'),
-                        style: isEnglish
-                            ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor)
-                            : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor),
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: themeConfig.textColor,
+                        ),
                       ),
                       onSelected: (val) => setState(() => _showHaragBorder = val),
                     ),
@@ -996,9 +994,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                     avatar: Icon(Icons.pin_outlined, size: 16, color: themeConfig.accentColor),
                     label: Text(
                       isEnglish ? "Ge'ez Numeral (፫፥፲፮)" : 'ግዕዝ ቁጥር (፫፥፲፮)',
-                      style: isEnglish
-                          ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor)
-                          : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: themeConfig.textColor,
+                      ),
                     ),
                     onSelected: (val) => setState(() => _useGeezNumerals = val),
                   ),
@@ -1013,9 +1014,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                     avatar: const Icon(Icons.format_color_text_rounded, size: 16, color: Color(0xFFDC2626)),
                     label: Text(
                       isEnglish ? 'Rubrication (Red Ink)' : 'ቀይ ጽሕፈት (ቀይ ቀለም)',
-                      style: isEnglish
-                          ? GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor)
-                          : GoogleFonts.notoSansEthiopic(fontSize: 11.5, fontWeight: FontWeight.w700, color: themeConfig.textColor),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: themeConfig.textColor,
+                      ),
                     ),
                     onSelected: (val) => setState(() => _useRubrication = val),
                   ),
@@ -1093,17 +1097,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
           child: Center(
             child: Text(
               label,
-              style: isEnglish
-                  ? GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : themeConfig.textColor,
-                    )
-                  : GoogleFonts.notoSansEthiopic(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? Colors.white : themeConfig.textColor,
-                    ),
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? Colors.white : themeConfig.textColor,
+              ),
             ),
           ),
         ),
@@ -1114,9 +1113,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
   Widget _buildSectionTitle(String title, bool isEnglish, ReaderThemeConfig themeConfig) {
     return Text(
       title,
-      style: isEnglish
-          ? GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: themeConfig.textColor)
-          : GoogleFonts.notoSansEthiopic(fontSize: 13, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+      style: themeConfig.getAppStyle(
+        isEnglish: isEnglish,
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: themeConfig.textColor,
+      ),
     );
   }
 
@@ -1160,17 +1162,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
               const SizedBox(height: 2),
               Text(
                 label,
-                style: isEnglish
-                    ? GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : themeConfig.textColor,
-                      )
-                    : GoogleFonts.notoSansEthiopic(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected ? Colors.white : themeConfig.textColor,
-                      ),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? Colors.white : themeConfig.textColor,
+                ),
               ),
             ],
           ),

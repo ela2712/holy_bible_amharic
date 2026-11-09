@@ -43,8 +43,11 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/database/
-    - assets/data/
+    - assets/data/amharic_1954.json
+    - assets/data/orthodox_81.json
+    - assets/data/geez_81.json
+    - assets/data/kjv.json
+    - assets/data/cross_references.json
     - assets/fonts/
 
   fonts:

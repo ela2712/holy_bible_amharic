@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/geez_numbers.dart';
 import '../../providers/app_language_provider.dart';
@@ -405,9 +404,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
         elevation: 0,
         title: Text(
           isEnglish ? 'Liturgical Calendar' : 'የኢትዮጵያ አጽዋማትና በዓላት',
-          style: isEnglish
-              ? GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: themeConfig.textColor)
-              : GoogleFonts.notoSansEthiopic(fontSize: 18, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+          style: themeConfig.getAppStyle(
+            isEnglish: isEnglish,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: themeConfig.textColor,
+          ),
         ),
         actions: [
           IconButton(
@@ -459,9 +461,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                             isEnglish
                                 ? '$_selectedYear Ethiopian Calendar'
                                 : '$_selectedYear ዓመተ ምሕረት (ባሕረ ሐሳብ)',
-                            style: isEnglish
-                                ? GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor)
-                                : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 15, color: themeConfig.textColor),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              color: themeConfig.textColor,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -527,17 +532,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                         child: Center(
                           child: Text(
                             name,
-                            style: isEnglish
-                                ? GoogleFonts.inter(
-                                    fontSize: 12.5,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    color: isSelected ? Colors.white : themeConfig.textColor,
-                                  )
-                                : GoogleFonts.notoSansEthiopic(
-                                    fontSize: 12.5,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    color: isSelected ? Colors.white : themeConfig.textColor,
-                                  ),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 12.5,
+                              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                              color: isSelected ? Colors.white : themeConfig.textColor,
+                            ),
                           ),
                         ),
                       ),
@@ -564,9 +564,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                       children: [
                         Text(
                           '$monthName $_selectedYear',
-                          style: isEnglish
-                              ? GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: themeConfig.textColor)
-                              : GoogleFonts.notoSansEthiopic(fontSize: 17, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
                         ),
                         Text(
                           isEnglish ? '$daysInMonth Days' : '$daysInMonth ቀናት',
@@ -725,9 +728,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                           isEnglish
                               ? '$monthName $_selectedDay, $_selectedYear E.C.'
                               : '$monthName $_selectedDay ቀን $_selectedYear ዓ.ም.',
-                          style: isEnglish
-                              ? GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor)
-                              : GoogleFonts.notoSansEthiopic(fontSize: 16, fontWeight: FontWeight.w800, color: themeConfig.textColor),
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.textColor,
+                          ),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -808,9 +814,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                                   Expanded(
                                     child: Text(
                                       evt.getDisplayTitle(isEnglish),
-                                      style: isEnglish
-                                          ? GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13.5, color: themeConfig.textColor)
-                                          : GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w800, fontSize: 14, color: themeConfig.textColor),
+                                      style: themeConfig.getAppStyle(
+                                        isEnglish: isEnglish,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: isEnglish ? 13.5 : 14,
+                                        color: themeConfig.textColor,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -818,9 +827,12 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                               const SizedBox(height: 6),
                               Text(
                                 evt.getDisplayDescription(isEnglish),
-                                style: isEnglish
-                                    ? GoogleFonts.inter(fontSize: 12, height: 1.45, color: themeConfig.secondaryTextColor)
-                                    : GoogleFonts.notoSansEthiopic(fontSize: 12.5, height: 1.45, color: themeConfig.secondaryTextColor),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontSize: isEnglish ? 12 : 12.5,
+                                  height: 1.45,
+                                  color: themeConfig.secondaryTextColor,
+                                ),
                               ),
                             ],
                           ),
