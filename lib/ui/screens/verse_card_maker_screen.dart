@@ -74,11 +74,24 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
   bool _showHaragBorder = true;
   bool _useGeezNumerals = false;
   bool _useRubrication = true;
-  String _fontFamily = 'Serif'; // 'Serif', 'Sans', 'Abyssinica'
+  String _fontFamily = 'Serif';
   double _fontSize = 18.0;
   TextAlign _alignment = TextAlign.center;
   bool _isGenerating = false;
   Uint8List? _customBackgroundBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final isEnglish = ref.read(isEnglishUiProvider);
+      final themeConfig = ref.read(themeConfigProvider);
+      setState(() {
+        _fontFamily = isEnglish ? themeConfig.englishFontFamily : themeConfig.fontFamily;
+      });
+    });
+  }
 
   static const List<CardThemePreset> _presets = [
     // 1. Ancient Parchment (ጥንታዊ ብራና)
@@ -93,10 +106,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragSecondary: Color(0xFF047857), // Malachite green ink
     ),
 
-    // 2. Lalibela (ላሊበላ)
+    // 2. St. Athanasius (ቅዱስ አትናቴዎስ)
     CardThemePreset(
-      name: 'ላሊበላ',
-      nameEn: 'Lalibela',
+      name: 'ቅዱስ አትናቴዎስ',
+      nameEn: 'St. Athanasius',
       backgroundColors: [Color(0xFF2C1810), Color(0xFF4A1F18)],
       textColor: Color(0xFFFDFBF7),
       accentColor: Color(0xFFFFD54F),
@@ -104,10 +117,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFFFFD54F),
       haragSecondary: Color(0xFFC5A059),
     ),
-    // 3. Axumite (አክሱም)
+    // 3. St. Cyril (ቅዱስ ቄርሎስ)
     CardThemePreset(
-      name: 'አክሱም',
-      nameEn: 'Axumite',
+      name: 'ቅዱስ ቄርሎስ',
+      nameEn: 'St. Cyril',
       backgroundColors: [Color(0xFF0F172A), Color(0xFF1E293B)],
       textColor: Color(0xFFF8FAFC),
       accentColor: Color(0xFF38BDF8),
@@ -115,10 +128,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFF38BDF8),
       haragSecondary: Color(0xFF818CF8),
     ),
-    // 4. Gondar (ጎንደር)
+    // 4. St. John Chrysostom (ቅዱስ ዮሐንስ አፈወርቅ)
     CardThemePreset(
-      name: 'ጎንደር',
-      nameEn: 'Gondar',
+      name: 'ቅዱስ ዮሐንስ አፈወርቅ',
+      nameEn: 'St. Chrysostom',
       backgroundColors: [Color(0xFF3B0B13), Color(0xFF6B1422)],
       textColor: Color(0xFFFFF7ED),
       accentColor: Color(0xFFFBBF24),
@@ -126,10 +139,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFFFBBF24),
       haragSecondary: Color(0xFFEA580C),
     ),
-    // 5. Debre Damo (ደብረ ዳሞ)
+    // 5. St. Basil (ቅዱስ ባስልዮስ)
     CardThemePreset(
-      name: 'ደብረ ዳሞ',
-      nameEn: 'Debre Damo',
+      name: 'ቅዱስ ባስልዮስ',
+      nameEn: 'St. Basil',
       backgroundColors: [Color(0xFF062C20), Color(0xFF0E4D3A)],
       textColor: Color(0xFFF0FDF4),
       accentColor: Color(0xFF34D399),
@@ -137,10 +150,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFF34D399),
       haragSecondary: Color(0xFFA7F3D0),
     ),
-    // 6. Obsidian (ስሌት)
+    // 6. St. Dioscorus (ቅዱስ ዲዮስቆሮስ)
     CardThemePreset(
-      name: 'ስሌት',
-      nameEn: 'Obsidian',
+      name: 'ቅዱስ ዲዮስቆሮስ',
+      nameEn: 'St. Dioscorus',
       backgroundColors: [Color(0xFF090A0F), Color(0xFF161824)],
       textColor: Color(0xFFFFFFFF),
       accentColor: Color(0xFFE2E8F0),
@@ -148,10 +161,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFF64748B),
       haragSecondary: Color(0xFF94A3B8),
     ),
-    // 7. Tigray Gold (ትግራይ)
+    // 7. St. Gregory (ቅዱስ ጎርጎርዮስ)
     CardThemePreset(
-      name: 'ትግራይ',
-      nameEn: 'Tigray Amber',
+      name: 'ቅዱስ ጎርጎርዮስ',
+      nameEn: 'St. Gregory',
       backgroundColors: [Color(0xFF261506), Color(0xFF45240A), Color(0xFF68340D)],
       textColor: Color(0xFFFFFBEB),
       accentColor: Color(0xFFFBBF24),
@@ -159,10 +172,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFFFBBF24),
       haragSecondary: Color(0xFFB45309),
     ),
-    // 8. Harar Jugol (ሐረር ጁጎል)
+    // 8. St. Ephrem the Syrian (ቅዱስ ኤፍሬም)
     CardThemePreset(
-      name: 'ሐረር ጁጎል',
-      nameEn: 'Harar Jugol',
+      name: 'ቅዱስ ኤፍሬም',
+      nameEn: 'St. Ephrem',
       backgroundColors: [Color(0xFF1E0A12), Color(0xFF421224)],
       textColor: Color(0xFFFFF1F2),
       accentColor: Color(0xFFFB7185),
@@ -170,10 +183,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFFF43F5E),
       haragSecondary: Color(0xFF9F1239),
     ),
-    // 9. Lake Tana (ጣና ቂርቆስ)
+    // 9. St. Yared (ቅዱስ ያሬድ)
     CardThemePreset(
-      name: 'ጣና ቂርቆስ',
-      nameEn: 'Lake Tana',
+      name: 'ቅዱስ ያሬድ',
+      nameEn: 'St. Yared',
       backgroundColors: [Color(0xFF031A2E), Color(0xFF083344)],
       textColor: Color(0xFFF0F9FF),
       accentColor: Color(0xFF38BDF8),
@@ -181,10 +194,10 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       haragPrimary: Color(0xFF0EA5E9),
       haragSecondary: Color(0xFF0369A1),
     ),
-    // 10. Alabaster Minimalist (ንጹሕ ብራና)
+    // 10. Abba Giyorgis of Gascha (አባ ጊዮርጊስ ዘጋስጫ)
     CardThemePreset(
-      name: 'ንጹሕ ብራና',
-      nameEn: 'Alabaster',
+      name: 'አባ ጊዮርጊስ ዘጋስጫ',
+      nameEn: 'Abba Giyorgis',
       backgroundColors: [Color(0xFFFFFFFF), Color(0xFFF8F6F0)],
       textColor: Color(0xFF1C1917),
       accentColor: Color(0xFF991B1B),
@@ -216,25 +229,32 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
   }) {
     if (isEnglish) {
       switch (_fontFamily) {
-        case 'Sans':
+        case 'Inter':
           return GoogleFonts.inter(
             fontSize: fontSize,
             height: 1.55,
             fontWeight: FontWeight.w600,
             color: textColor,
           );
-        case 'Abyssinica':
-          return GoogleFonts.cormorantGaramond(
-            fontSize: fontSize * 1.1,
-            height: 1.5,
-            fontWeight: FontWeight.w700,
+        case 'Lora':
+          return GoogleFonts.lora(
+            fontSize: fontSize,
+            height: 1.55,
+            fontWeight: FontWeight.w600,
             color: textColor,
           );
-        case 'Serif':
-        default:
+        case 'Merriweather':
           return GoogleFonts.merriweather(
             fontSize: fontSize,
             height: 1.6,
+            fontWeight: FontWeight.w700,
+            color: textColor,
+          );
+        case 'Cormorant':
+        default:
+          return GoogleFonts.cormorantGaramond(
+            fontSize: fontSize * 1.15,
+            height: 1.5,
             fontWeight: FontWeight.w700,
             color: textColor,
           );
@@ -255,6 +275,15 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
             fontFamily: 'AbyssinicaSIL',
             fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic'],
             fontSize: fontSize * 1.05,
+            height: 1.6,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          );
+        case 'PowerGeez':
+          return TextStyle(
+            fontFamily: 'PowerGeez',
+            fontFamilyFallback: const ['Noto Serif Ethiopic', 'Abyssinica SIL', 'Nyala', 'serif'],
+            fontSize: fontSize,
             height: 1.6,
             fontWeight: FontWeight.w600,
             color: textColor,
@@ -338,9 +367,12 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
       ));
     }
 
-    return RichText(
+    return Text.rich(
+      TextSpan(
+        style: baseStyle,
+        children: spans,
+      ),
       textAlign: alignment,
-      text: TextSpan(children: spans),
     );
   }
 
@@ -605,17 +637,6 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
                                               ),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      isEnglish ? 'HOLY BIBLE' : 'መጽሐፍ ቅዱስ',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1.1,
-                                        color: preset.textColor.withValues(alpha: 0.65),
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ],
@@ -742,30 +763,70 @@ class _VerseCardMakerScreenState extends ConsumerState<VerseCardMakerScreen> {
               themeConfig,
             ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildFontChip(
-                  id: 'Serif',
-                  label: isEnglish ? 'Noto Serif' : 'ኖቶ ሰሪፍ',
-                  themeConfig: themeConfig,
-                  isEnglish: isEnglish,
-                ),
-                const SizedBox(width: 8),
-                _buildFontChip(
-                  id: 'Sans',
-                  label: isEnglish ? 'Noto Sans' : 'ኖቶ ሳንስ',
-                  themeConfig: themeConfig,
-                  isEnglish: isEnglish,
-                ),
-                const SizedBox(width: 8),
-                _buildFontChip(
-                  id: 'Abyssinica',
-                  label: isEnglish ? 'Abyssinica' : 'አቢሲኒካ',
-                  themeConfig: themeConfig,
-                  isEnglish: isEnglish,
-                ),
-              ],
-            ),
+            if (isEnglish)
+              Row(
+                children: [
+                  _buildFontChip(
+                    id: 'Cormorant',
+                    label: 'Cormorant',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFontChip(
+                    id: 'Merriweather',
+                    label: 'Merriweather',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFontChip(
+                    id: 'Lora',
+                    label: 'Lora',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFontChip(
+                    id: 'Inter',
+                    label: 'Inter',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  _buildFontChip(
+                    id: 'Serif',
+                    label: 'ኖቶ ሰሪፍ',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFontChip(
+                    id: 'Sans',
+                    label: 'ኖቶ ሳንስ',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFontChip(
+                    id: 'Abyssinica',
+                    label: 'አቢሲኒካ',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFontChip(
+                    id: 'PowerGeez',
+                    label: 'ዋሽራ',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                ],
+              ),
             const SizedBox(height: 20),
 
             // 4. Orthodox Cross Watermark Selector

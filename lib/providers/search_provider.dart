@@ -73,19 +73,24 @@ class SearchNotifier extends StateNotifier<SearchState> {
         limit: 100,
       );
 
-      // Save to search history (deduped, max 20)
-      final updatedHistory = [trimmed, ...state.recentSearches.where((s) => s != trimmed)].take(20).toList();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('recent_bible_searches', updatedHistory);
-
       state = state.copyWith(
         results: results,
-        recentSearches: updatedHistory,
         isSearching: false,
       );
     } catch (e) {
       state = state.copyWith(isSearching: false, error: e.toString());
     }
+  }
+
+  Future<void> saveToRecentSearches(String term) async {
+    final trimmed = term.trim();
+    if (trimmed.length < 2) return;
+
+    final updatedHistory = [trimmed, ...state.recentSearches.where((s) => s != trimmed)].take(20).toList();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('recent_bible_searches', updatedHistory);
+
+    state = state.copyWith(recentSearches: updatedHistory);
   }
 
   Future<void> clearRecentSearches() async {

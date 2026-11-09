@@ -194,7 +194,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       _performSearch();
                     }
                   },
-                  onSubmitted: (_) => _performSearch(),
+                  onSubmitted: (query) {
+                    _performSearch();
+                    ref.read(searchProvider.notifier).saveToRecentSearches(query);
+                  },
                 ),
               ),
             ),
@@ -338,6 +341,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               return InkWell(
                 borderRadius: BorderRadius.circular(18),
                 onTap: () async {
+                  ref.read(searchProvider.notifier).saveToRecentSearches(_queryController.text);
                   final bibleState = ref.read(bibleStateProvider);
                   final targetBook = bibleState.books.firstWhere(
                     (b) => b.bookNumber == bookNumber,

@@ -233,66 +233,116 @@ class SettingsScreen extends ConsumerWidget {
                     isDark: isDark,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            _buildFontFamilyItem(
-                              label: 'ሴሪፍ',
-                              subLabel: 'Noto Serif',
-                              sampleText: 'በመጀመሪያ',
-                              sampleStyle: GoogleFonts.notoSerifEthiopic(fontWeight: FontWeight.w700),
-                              isSelected: themeConfig.fontFamily == 'Serif',
-                              themeConfig: themeConfig,
-                              onTap: () => themeNotifier.setFontFamily('Serif'),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildFontFamilyItem(
-                              label: 'ሳንስ',
-                              subLabel: 'Noto Sans',
-                              sampleText: 'በመጀመሪያ',
-                              sampleStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
-                              isSelected: themeConfig.fontFamily == 'Sans',
-                              themeConfig: themeConfig,
-                              onTap: () => themeNotifier.setFontFamily('Sans'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            _buildFontFamilyItem(
-                              label: 'አቢሲኒካ',
-                              subLabel: 'Abyssinica',
-                              sampleText: 'በመጀመሪያ',
-                              sampleStyle: GoogleFonts.abyssinicaSil(fontWeight: FontWeight.w700),
-                              isSelected: themeConfig.fontFamily == 'Abyssinica',
-                              themeConfig: themeConfig,
-                              onTap: () => themeNotifier.setFontFamily('Abyssinica'),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildFontFamilyItem(
-                              label: 'ፓወር ግዕዝ',
-                              subLabel: 'Power Ge\'ez',
-                              sampleText: 'በመጀመሪያ',
-                              sampleStyle: const TextStyle(
-                                fontFamily: 'Power Ge\'ez Unicode',
-                                fontFamilyFallback: [
-                                  'PowerGeez',
-                                  'Power Ge\'ez',
-                                  'Nyala',
-                                  'WashRa',
-                                  'Abyssinica SIL',
-                                  'Noto Serif Ethiopic',
+                      children: isEnglish
+                          ? [
+                              Row(
+                                children: [
+                                  _buildFontFamilyItem(
+                                    label: 'Cormorant',
+                                    subLabel: 'Liturgical Garamond',
+                                    sampleText: 'In the beginning',
+                                    sampleStyle: GoogleFonts.cormorantGaramond(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.englishFontFamily == 'Cormorant',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setEnglishFontFamily('Cormorant'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFontFamilyItem(
+                                    label: 'Merriweather',
+                                    subLabel: 'Classic Literary',
+                                    sampleText: 'In the beginning',
+                                    sampleStyle: GoogleFonts.merriweather(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.englishFontFamily == 'Merriweather',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setEnglishFontFamily('Merriweather'),
+                                  ),
                                 ],
-                                fontWeight: FontWeight.w700,
                               ),
-                              isSelected: themeConfig.fontFamily == 'PowerGeez',
-                              themeConfig: themeConfig,
-                              onTap: () => themeNotifier.setFontFamily('PowerGeez'),
-                            ),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  _buildFontFamilyItem(
+                                    label: 'Lora',
+                                    subLabel: 'Sacred Scriptural',
+                                    sampleText: 'In the beginning',
+                                    sampleStyle: GoogleFonts.lora(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.englishFontFamily == 'Lora',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setEnglishFontFamily('Lora'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFontFamilyItem(
+                                    label: 'Inter',
+                                    subLabel: 'Modern Sans',
+                                    sampleText: 'In the beginning',
+                                    sampleStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.englishFontFamily == 'Inter',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setEnglishFontFamily('Inter'),
+                                  ),
+                                ],
+                              ),
+                            ]
+                          : [
+                              Row(
+                                children: [
+                                  _buildFontFamilyItem(
+                                    label: 'ሴሪፍ',
+                                    subLabel: 'Noto Serif',
+                                    sampleText: 'በመጀመሪያ',
+                                    sampleStyle: GoogleFonts.notoSerifEthiopic(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.fontFamily == 'Serif',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setFontFamily('Serif'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFontFamilyItem(
+                                    label: 'ሳንስ',
+                                    subLabel: 'Noto Sans',
+                                    sampleText: 'በመጀመሪያ',
+                                    sampleStyle: GoogleFonts.notoSansEthiopic(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.fontFamily == 'Sans',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setFontFamily('Sans'),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  _buildFontFamilyItem(
+                                    label: 'አቢሲኒካ',
+                                    subLabel: 'Abyssinica',
+                                    sampleText: 'በመጀመሪያ',
+                                    sampleStyle: GoogleFonts.abyssinicaSil(fontWeight: FontWeight.w700),
+                                    isSelected: themeConfig.fontFamily == 'Abyssinica',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setFontFamily('Abyssinica'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _buildFontFamilyItem(
+                                    label: 'ፓወር ግዕዝ',
+                                    subLabel: 'Power Ge\'ez',
+                                    sampleText: 'በመጀመሪያ',
+                                    sampleStyle: const TextStyle(
+                                      fontFamily: 'Power Ge\'ez Unicode',
+                                      fontFamilyFallback: [
+                                        'PowerGeez',
+                                        'Power Ge\'ez',
+                                        'Nyala',
+                                        'WashRa',
+                                        'Abyssinica SIL',
+                                        'Noto Serif Ethiopic',
+                                      ],
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    isSelected: themeConfig.fontFamily == 'PowerGeez',
+                                    themeConfig: themeConfig,
+                                    onTap: () => themeNotifier.setFontFamily('PowerGeez'),
+                                  ),
+                                ],
+                              ),
+                            ],
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -606,47 +656,6 @@ class SettingsScreen extends ConsumerWidget {
                                     ),
                                   ),
                                 ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: () async {
-                                HapticFeedback.lightImpact();
-                                final sent = await notifNotifier.sendTestNotification(isEnglish: isEnglish);
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      sent
-                                          ? (isEnglish ? 'Sample verse notification sent' : 'የሙከራ የዕለት ጥቅስ ማሳወቂያ ተልኳል')
-                                          : (isEnglish ? 'Notification permission not granted' : 'የማሳወቂያ ፈቃድ አልተሰጠም'),
-                                    ),
-                                    duration: const Duration(seconds: 3),
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              },
-                              icon: Icon(
-                                Icons.send_rounded,
-                                size: 14,
-                                color: themeConfig.accentColor,
-                              ),
-                              label: Text(
-                                isEnglish ? 'Preview Notification' : 'ማሳወቂያውን ሞክር',
-                                style: isEnglish
-                                    ? GoogleFonts.inter(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: themeConfig.accentColor,
-                                      )
-                                    : GoogleFonts.notoSansEthiopic(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: themeConfig.accentColor,
-                                      ),
                               ),
                             ),
                           ),

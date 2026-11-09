@@ -65,7 +65,7 @@ class BookSelectorScreen extends ConsumerStatefulWidget {
 class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _filter = '';
-  String _testamentFilter = 'NT'; // 'NT' or 'OT'
+  String _testamentFilter = 'OT'; // 'OT' or 'NT'
 
   // 3-Step State: 0 = Book, 1 = Chapter, 2 = Verse
   int _currentStep = 0;
@@ -85,7 +85,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
       _testamentFilter = bibleState.currentBook!.isNewTestament ? 'NT' : 'OT';
     } else {
       _currentStep = 0;
-      _testamentFilter = 'NT';
+      _testamentFilter = 'OT';
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -526,20 +526,20 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
               ),
               child: Row(
                 children: [
-                  // New Testament Tab (First by modern user priority, or OT first)
-                  _buildTestamentTab(
-                    label: isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን',
-                    count: ntBooks.length,
-                    value: 'NT',
-                    themeConfig: themeConfig,
-                    isEnglish: isEnglish,
-                  ),
-                  const SizedBox(width: 4),
-                  // Old Testament Tab
+                  // Old Testament Tab (Left)
                   _buildTestamentTab(
                     label: isEnglish ? 'Old Testament' : 'ብሉይ ኪዳን',
                     count: otBooks.length,
                     value: 'OT',
+                    themeConfig: themeConfig,
+                    isEnglish: isEnglish,
+                  ),
+                  const SizedBox(width: 4),
+                  // New Testament Tab (Right)
+                  _buildTestamentTab(
+                    label: isEnglish ? 'New Testament' : 'ሐዲስ ኪዳን',
+                    count: ntBooks.length,
+                    value: 'NT',
                     themeConfig: themeConfig,
                     isEnglish: isEnglish,
                   ),

@@ -194,61 +194,15 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     double? height,
     FontWeight? fontWeight,
     Color? color,
+    bool isEnglish = false,
   }) {
-    final size = fontSize ?? themeConfig.fontSize;
-    final lineHeight = height ?? themeConfig.lineHeight;
-    final textColor = color ?? themeConfig.textColor;
-    final weight = fontWeight ?? FontWeight.normal;
-
-    switch (themeConfig.fontFamily) {
-      case 'Abyssinica':
-        return TextStyle(
-          fontFamily: 'AbyssinicaSIL',
-          fontFamilyFallback: const ['Abyssinica SIL', 'Nyala', 'Noto Serif Ethiopic', 'Noto Serif', 'Roboto', 'serif'],
-          fontSize: size,
-          height: lineHeight,
-          fontWeight: weight,
-          color: textColor,
-        );
-      case 'Sans':
-        return TextStyle(
-          fontFamily: 'NotoSansEthiopic',
-          fontFamilyFallback: const ['Noto Sans Ethiopic', 'Nyala', 'sans-serif', 'Roboto'],
-          fontSize: size,
-          height: lineHeight,
-          fontWeight: weight,
-          color: textColor,
-        );
-      case 'PowerGeez':
-        return TextStyle(
-          fontFamily: 'Power Ge\'ez Unicode',
-          fontFamilyFallback: const [
-            'PowerGeez',
-            'Power Ge\'ez',
-            'Nyala',
-            'WashRa',
-            'NotoSerifEthiopic',
-            'AbyssinicaSIL',
-            'Noto Serif',
-            'Roboto',
-            'serif',
-          ],
-          fontSize: size,
-          height: lineHeight,
-          fontWeight: weight,
-          color: textColor,
-        );
-      case 'Serif':
-      default:
-        return TextStyle(
-          fontFamily: 'NotoSerifEthiopic',
-          fontFamilyFallback: const ['Noto Serif Ethiopic', 'Nyala', 'Noto Serif', 'Roboto', 'serif'],
-          fontSize: size,
-          height: lineHeight,
-          fontWeight: weight,
-          color: textColor,
-        );
-    }
+    return themeConfig.getAppStyle(
+      isEnglish: isEnglish,
+      fontSize: fontSize ?? themeConfig.fontSize,
+      height: height ?? themeConfig.lineHeight,
+      fontWeight: fontWeight ?? FontWeight.normal,
+      color: color ?? themeConfig.textColor,
+    );
   }
 
   static final RegExp _rubricPatternAmharic = RegExp(
@@ -1410,6 +1364,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   ) {
     final sections = <Widget>[];
     List<Verse> currentChunk = [];
+    final isEnglishTrans = bibleState.currentTranslation?.id == 3 ||
+        (bibleState.currentTranslation?.name.contains('King James') ?? false);
 
     void flushChunk() {
       if (currentChunk.isEmpty) return;
@@ -1474,6 +1430,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                             fontSize: themeConfig.fontSize,
                             height: themeConfig.lineHeight,
                             color: themeConfig.textColor,
+                            isEnglish: isEnglishTrans,
                           ),
                           rubricStyle: _getScriptureTextStyle(
                             themeConfig,
@@ -1481,8 +1438,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                             height: themeConfig.lineHeight,
                             color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
                             fontWeight: FontWeight.w700,
+                            isEnglish: isEnglishTrans,
                           ),
-                          isEnglish: ref.watch(isEnglishUiProvider),
+                          isEnglish: isEnglishTrans,
                         ),
                       ],
                     ),
@@ -1544,6 +1502,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       } catch (_) {}
     }
 
+    final isEnglishTrans = bibleState.currentTranslation?.id == 3 ||
+        (bibleState.currentTranslation?.name.contains('King James') ?? false);
     final verseNumStr = _formatVerseLabel(verse, themeConfig.useGeezNumerals);
 
     return Column(
@@ -1614,6 +1574,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           fontSize: themeConfig.fontSize,
                           height: themeConfig.lineHeight,
                           color: themeConfig.textColor,
+                          isEnglish: isEnglishTrans,
                         ),
                         rubricStyle: _getScriptureTextStyle(
                           themeConfig,
@@ -1621,8 +1582,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                           height: themeConfig.lineHeight,
                           color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
                           fontWeight: FontWeight.w700,
+                          isEnglish: isEnglishTrans,
                         ),
-                        isEnglish: ref.watch(isEnglishUiProvider),
+                        isEnglish: isEnglishTrans,
                       ),
                     ],
                   ),

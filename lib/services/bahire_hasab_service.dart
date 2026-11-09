@@ -478,7 +478,7 @@ class BahireHasabService {
       seasonTitleEn = 'Season of Flowers';
       seasonCategory = 'ወቅት';
       seasonCategoryEn = 'Season';
-      recommendedPlanId = 'filseta_16';
+      recommendedPlanId = null;
       seasonDescription = 'የማሕሌተ ጽጌና የእመቤታችን ስደት መታሰቢያ ወቅት';
       seasonDescriptionEn = 'Season of Tsigie and flight of the Holy Family';
     }

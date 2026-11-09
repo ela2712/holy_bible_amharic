@@ -12,7 +12,8 @@ class ReaderThemeConfig {
   final double fontSize;
   final double lineSpacing;
   final bool useGeezNumerals;
-  final String fontFamily; // 'Sans' or 'Serif'
+  final String fontFamily; // Amharic: 'Serif', 'Sans', 'Abyssinica', 'PowerGeez'
+  final String englishFontFamily; // English: 'Cormorant', 'Merriweather', 'Lora', 'Inter'
   final bool isParagraphMode;
 
   const ReaderThemeConfig({
@@ -21,6 +22,7 @@ class ReaderThemeConfig {
     this.lineSpacing = 1.75,
     this.useGeezNumerals = false,
     this.fontFamily = 'Serif',
+    this.englishFontFamily = 'Cormorant',
     this.isParagraphMode = false,
   });
 
@@ -29,6 +31,107 @@ class ReaderThemeConfig {
 
   ThemeData toThemeData() => AppTheme.buildTheme(this);
 
+  TextStyle getAppStyle({
+    required bool isEnglish,
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? height,
+    double? letterSpacing,
+    FontStyle? fontStyle,
+  }) {
+    if (isEnglish) {
+      switch (englishFontFamily) {
+        case 'Merriweather':
+          return GoogleFonts.merriweather(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+        case 'Lora':
+          return GoogleFonts.lora(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+        case 'Inter':
+          return GoogleFonts.inter(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+        case 'Cormorant':
+        default:
+          return GoogleFonts.cormorantGaramond(
+            fontSize: fontSize != null ? fontSize * 1.05 : null,
+            fontWeight: fontWeight ?? FontWeight.w600,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+      }
+    } else {
+      switch (fontFamily) {
+        case 'Sans':
+          return GoogleFonts.notoSansEthiopic(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+        case 'Abyssinica':
+          return GoogleFonts.abyssinicaSil(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+        case 'PowerGeez':
+          return TextStyle(
+            fontFamily: 'Power Ge\'ez Unicode',
+            fontFamilyFallback: const [
+              'PowerGeez',
+              'Power Ge\'ez',
+              'Nyala',
+              'WashRa',
+              'NotoSerifEthiopic',
+              'AbyssinicaSIL',
+            ],
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+        case 'Serif':
+        default:
+          return GoogleFonts.notoSerifEthiopic(
+            fontSize: fontSize,
+            fontWeight: fontWeight,
+            color: color,
+            height: height,
+            letterSpacing: letterSpacing,
+            fontStyle: fontStyle,
+          );
+      }
+    }
+  }
+
   ReaderThemeConfig copyWith({
     ReaderThemeMode? mode,
     double? fontSize,
@@ -36,6 +139,7 @@ class ReaderThemeConfig {
     double? lineHeight,
     bool? useGeezNumerals,
     String? fontFamily,
+    String? englishFontFamily,
     bool? isParagraphMode,
   }) {
     return ReaderThemeConfig(
@@ -44,6 +148,7 @@ class ReaderThemeConfig {
       lineSpacing: lineSpacing ?? lineHeight ?? this.lineSpacing,
       useGeezNumerals: useGeezNumerals ?? this.useGeezNumerals,
       fontFamily: fontFamily ?? this.fontFamily,
+      englishFontFamily: englishFontFamily ?? this.englishFontFamily,
       isParagraphMode: isParagraphMode ?? this.isParagraphMode,
     );
   }
@@ -189,7 +294,8 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.notoSansEthiopic(
+        titleTextStyle: config.getAppStyle(
+          isEnglish: false,
           color: config.textColor,
           fontSize: 18,
           fontWeight: FontWeight.w700,

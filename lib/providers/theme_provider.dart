@@ -20,6 +20,7 @@ class ThemeConfigNotifier extends StateNotifier<ReaderThemeConfig> {
     final useGeezNumerals = prefs.getBool('reader_use_geez_numerals') ?? false;
     final isParagraphMode = prefs.getBool('reader_is_paragraph_mode') ?? false;
     final fontFamily = prefs.getString('reader_font_family') ?? 'Serif';
+    final englishFontFamily = prefs.getString('reader_english_font_family') ?? 'Cormorant';
 
     state = ReaderThemeConfig(
       mode: ReaderThemeMode.values[modeIndex.clamp(0, 2)],
@@ -27,6 +28,7 @@ class ThemeConfigNotifier extends StateNotifier<ReaderThemeConfig> {
       lineSpacing: lineSpacing,
       useGeezNumerals: useGeezNumerals,
       fontFamily: fontFamily,
+      englishFontFamily: englishFontFamily,
       isParagraphMode: isParagraphMode,
     );
   }
@@ -35,6 +37,12 @@ class ThemeConfigNotifier extends StateNotifier<ReaderThemeConfig> {
     state = state.copyWith(fontFamily: family);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('reader_font_family', family);
+  }
+
+  Future<void> setEnglishFontFamily(String family) async {
+    state = state.copyWith(englishFontFamily: family);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('reader_english_font_family', family);
   }
 
   Future<void> setMode(ReaderThemeMode mode) async {
