@@ -195,18 +195,22 @@ class BahireHasabService {
   BahireHasabService._();
 
   static const Set<String> seasonalPlanIds = {
-    'filseta_16',
     'advent_prophets_43',
+    'nineveh_3',
     'great_lent_55',
     'passion_week',
+    'apostles_fast',
+    'filseta_16',
   };
 
   static const Set<String> eotcCuratedPlanIds = {
     'canonical_365',
     'deuterocanon_90',
-    'passion_week',
-    'great_lent_55',
     'advent_prophets_43',
+    'nineveh_3',
+    'great_lent_55',
+    'passion_week',
+    'apostles_fast',
     'filseta_16',
   };
 
@@ -268,6 +272,10 @@ class BahireHasabService {
           'start': createEthiopianDate(ethYear, 3, 15),
           'end': createEthiopianDate(ethYear, 4, 28),
         };
+      case 'nineveh_3':
+        final nineveh = getNinevehDate(ethYear);
+        final end = addDays(nineveh, 2);
+        return {'start': nineveh, 'end': end};
       case 'great_lent_55':
         final nineveh = getNinevehDate(ethYear);
         final start = addDays(nineveh, 14);
@@ -277,6 +285,11 @@ class BahireHasabService {
         final nineveh = getNinevehDate(ethYear);
         final start = addDays(nineveh, 62);
         final end = addDays(nineveh, 69);
+        return {'start': start, 'end': end};
+      case 'apostles_fast':
+        final nineveh = getNinevehDate(ethYear);
+        final start = addDays(nineveh, 119); // Monday after Pentecost
+        final end = createEthiopianDate(ethYear, 11, 4); // Hamle 4 (Eve of Peter & Paul)
         return {'start': start, 'end': end};
       default:
         throw ArgumentError('Not a seasonal plan: $planId');
@@ -512,7 +525,7 @@ class BahireHasabService {
         date: nineveh,
         description: 'የሦስት ቀን የነነዌ ጾምና የንስሐ ጸሎት።',
         descriptionEn: 'Three-day fast of repentance and prayer of Nineveh.',
-        matchingPlanId: 'passion_week',
+        matchingPlanId: 'nineveh_3',
       ),
       LiturgicalEvent(
         title: 'ዐቢይ ጾም',
@@ -601,7 +614,7 @@ class BahireHasabService {
         date: apostlesFast,
         description: 'ከበዓለ ጰራቅሊጦስ ማግሥት የሚጀመረው የቅዱሳን ሐዋርያት ጾም።',
         descriptionEn: 'Fast of the Holy Apostles beginning the day after Pentecost.',
-        matchingPlanId: 'nt_90',
+        matchingPlanId: 'apostles_fast',
       ),
       LiturgicalEvent(
         title: 'ጾመ ድኅነት',
@@ -644,6 +657,7 @@ class BahireHasabService {
     final adventInfo = getFastSeasonInfo('advent_prophets_43', ethDate);
     final lentInfo = getFastSeasonInfo('great_lent_55', ethDate);
     final passionInfo = getFastSeasonInfo('passion_week', ethDate);
+    final apostlesInfo = getFastSeasonInfo('apostles_fast', ethDate);
 
     // 1. Fast of Assumption (ጾመ ፍልሰታ - ነሐሴ 1 - 16)
     if (filsetaInfo.isUnlocked) {
@@ -663,7 +677,7 @@ class BahireHasabService {
       seasonTitleEn = 'Fast of Nineveh';
       seasonCategory = 'ጾም';
       seasonCategoryEn = 'Fast';
-      recommendedPlanId = null;
+      recommendedPlanId = 'nineveh_3';
       seasonDescription = 'የሦስት ቀናት የነነዌ ጾምና የንስሐ ጸሎት';
       seasonDescriptionEn = 'Three days of fasting and repentance of Nineveh';
       isSeasonalFast = true;
@@ -724,13 +738,12 @@ class BahireHasabService {
       seasonDescriptionEn = 'Christ is risen! Season of joy and thanksgiving';
     }
     // 8. Fast of the Apostles (ጾመ ሐዋርያት)
-    else if (daysBetween(apostlesFastEvent.date, ethDate) >= 0 &&
-        daysBetween(ethDate, createEthiopianDate(ethDate.year, 11, 4)) >= 0) {
+    else if (apostlesInfo.isUnlocked) {
       seasonTitle = 'ጾመ ሐዋርያት';
       seasonTitleEn = 'Fast of the Apostles';
       seasonCategory = 'ጾም';
       seasonCategoryEn = 'Fast';
-      recommendedPlanId = 'nt_90';
+      recommendedPlanId = 'apostles_fast';
       seasonDescription = 'የቅዱሳን ሐዋርያት የስብከትና የጾም ወቅት';
       seasonDescriptionEn = 'Holy Apostles preaching and fast season';
       isSeasonalFast = true;
@@ -801,6 +814,12 @@ class BahireHasabService {
         'titleEn': 'Holy Easter (Fasika)',
         'month': easterEvent.date.month,
         'day': easterEvent.date.day,
+      },
+      {
+        'title': 'ጾመ ሐዋርያት',
+        'titleEn': 'Fast of the Apostles',
+        'month': apostlesFastEvent.date.month,
+        'day': apostlesFastEvent.date.day,
       },
       {
         'title': 'ጾመ ፍልሰታ',

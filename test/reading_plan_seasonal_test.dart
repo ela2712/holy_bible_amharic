@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:holy_bible_amharic/core/utils/canonical_book_map.dart';
+import 'package:holy_bible_amharic/models/reading_plan.dart';
 import 'package:holy_bible_amharic/services/bahire_hasab_service.dart';
+import 'package:holy_bible_amharic/services/bible_repository.dart';
 import 'package:holy_bible_amharic/providers/reading_plan_session_provider.dart';
 import 'package:holy_bible_amharic/data/reading_plans_data.dart';
 
@@ -135,6 +138,114 @@ void main() {
       expect(midLentInfo.isUnlocked, isTrue);
       expect(midLentInfo.daysRemaining, greaterThan(0));
     });
+
+    test('Fast of Nineveh (3 Days, Book of Jonah) locks and unlocks accurately with movable Bahire Hasab', () {
+      // 2017 E.C.: Nineveh starts Yekatit 3 (Monday) and lasts Yekatit 3, 4, 5
+      final preNineveh = BahireHasabService.createEthiopianDate(2017, 5, 28); // Tir 28
+      final preInfo = BahireHasabService.getFastSeasonInfo('nineveh_3', preNineveh);
+      expect(preInfo.isSeasonal, isTrue);
+      expect(preInfo.isUnlocked, isFalse);
+      // Tir 28 -> Tir 29, 30, Yekatit 1, 2, 3 = 5 days
+      expect(preInfo.daysUntilStart, 5);
+
+      // Day 1 of Nineveh: Yekatit 3, 2017
+      final day1 = BahireHasabService.createEthiopianDate(2017, 6, 3);
+      final day1Info = BahireHasabService.getFastSeasonInfo('nineveh_3', day1);
+      expect(day1Info.isUnlocked, isTrue);
+      expect(day1Info.daysRemaining, 3);
+
+      // Day 3 (Wednesday) of Nineveh: Yekatit 5, 2017
+      final day3 = BahireHasabService.createEthiopianDate(2017, 6, 5);
+      final day3Info = BahireHasabService.getFastSeasonInfo('nineveh_3', day3);
+      expect(day3Info.isUnlocked, isTrue);
+      expect(day3Info.daysRemaining, 1);
+
+      // Thursday after Nineveh: Yekatit 6, 2017 -> locked until 2018 Nineveh
+      final afterNineveh = BahireHasabService.createEthiopianDate(2017, 6, 6);
+      final afterInfo = BahireHasabService.getFastSeasonInfo('nineveh_3', afterNineveh);
+      expect(afterInfo.isUnlocked, isFalse);
+      expect(afterInfo.startDate?.year, 2018);
+
+      // Plan content covers all 4 chapters of Jonah across 3 days
+      final plan = ReadingPlansData.getPlanById('nineveh_3')!;
+      expect(plan.totalDays, 3);
+      expect(plan.passages.length, 3);
+      expect(plan.passages.every((p) => p.canonicalId == 'JON'), isTrue);
+      expect(plan.passages[0].startChapter, 1);
+      expect(plan.passages[0].endChapter, 2);
+      expect(plan.passages[1].startChapter, 3);
+      expect(plan.passages[2].startChapter, 4);
+    });
+
+    test('Fast of the Apostles dynamically adapts duration & readings per Bahire Hasab year (14–49 days)', () {
+      // 2019 E.C.: Nineveh Yekatit 15 -> Sene 14 to Hamle 4 = 21 days (<= 28: Acts 1-28 compressed cleanly)
+      final pre2019 = BahireHasabService.createEthiopianDate(2019, 9, 1);
+      final info2019 = BahireHasabService.getFastSeasonInfo('apostles_fast', pre2019);
+      expect(info2019.isSeasonal, isTrue);
+      expect(info2019.isUnlocked, isFalse);
+      expect(info2019.startDate?.month, 10); // Sene
+      expect(info2019.startDate?.day, 14);
+      expect(info2019.endDate?.month, 11); // Hamle
+      expect(info2019.endDate?.day, 4);
+
+      final plan2019 = ReadingPlansData.buildApostlesFastPlan(targetDate: pre2019);
+      expect(plan2019.totalDays, 21);
+      expect(plan2019.passages.length, 21);
+      expect(plan2019.passages.every((p) => p.canonicalId == 'ACT'), isTrue);
+      expect(plan2019.passages.first.startChapter, 1);
+      expect(plan2019.passages.last.endChapter, 28);
+      // Verify contiguous coverage of all 28 chapters with zero gaps
+      int expectedNextCh = 1;
+      for (final p in plan2019.passages) {
+        expect(p.startChapter, expectedNextCh);
+        expectedNextCh = p.endChapter + 1;
+      }
+      expect(expectedNextCh, 29);
+
+      // During 2019 Apostles Fast (e.g. Sene 14, 2019): unlocked, recommendedPlanId = apostles_fast
+      final active2019 = BahireHasabService.createEthiopianDate(2019, 10, 14);
+      final activeInfo = BahireHasabService.getFastSeasonInfo('apostles_fast', active2019);
+      expect(activeInfo.isUnlocked, isTrue);
+      expect(activeInfo.daysRemaining, 21);
+
+      // Day after 2019 Apostles Fast ends (Hamle 5, 2019 - Feast of Peter & Paul):
+      // Automatically points to 2020 E.C. (37 days: Ginbot 28 - Hamle 4)
+      final feast2019 = BahireHasabService.createEthiopianDate(2019, 11, 5);
+      final nextYearInfo = BahireHasabService.getFastSeasonInfo('apostles_fast', feast2019);
+      expect(nextYearInfo.isUnlocked, isFalse);
+      expect(nextYearInfo.startDate?.year, 2020);
+      expect(nextYearInfo.startDate?.month, 9); // Ginbot
+      expect(nextYearInfo.startDate?.day, 28);
+
+      final plan2020 = ReadingPlansData.buildApostlesFastPlan(targetDate: feast2019);
+      expect(plan2020.totalDays, 37);
+      expect(plan2020.passages.length, 37);
+      // Days 1..28 cover Acts 1..28 (1 ch/day)
+      for (int i = 0; i < 28; i++) {
+        expect(plan2020.passages[i].canonicalId, 'ACT');
+        expect(plan2020.passages[i].startChapter, i + 1);
+        expect(plan2020.passages[i].endChapter, i + 1);
+      }
+      // Remaining 9 days (29..37) continue in EOTC General Epistles order: 1PE (5), 2PE (3), 1JN (1)
+      expect(plan2020.passages[28].canonicalId, '1PE');
+      expect(plan2020.passages[28].startChapter, 1);
+      expect(plan2020.passages[32].canonicalId, '1PE');
+      expect(plan2020.passages[32].startChapter, 5);
+      expect(plan2020.passages[33].canonicalId, '2PE');
+      expect(plan2020.passages[33].startChapter, 1);
+      expect(plan2020.passages[35].canonicalId, '2PE');
+      expect(plan2020.passages[35].startChapter, 3);
+      expect(plan2020.passages[36].canonicalId, '1JN');
+      expect(plan2020.passages[36].startChapter, 1);
+
+      // 2021 E.C.: Ginbot 20 - Hamle 4 = 45 days (28 Acts + 5 1PE + 3 2PE + 5 1JN + 1 2JN + 1 3JN + 2 JAS)
+      final pre2021 = BahireHasabService.createEthiopianDate(2021, 9, 1);
+      final plan2021 = ReadingPlansData.buildApostlesFastPlan(targetDate: pre2021);
+      expect(plan2021.totalDays, 45);
+      expect(plan2021.passages.length, 45);
+      expect(plan2021.passages.last.canonicalId, 'JAS');
+      expect(plan2021.passages.last.startChapter, 2);
+    });
   });
 
   group('Automatic Ethiopian New Year (Meskerem 1) Cycle Reset Tests', () {
@@ -150,6 +261,8 @@ void main() {
       await prefs.setStringList('plan_filseta_16_completed', ['1', '2', '3']);
       await prefs.setStringList('plan_canonical_365_completed', ['1', '2', '3', '4']);
       await prefs.setStringList('plan_advent_prophets_43_completed', ['1']);
+      await prefs.setStringList('plan_apostles_fast_completed', ['1', '35']);
+      await prefs.setStringList('plan_apostles_fast_day_35_chapters', ['1']);
       // Non-EOTC generic plan should NOT be wiped
       await prefs.setStringList('plan_nt_90_completed', ['1', '2']);
 
@@ -162,6 +275,7 @@ void main() {
       // Check that in 2019 cycle they existed
       expect(notifier.state.completedDaysByPlan['filseta_16']?.length, 3);
       expect(notifier.state.completedDaysByPlan['canonical_365']?.length, 4);
+      expect(notifier.state.completedDaysByPlan['apostles_fast']?.length, 2);
       expect(notifier.state.completedDaysByPlan['nt_90']?.length, 2);
 
       // Now simulate arrival of New Year: Meskerem 1, 2020 E.C.!
@@ -169,10 +283,12 @@ void main() {
       final didReset = await notifier.checkAndApplyAnnualCycleReset(simulatedDate: newYear2020);
 
       expect(didReset, isTrue);
-      // All EOTC curated plans have reset to 0
+      // All EOTC curated plans have reset to 0 (including stale high-numbered day keys from dynamic plans)
       expect(notifier.state.completedDaysByPlan['filseta_16']?.isEmpty, isTrue);
       expect(notifier.state.completedDaysByPlan['canonical_365']?.isEmpty, isTrue);
       expect(notifier.state.completedDaysByPlan['advent_prophets_43']?.isEmpty, isTrue);
+      expect(notifier.state.completedDaysByPlan['apostles_fast']?.isEmpty, isTrue);
+      expect(prefs.getStringList('plan_apostles_fast_day_35_chapters'), isNull);
 
       // Non-EOTC plan remained intact
       expect(notifier.state.completedDaysByPlan['nt_90']?.length, 2);
@@ -205,6 +321,111 @@ void main() {
       final startedCanonical = await notifier.startReadingSession(canonicalPlan, 1, simulatedDate: tikimt30);
       expect(startedCanonical, isTrue);
       expect(notifier.state.activeSessionPlan?.id, 'canonical_365');
+    });
+
+    test('Fasting plans are ordered chronologically along the EOTC liturgical timeline', () {
+      final fastingPlanIds = ReadingPlansData.allPlans
+          .where((p) => p.category == 'ጾምና በዓላት' || p.categoryEn == 'Fasts & Feasts')
+          .map((p) => p.id)
+          .toList();
+
+      expect(fastingPlanIds, [
+        'advent_prophets_43', // Hidar 15 - Tahsas 28
+        'nineveh_3',          // 3 Days (Mon-Wed, 2 weeks before Great Lent)
+        'great_lent_55',      // Yekatit/Megabit - Miyazya
+        'passion_week',       // Hosanna - Easter
+        'apostles_fast',      // Monday after Pentecost - Hamle 4 (dynamic 14-49 days)
+        'filseta_16',         // Nehase 1 - 16 (last in liturgical year)
+      ]);
+    });
+
+    test('All fasting plan readings match their season and resolve real scripture across translations', () async {
+      final repo = BibleRepository.instance;
+      await repo.ensureInitialized();
+
+      // Include both default current year and a long 45-day Apostles Fast year (2021 E.C.)
+      final plansToVerify = <ReadingPlan>[
+        for (final planId in BahireHasabService.seasonalPlanIds) ReadingPlansData.getPlanById(planId)!,
+        ReadingPlansData.buildApostlesFastPlan(
+          targetDate: BahireHasabService.createEthiopianDate(2021, 9, 1),
+        ),
+      ];
+
+      for (final translationId in [1, 2, 3, 4]) {
+        final books = await repo.getBooks(translationId: translationId);
+
+        for (final plan in plansToVerify) {
+          expect(plan.passages.length, plan.totalDays, reason: '${plan.id} passage count mismatch');
+
+          for (int i = 0; i < plan.passages.length; i++) {
+            final p = plan.passages[i];
+            expect(p.day, i + 1, reason: '${plan.id} day numbering mismatch');
+            expect(p.canonicalId.isNotEmpty, isTrue, reason: '${plan.id} day ${p.day} missing canonicalId');
+            expect(p.startChapter, greaterThanOrEqualTo(1));
+            expect(p.endChapter, greaterThanOrEqualTo(p.startChapter));
+
+            final resolved = CanonicalBookMap.resolveBook(
+              books: books,
+              currentTranslationId: translationId,
+              traditionalBookNumber: p.bookNumber,
+              canonicalId: p.canonicalId,
+              bookName: p.bookName,
+            );
+            expect(resolved, isNotNull, reason: 'Failed to resolve ${p.canonicalId} in translation $translationId (${plan.id} day ${p.day})');
+
+            for (int ch = p.startChapter; ch <= p.endChapter; ch++) {
+              final verses = await repo.getVerses(bookId: resolved!.id, chapter: ch);
+              expect(verses.isNotEmpty, isTrue, reason: 'Empty chapter $ch in ${p.canonicalId} for translation $translationId (${plan.id} day ${p.day})');
+            }
+          }
+        }
+      }
+
+      // Verify specific liturgical landmarks per season
+      final advent = ReadingPlansData.getPlanById('advent_prophets_43')!;
+      expect(advent.passages.first.canonicalId, 'GEN');
+      expect(advent.passages[14].canonicalId, 'ISA');
+      expect(advent.passages[14].startChapter, 7); // Emmanuel virgin birth prophecy
+      expect(advent.passages[36].canonicalId, 'MIC');
+      expect(advent.passages[36].startChapter, 5); // Bethlehem prophecy
+      expect(advent.passages.last.canonicalId, 'LUK');
+      expect(advent.passages.last.startChapter, 2); // Nativity of Christ
+
+      final lent = ReadingPlansData.getPlanById('great_lent_55')!;
+      expect(lent.passages[6].canonicalId, 'JHN');
+      expect(lent.passages[6].startChapter, 3); // Sunday 1: Zewerede
+      expect(lent.passages[20].canonicalId, 'JHN');
+      expect(lent.passages[20].startChapter, 2); // Sunday 3: Mikurab (Cleansing temple)
+      expect(lent.passages[27].canonicalId, 'JHN');
+      expect(lent.passages[27].startChapter, 5); // Sunday 4: Metsague (Bethesda)
+      expect(lent.passages[34].canonicalId, 'MAT');
+      expect(lent.passages[34].startChapter, 24); // Sunday 5: Debre Zeyt
+      expect(lent.passages[41].canonicalId, 'MAT');
+      expect(lent.passages[41].startChapter, 25); // Sunday 6: Gebre Her
+      expect(lent.passages[47].canonicalId, 'JHN');
+      expect(lent.passages[47].startChapter, 11); // Lazarus Saturday (Day 48)
+      expect(lent.passages[48].canonicalId, 'MAT');
+      expect(lent.passages[48].startChapter, 21); // Palm Sunday / Hosanna (Day 49)
+      expect(lent.passages[53].canonicalId, 'MAT');
+      expect(lent.passages[53].startChapter, 27); // Good Friday (Day 54)
+      expect(lent.passages.last.canonicalId, 'PSA');
+      expect(lent.passages.last.startChapter, 16); // Holy Saturday (Day 55)
+
+      final passion = ReadingPlansData.getPlanById('passion_week')!;
+      expect(passion.passages.first.canonicalId, 'MAT');
+      expect(passion.passages.first.startChapter, 21); // Hosanna
+      expect(passion.passages.last.canonicalId, 'JHN');
+      expect(passion.passages.last.startChapter, 20); // Resurrection
+
+      final filseta = ReadingPlansData.getPlanById('filseta_16')!;
+      expect(filseta.passages.first.canonicalId, 'LUK');
+      expect(filseta.passages.first.startChapter, 1); // Annunciation & Magnificat
+      expect(filseta.passages[9].canonicalId, 'EZK');
+      expect(filseta.passages[9].startChapter, 44); // Closed East Gate
+      expect(filseta.passages[14].canonicalId, 'REV');
+      expect(filseta.passages[14].startChapter, 12); // Woman clothed with the sun
+      expect(filseta.passages.last.canonicalId, 'PSA');
+      expect(filseta.passages.last.startChapter, 150); // Filseta concluding praise
     });
   });
 }

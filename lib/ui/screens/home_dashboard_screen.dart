@@ -127,16 +127,21 @@ class HomeDashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
                       isEnglish ? 'Holy Bible' : 'መጽሐፍ ቅዱስ',
-                      style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: themeConfig.textColor,
-                              letterSpacing: -0.3,),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: themeConfig.textColor,
+                        letterSpacing: -0.3,
+                      ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
@@ -155,7 +160,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                                 : (bibleState.currentTranslation?.id == 1
                                     ? '1954'
                                     : (bibleState.currentTranslation?.id == 3 ? 'KJV' : '81 ቀኖና'))),
-                        style: TextStyle(
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.8,
@@ -305,17 +311,22 @@ class HomeDashboardScreen extends ConsumerWidget {
                   style: EthiopianCrossStyle.lalibela,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  isEnglish ? 'LITURGICAL CALENDAR' : 'ባሕረ ሐሳብና የዕለቱ ሥርዓት',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                    color: themeConfig.goldAccent,
+                Expanded(
+                  child: Text(
+                    isEnglish ? 'LITURGICAL CALENDAR' : 'ባሕረ ሐሳብና የዕለቱ ሥርዓት',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: themeConfig.goldAccent,
+                    ),
                   ),
                 ),
                 if (isFastDay) ...[
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -337,10 +348,11 @@ class HomeDashboardScreen extends ConsumerWidget {
                         const SizedBox(width: 5),
                         Text(
                           isEnglish ? 'Fast Day' : 'የጾም ቀን',
-                          style: const TextStyle(
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
                             fontSize: 10.5,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFFEF4444),
+                            color: const Color(0xFFEF4444),
                           ),
                         ),
                       ],
@@ -372,7 +384,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   ),
                   child: Text(
                     evangelist,
-                    style: TextStyle(
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       color: themeConfig.accentColor,
@@ -537,28 +550,42 @@ class HomeDashboardScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.auto_awesome, color: Color(0xFFFBBF24), size: 14),
-                              const SizedBox(width: 6),
-                              Text(
-                                themeLabel,
-                                style: themeConfig.getAppStyle(isEnglish: isEnglish, color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.4,),
-                              ),
-                            ],
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const OrthodoxVectorIcon(
+                                  kind: OrthodoxIconKind.bethlehemStar,
+                                  color: Color(0xFFFBBF24),
+                                  size: 15,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    themeLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         InkWell(
                           onTap: () {
                             Navigator.push(
@@ -585,8 +612,9 @@ class HomeDashboardScreen extends ConsumerWidget {
                                 const SizedBox(width: 5),
                                 Text(
                                   isEnglish ? 'Share Card' : 'ካርድ ፍጠር',
-                                  style: const TextStyle(
-                                    color: Color(0xFFFBBF24),
+                                  style: themeConfig.getAppStyle(
+                                    isEnglish: isEnglish,
+                                    color: const Color(0xFFFBBF24),
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -613,13 +641,20 @@ class HomeDashboardScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '— $reference',
-                          style: themeConfig.getAppStyle(isEnglish: isEnglish, color: const Color(0xFFFBBF24),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
+                        Expanded(
+                          child: Text(
+                            '— $reference',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              color: const Color(0xFFFBBF24),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
@@ -641,10 +676,19 @@ class HomeDashboardScreen extends ConsumerWidget {
                             }
                             onNavigateTab(0);
                           },
-                          icon: const Icon(Icons.menu_book_rounded, size: 15),
+                          icon: const OrthodoxVectorIcon(
+                            kind: OrthodoxIconKind.geezScroll,
+                            size: 16,
+                            color: Color(0xFF1E1B4B),
+                          ),
                           label: Text(
                             isEnglish ? 'Read Chapter' : 'ምዕራፉን አንብብ',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              color: const Color(0xFF1E1B4B),
+                            ),
                           ),
                         ),
                       ],
@@ -706,7 +750,11 @@ class HomeDashboardScreen extends ConsumerWidget {
                           color: themeConfig.accentColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.import_contacts_rounded, color: themeConfig.accentColor, size: 20),
+                        child: OrthodoxVectorIcon(
+                          kind: OrthodoxIconKind.birannaCodex,
+                          color: themeConfig.accentColor,
+                          size: 22,
+                        ),
                       ),
                       SizedBox(
                         width: 34,
@@ -722,7 +770,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                             ),
                             Text(
                               '${(progress * 100).toInt()}%',
-                              style: TextStyle(
+                              style: themeConfig.getAppStyle(
+                                isEnglish: true,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
                                 color: themeConfig.textColor,
@@ -736,7 +785,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   const Spacer(),
                   Text(
                     isEnglish ? 'RESUME READING' : 'የቀጠለ ንባብ',
-                    style: TextStyle(
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -760,7 +810,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                           isEnglish ? 'Chapter $chapter of $totalCh' : 'ምዕራፍ $chapter ከ $totalCh',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: themeConfig.accentColor,
@@ -810,22 +861,32 @@ class HomeDashboardScreen extends ConsumerWidget {
                           color: themeConfig.goldAccent.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.explore_rounded, color: themeConfig.goldAccent, size: 20),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: themeConfig.goldAccent.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(10),
+                        child: OrthodoxVectorIcon(
+                          kind: OrthodoxIconKind.orthodoxCross,
+                          color: themeConfig.goldAccent,
+                          size: 22,
                         ),
-                        child: Text(
-                          isEnglish
-                              ? '${ReadingPlansData.allPlans.length} Plans'
-                              : '${ReadingPlansData.allPlans.length} ዕቅዶች',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: themeConfig.goldAccent,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: themeConfig.goldAccent.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            isEnglish
+                                ? '${ReadingPlansData.allPlans.length} Plans'
+                                : '${ReadingPlansData.allPlans.length} ዕቅዶች',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              color: themeConfig.goldAccent,
+                            ),
                           ),
                         ),
                       ),
@@ -834,7 +895,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   const Spacer(),
                   Text(
                     isEnglish ? 'READING PLANS' : 'ሥርዓተ ንባብ',
-                    style: TextStyle(
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
@@ -858,7 +920,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                           isEnglish ? 'Fasts, Feasts & More' : 'ጾም፣ በዓላትና ዓመታዊ',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                             color: themeConfig.goldAccent,
@@ -922,7 +985,11 @@ class HomeDashboardScreen extends ConsumerWidget {
                   color: const Color(0xFFF97316).withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFF97316), size: 22),
+                child: const OrthodoxVectorIcon(
+                  kind: OrthodoxIconKind.vigilFlame,
+                  color: Color(0xFFF97316),
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -939,7 +1006,12 @@ class HomeDashboardScreen extends ConsumerWidget {
                       isEnglish
                           ? (streak > 0 ? 'Best: $longestStreak days' : 'Read any chapter today to begin')
                           : (streak > 0 ? 'ከፍተኛው: $longestStreak ቀናት' : 'ተከታታይነት ለመጀመር ዛሬ አንድ ምዕራፍ ያንብቡ'),
-                      style: TextStyle(fontSize: 11.5, color: themeConfig.secondaryTextColor, fontWeight: FontWeight.w600),
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
+                        fontSize: 11.5,
+                        color: themeConfig.secondaryTextColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -957,8 +1029,13 @@ class HomeDashboardScreen extends ConsumerWidget {
                       const Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF047857)),
                       const SizedBox(width: 4),
                       Text(
-                        isEnglish ? '$todayCount today' : 'ዛሬ $todayCount ተነቧል',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF047857)),
+                        isEnglish ? '$todayCount ch today' : 'ዛሬ $todayCount ምዕራፍ',
+                        style: themeConfig.getAppStyle(
+                          isEnglish: isEnglish,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF047857),
+                        ),
                       ),
                     ],
                   ),
@@ -983,7 +1060,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                 children: [
                   Text(
                     dayInitial,
-                    style: TextStyle(
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: isToday ? themeConfig.accentColor : themeConfig.secondaryTextColor,
@@ -1010,7 +1088,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                           ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
                           : Text(
                               '${date.day}',
-                              style: TextStyle(
+                              style: themeConfig.getAppStyle(
+                                isEnglish: true,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: isToday ? themeConfig.accentColor : themeConfig.secondaryTextColor,
@@ -1036,7 +1115,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   children: [
                     Text(
                       isEnglish ? 'BOOKS COMPLETED' : 'የተጠናቀቁ መጻሕፍት',
-                      style: TextStyle(
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -1057,7 +1137,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                   children: [
                     Text(
                       isEnglish ? 'TOTAL CHAPTERS' : 'ጠቅላላ የተነበቡ ምዕራፎች',
-                      style: TextStyle(
+                      style: themeConfig.getAppStyle(
+                        isEnglish: isEnglish,
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
@@ -1137,11 +1218,18 @@ class HomeDashboardScreen extends ConsumerWidget {
                 child: ListTile(
                   title: Row(
                     children: [
-                      Text(
-                        t.name,
-                        style: themeConfig.getAppStyle(isEnglish: isEnglish, fontWeight: FontWeight.w700,
-                                fontSize: 14.5,
-                                color: themeConfig.textColor,),
+                      Flexible(
+                        child: Text(
+                          t.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: themeConfig.textColor,
+                          ),
+                        ),
                       ),
                       if (t.id == 4) ...[
                         const SizedBox(width: 8),
@@ -1153,7 +1241,8 @@ class HomeDashboardScreen extends ConsumerWidget {
                           ),
                           child: Text(
                             isEnglish ? 'Ge\'ez' : 'ግዕዝ',
-                            style: TextStyle(
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF854D0E),

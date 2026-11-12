@@ -8,6 +8,7 @@ import '../../providers/bible_state.dart';
 import '../../providers/reading_plan_session_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/bahire_hasab_service.dart';
+import '../widgets/modern_bible_icons.dart';
 
 class ReadingPlansScreen extends ConsumerStatefulWidget {
   final Function(int tabIndex)? onNavigateToReader;
@@ -42,29 +43,12 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     'Annual',
   ];
 
-  IconData _getIconForName(String name) {
-    switch (name) {
-      case 'church':
-        return Icons.church_outlined;
-      case 'lightbulb':
-        return Icons.lightbulb_outline_rounded;
-      case 'music_note':
-        return Icons.music_note_rounded;
-      case 'spa':
-        return Icons.spa_outlined;
-      case 'favorite':
-        return Icons.favorite_border_rounded;
-      case 'stars':
-        return Icons.auto_awesome_outlined;
-      case 'shield':
-        return Icons.shield_outlined;
-      case 'visibility':
-        return Icons.visibility_outlined;
-      case 'menu_book':
-        return Icons.menu_book_rounded;
-      default:
-        return Icons.auto_stories_outlined;
-    }
+  Widget _buildPlanCoverIcon(String name, Color color, {double size = 24}) {
+    return OrthodoxVectorIcon(
+      kind: OrthodoxVectorIcon.kindForPlanCover(name),
+      size: size,
+      color: color,
+    );
   }
 
   Future<void> _launchPlanPassageInReader(
@@ -558,7 +542,11 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       Navigator.pop(ctx);
                                       _openPlanDetailModal(context, matchingPlan, themeConfig, isEnglish);
                                     },
-                                    icon: const Icon(Icons.menu_book_rounded, size: 15),
+                                    icon: OrthodoxVectorIcon(
+                                      kind: OrthodoxIconKind.geezScroll,
+                                      size: 16,
+                                      color: themeConfig.accentColor,
+                                    ),
                                     label: Text(
                                       isEnglish
                                           ? 'Open ${matchingPlan.getDisplayTitle(true)}'
@@ -635,11 +623,18 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        isDayDone ? Icons.check_circle_rounded : Icons.local_fire_department_rounded,
-                        size: 14,
-                        color: isDayDone ? const Color(0xFF10B981) : themeConfig.goldAccent,
-                      ),
+                      if (isDayDone)
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 14,
+                          color: Color(0xFF10B981),
+                        )
+                      else
+                        OrthodoxVectorIcon(
+                          kind: OrthodoxIconKind.vigilFlame,
+                          size: 15,
+                          color: themeConfig.goldAccent,
+                        ),
                       const SizedBox(width: 5),
                       Text(
                         isEnglish ? 'Active Reading Session' : 'በሂደት ላይ ያለ ንባብ',
@@ -767,10 +762,10 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
     final isDark = themeConfig.mode == ReaderThemeMode.dark;
     final isEnglish = ref.watch(isEnglishUiProvider);
 
-    final allPlans = sessionState.allAvailablePlans;
     final liturgicalStatus = BahireHasabService.getCurrentLiturgicalStatus(DateTime.now());
     final EthiopianDate ethDate = (liturgicalStatus['ethDate'] as EthiopianDate?) ??
         BahireHasabService.fromGregorian(DateTime.now());
+    final allPlans = sessionState.getPlansForDate(ethDate);
     final String evangelist = (liturgicalStatus['evangelist'] as String?) ?? 'ዘመነ ማቴዎስ';
     final String evangelistEn = (liturgicalStatus['evangelistEn'] as String?) ?? evangelist;
     final String seasonTitle = (liturgicalStatus['seasonTitle'] as String?) ?? 'ዘመነ ጽጌ';
@@ -835,12 +830,20 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            isEnglish ? 'Reading Plans' : 'የንባብ ዕቅዶች',
-                            style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 22,
-                                    fontWeight: FontWeight.w900,
-                                    color: themeConfig.textColor,),
+                          Expanded(
+                            child: Text(
+                              isEnglish ? 'Reading Plans' : 'የንባብ ዕቅዶች',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: themeConfig.getAppStyle(
+                                isEnglish: isEnglish,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: themeConfig.textColor,
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: themeConfig.accentColor,
@@ -912,30 +915,40 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: themeConfig.goldAccent.withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.calendar_month_rounded,
-                                          size: 13,
-                                          color: themeConfig.goldAccent,
-                                        ),
-                                        const SizedBox(width: 5),
-                                        Text(
-                                          isEnglish ? 'Bahire Hasab Calendar' : 'የባሕረ ሐሳብ ዘመን ቀመር',
-                                          style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 11,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: themeConfig.goldAccent,),
-                                        ),
-                                      ],
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: themeConfig.goldAccent.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          OrthodoxVectorIcon(
+                                            kind: OrthodoxIconKind.orthodoxCross,
+                                            size: 14,
+                                            color: themeConfig.goldAccent,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Flexible(
+                                            child: Text(
+                                              isEnglish ? 'Bahire Hasab Calendar' : 'የባሕረ ሐሳብ ዘመን ቀመር',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: themeConfig.getAppStyle(
+                                                isEnglish: isEnglish,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w800,
+                                                color: themeConfig.goldAccent,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
+                                  const SizedBox(width: 8),
                                   const Spacer(),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1000,7 +1013,11 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                       allPlans,
                                       isEnglish,
                                     ),
-                                    icon: const Icon(Icons.auto_stories_outlined, size: 15),
+                                    icon: OrthodoxVectorIcon(
+                                      kind: OrthodoxIconKind.birannaCodex,
+                                      size: 16,
+                                      color: themeConfig.goldAccent,
+                                    ),
                                     label: Text(
                                       isEnglish ? 'Feasts' : 'አጽዋማት',
                                       style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 11.5,
@@ -1222,13 +1239,35 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: themeConfig.accentColor.withValues(alpha: 0.12),
+                    color: (isLocked ? const Color(0xFFD97706) : themeConfig.accentColor).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
-                    isLocked ? Icons.lock_outline_rounded : _getIconForName(plan.coverIcon),
-                    color: isLocked ? const Color(0xFFD97706) : themeConfig.accentColor,
-                    size: 22,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      _buildPlanCoverIcon(
+                        plan.coverIcon,
+                        isLocked ? const Color(0xFFD97706) : themeConfig.accentColor,
+                        size: 24,
+                      ),
+                      if (isLocked)
+                        Positioned(
+                          right: 3,
+                          bottom: 3,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: themeConfig.surfaceColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.lock_rounded,
+                              size: 10,
+                              color: Color(0xFFD97706),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -1238,54 +1277,6 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                     children: [
                       Row(
                         children: [
-                          if (isLiturgicalMatch) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              margin: const EdgeInsets.only(right: 6),
-                              decoration: BoxDecoration(
-                                color: themeConfig.goldAccent.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.stars_rounded, size: 12, color: themeConfig.goldAccent),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    isEnglish
-                                        ? (info.daysRemaining > 0 ? 'Current Season (${info.daysRemaining}d)' : 'Current Season')
-                                        : (info.daysRemaining > 0 ? 'ወቅታዊ ዕቅድ (${info.daysRemaining} ቀናት)' : 'ወቅታዊ ዕቅድ'),
-                                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: themeConfig.goldAccent,),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ] else if (isLocked) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              margin: const EdgeInsets.only(right: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD97706).withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.35)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.schedule_rounded, size: 11, color: Color(0xFFD97706)),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    info.getCountdownText(isEnglish: isEnglish),
-                                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: const Color(0xFFD97706),),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
                           Flexible(
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1297,9 +1288,12 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                 plan.getDisplayBadge(isEnglish),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 10.5,
-                                        fontWeight: FontWeight.w800,
-                                        color: themeConfig.accentColor,),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: themeConfig.accentColor,
+                                ),
                               ),
                             ),
                           ),
@@ -1329,9 +1323,12 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                   const SizedBox(width: 3),
                                   Text(
                                     isEnglish ? 'Locked' : 'ተቆልፏል',
-                                    style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 10.5,
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
+                                      fontSize: 10.5,
                                       fontWeight: FontWeight.w800,
-                                      color: themeConfig.secondaryTextColor,),
+                                      color: themeConfig.secondaryTextColor,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1339,14 +1336,83 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                           else
                             Text(
                               '${(progress * 100).toInt()}%',
-                              style: themeConfig.getAppStyle(isEnglish: true, fontSize: 12.5,
+                              style: themeConfig.getAppStyle(
+                                isEnglish: true,
+                                fontSize: 12.5,
                                 fontWeight: FontWeight.w800,
                                 color: progress > 0
                                     ? const Color(0xFF10B981)
-                                    : themeConfig.secondaryTextColor,),
+                                    : themeConfig.secondaryTextColor,
+                              ),
                             ),
                         ],
                       ),
+                      if (isLiturgicalMatch || isLocked) ...[
+                        const SizedBox(height: 6),
+                        if (isLiturgicalMatch)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: themeConfig.goldAccent.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                OrthodoxVectorIcon(
+                                  kind: OrthodoxIconKind.bethlehemStar,
+                                  size: 12,
+                                  color: themeConfig.goldAccent,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    isEnglish
+                                        ? (info.daysRemaining > 0 ? 'Current Season (${info.daysRemaining}d)' : 'Current Season')
+                                        : (info.daysRemaining > 0 ? 'ወቅታዊ ዕቅድ (${info.daysRemaining} ቀናት)' : 'ወቅታዊ ዕቅድ'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: themeConfig.goldAccent,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706).withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.35)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.schedule_rounded, size: 11, color: Color(0xFFD97706)),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    info.getCountdownText(isEnglish: isEnglish),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFFD97706),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                       const SizedBox(height: 6),
                       Text(
                         plan.getDisplayTitle(isEnglish),
@@ -1370,10 +1436,14 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: LinearProgressIndicator(
-                value: progress,
+                value: isLocked ? 0.0 : progress,
                 minHeight: 5,
                 backgroundColor: themeConfig.cardBorderColor,
-                valueColor: AlwaysStoppedAnimation<Color>(themeConfig.accentColor),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  isLocked
+                      ? themeConfig.secondaryTextColor.withValues(alpha: 0.35)
+                      : themeConfig.accentColor,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -1728,7 +1798,11 @@ class _ReadingPlansScreenState extends ConsumerState<ReadingPlansScreen> {
                                         _launchPlanPassageInReader(context, plan, passage);
                                       }
                                     },
-                                    icon: Icon(isLocked ? Icons.visibility_outlined : Icons.menu_book_rounded, size: 15),
+                                    icon: OrthodoxVectorIcon(
+                                      kind: isLocked ? OrthodoxIconKind.prophecyScroll : OrthodoxIconKind.geezScroll,
+                                      size: 16,
+                                      color: themeConfig.accentColor,
+                                    ),
                                     label: Text(
                                       isLocked
                                           ? (isEnglish ? 'Preview' : 'እይ')

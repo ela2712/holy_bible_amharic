@@ -8,19 +8,20 @@ import '../../providers/app_language_provider.dart';
 import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_progress_provider.dart';
+import '../widgets/modern_bible_icons.dart';
 
 class CanonicalSectionInfo {
   final String key;
   final String title;
   final String titleEn;
-  final IconData icon;
+  final OrthodoxIconKind iconKind;
   final Color color;
 
   const CanonicalSectionInfo({
     required this.key,
     required this.title,
     required this.titleEn,
-    required this.icon,
+    required this.iconKind,
     required this.color,
   });
 }
@@ -116,7 +117,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'NT_GOSPELS',
         title: 'አራቱ ወንጌላት',
         titleEn: 'The Four Gospels',
-        icon: Icons.auto_stories_rounded,
+        iconKind: OrthodoxIconKind.orthodoxCross,
         color: Color(0xFF047857), // Emerald
       );
     }
@@ -125,7 +126,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'NT_ACTS',
         title: 'የሐዋርያት ታሪክ',
         titleEn: 'Apostolic History',
-        icon: Icons.history_edu_rounded,
+        iconKind: OrthodoxIconKind.vigilFlame,
         color: Color(0xFF0D9488), // Teal
       );
     }
@@ -134,7 +135,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'NT_PAUL',
         title: 'የጳውሎስ መልእክታት',
         titleEn: 'Pauline Epistles',
-        icon: Icons.mark_email_read_outlined,
+        iconKind: OrthodoxIconKind.faithShield,
         color: Color(0xFF0284C7), // Sky Blue
       );
     }
@@ -143,7 +144,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'NT_GENERAL',
         title: 'የሐዋርያት መልእክታት',
         titleEn: 'General Epistles',
-        icon: Icons.mail_outline_rounded,
+        iconKind: OrthodoxIconKind.geezScroll,
         color: Color(0xFF4F46E5), // Indigo
       );
     }
@@ -152,7 +153,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'NT_REV',
         title: 'የዮሐንስ ራእይ',
         titleEn: 'Revelation (Prophecy)',
-        icon: Icons.visibility_outlined,
+        iconKind: OrthodoxIconKind.bethlehemStar,
         color: Color(0xFF7C3AED), // Purple
       );
     }
@@ -163,7 +164,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'OT_LAW',
         title: 'ኦሪት (የሕግ መጻሕፍት)',
         titleEn: 'The Law (Pentateuch)',
-        icon: Icons.menu_book_rounded,
+        iconKind: OrthodoxIconKind.birannaCodex,
         color: Color(0xFF0F766E), // Deep Teal
       );
     }
@@ -172,7 +173,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'OT_HISTORY',
         title: 'የታሪክ መጻሕፍት',
         titleEn: 'Historical Books',
-        icon: Icons.account_balance_rounded,
+        iconKind: OrthodoxIconKind.sanctuaryLamp,
         color: Color(0xFF0D9488), // Teal
       );
     }
@@ -181,7 +182,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'OT_DEUTERO',
         title: 'ተጨማሪ የቀኖና 81 መጻሕፍት',
         titleEn: 'Deuterocanonical Books',
-        icon: Icons.verified_outlined,
+        iconKind: OrthodoxIconKind.orthodoxCross,
         color: Color(0xFFB45309), // Amber / Bronze
       );
     }
@@ -190,7 +191,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'OT_WISDOM',
         title: 'ጥበብና ቅኔ (መዝሙራት)',
         titleEn: 'Wisdom & Poetry (Psalms)',
-        icon: Icons.psychology_alt_outlined,
+        iconKind: OrthodoxIconKind.begenaHarp,
         color: Color(0xFF059669), // Forest Green
       );
     }
@@ -199,7 +200,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
         key: 'OT_PROPHETS',
         title: 'ትንቢት (ነቢያት)',
         titleEn: 'Prophets',
-        icon: Icons.campaign_outlined,
+        iconKind: OrthodoxIconKind.prophecyScroll,
         color: Color(0xFF4F46E5), // Indigo
       );
     }
@@ -208,7 +209,7 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
       key: book.isNewTestament ? 'NT_OTHER' : 'OT_OTHER',
       title: book.isNewTestament ? 'ሐዲስ ኪዳን' : 'ብሉይ ኪዳን',
       titleEn: book.isNewTestament ? 'New Testament' : 'Old Testament',
-      icon: Icons.book_rounded,
+      iconKind: OrthodoxIconKind.birannaCodex,
       color: const Color(0xFF6B7280),
     );
   }
@@ -473,7 +474,11 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
               style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 13.5, color: themeConfig.textColor),
               decoration: InputDecoration(
                 hintText: isEnglish ? 'Search books by name or abbreviation...' : 'መጽሐፍትን በስም ወይም በአህጽሮት ይፈልጉ...',
-                hintStyle: TextStyle(fontSize: 12.5, color: themeConfig.secondaryTextColor),
+                hintStyle: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: 12.5,
+                  color: themeConfig.secondaryTextColor,
+                ),
                 prefixIcon: Icon(Icons.search_rounded, size: 19, color: themeConfig.accentColor),
                 suffixIcon: _filter.isNotEmpty
                     ? IconButton(
@@ -589,7 +594,8 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                 ),
                 child: Text(
                   '$count',
-                  style: TextStyle(
+                  style: themeConfig.getAppStyle(
+                    isEnglish: true,
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
                     color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
@@ -675,16 +681,23 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
               color: sec.color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(sec.icon, size: 16, color: sec.color),
+            child: OrthodoxVectorIcon(kind: sec.iconKind, size: 17, color: sec.color),
           ),
           const SizedBox(width: 8),
-          Text(
-            title,
-            style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: sec.color,),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: themeConfig.getAppStyle(
+                isEnglish: isEnglish,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w800,
+                color: sec.color,
+              ),
+            ),
           ),
-          const Spacer(),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             decoration: BoxDecoration(
@@ -787,7 +800,8 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                               ),
                               child: Text(
                                 isEnglish ? 'Reading' : 'በንባብ ላይ',
-                                style: const TextStyle(
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
@@ -808,7 +822,8 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                                   const SizedBox(width: 3),
                                   Text(
                                     isEnglish ? 'Read' : 'ተጠናቋል',
-                                    style: const TextStyle(
+                                    style: themeConfig.getAppStyle(
+                                      isEnglish: isEnglish,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -826,7 +841,8 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                               ),
                               child: Text(
                                 '$readCount/${book.totalChapters}',
-                                style: TextStyle(
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: true,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   color: catColor,
@@ -840,7 +856,8 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                         children: [
                           Text(
                             isEnglish ? '${book.totalChapters} Chapters' : '${book.totalChapters} ምዕራፎች',
-                            style: TextStyle(
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
                               color: themeConfig.secondaryTextColor,
@@ -848,12 +865,16 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
                           ),
                           if (!isEnglish && book.nameEn.isNotEmpty) ...[
                             const SizedBox(width: 8),
-                            Text(
-                              '• ${book.nameEn}',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontStyle: FontStyle.italic,
-                                color: themeConfig.secondaryTextColor.withValues(alpha: 0.8),
+                            Flexible(
+                              child: Text(
+                                '• ${book.nameEn}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: true,
+                                  fontSize: 11.5,
+                                  color: themeConfig.secondaryTextColor.withValues(alpha: 0.8),
+                                ).copyWith(fontStyle: FontStyle.italic),
                               ),
                             ),
                           ],
@@ -894,15 +915,27 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isEnglish ? '$bookDisplayName — Select Chapter' : '$bookDisplayName — ምዕራፍ ይምረጡ',
-                style: themeConfig.getAppStyle(isEnglish: isEnglish, fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: themeConfig.textColor,),
+              Expanded(
+                child: Text(
+                  isEnglish ? '$bookDisplayName — Select Chapter' : '$bookDisplayName — ምዕራፍ ይምረጡ',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: themeConfig.textColor,
+                  ),
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 isEnglish ? '${book.totalChapters} Chapters' : '${book.totalChapters} ምዕራፎች',
-                style: TextStyle(fontSize: 12, color: themeConfig.secondaryTextColor),
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: 12,
+                  color: themeConfig.secondaryTextColor,
+                ),
               ),
             ],
           ),
@@ -975,7 +1008,11 @@ class _BookSelectorScreenState extends ConsumerState<BookSelectorScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () => _onVerseTapped(1),
-            icon: const Icon(Icons.menu_book_rounded, size: 18),
+            icon: const OrthodoxVectorIcon(
+              kind: OrthodoxIconKind.geezScroll,
+              size: 18,
+              color: Colors.white,
+            ),
             label: Text(
               isEnglish
                   ? 'Open $bookDisplayName Chapter $_selectedChapter from Verse 1'

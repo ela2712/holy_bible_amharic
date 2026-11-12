@@ -22,10 +22,12 @@ class ReadingPlanSessionState {
     this.activeSessionDay,
   });
 
-  List<ReadingPlan> get allAvailablePlans => [
+  List<ReadingPlan> getPlansForDate([EthiopianDate? targetDate]) => [
         ...customPlans,
-        ...ReadingPlansData.allPlans,
+        ...ReadingPlansData.getPlansForDate(targetDate),
       ];
+
+  List<ReadingPlan> get allAvailablePlans => getPlansForDate();
 
   DailyReadingPassage? get activePassage {
     if (activeSessionPlan == null || activeSessionDay == null) return null;
@@ -87,6 +89,15 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
 
   static const String _prefEotcCycleYear = 'eotc_liturgical_cycle_year';
 
+  Future<void> _clearPlanChapterPrefs(SharedPreferences prefs, String planId) async {
+    await prefs.remove('plan_${planId}_completed');
+    final prefix = 'plan_${planId}_day_';
+    final staleKeys = prefs.getKeys().where((k) => k.startsWith(prefix)).toList();
+    for (final k in staleKeys) {
+      await prefs.remove(k);
+    }
+  }
+
   /// Checks if a new Ethiopian liturgical year has arrived (Meskerem 1).
   /// If so, automatically resets all EOTC curated reading plans for the new cycle!
   Future<bool> checkAndApplyAnnualCycleReset({EthiopianDate? simulatedDate}) async {
@@ -101,13 +112,7 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
 
     if (todayEth.year > lastCycleYear) {
       for (final planId in BahireHasabService.eotcCuratedPlanIds) {
-        await prefs.remove('plan_${planId}_completed');
-        final plan = ReadingPlansData.getPlanById(planId);
-        if (plan != null) {
-          for (final passage in plan.passages) {
-            await prefs.remove('plan_${planId}_day_${passage.day}_chapters');
-          }
-        }
+        await _clearPlanChapterPrefs(prefs, planId);
       }
 
       final savedActiveId = prefs.getString(_prefActivePlanId);
@@ -146,8 +151,8 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
     return seasonInfo.isSeasonal && !seasonInfo.isUnlocked;
   }
 
-  Future<void> loadAll() async {
-    await checkAndApplyAnnualCycleReset();
+  Future<void> loadAll({EthiopianDate? simulatedDate}) async {
+    await checkAndApplyAnnualCycleReset(simulatedDate: simulatedDate);
 
     final prefs = await SharedPreferences.getInstance();
 
@@ -172,7 +177,7 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
       } catch (_) {}
     }
 
-    final allPlans = [...loadedCustomPlans, ...ReadingPlansData.allPlans];
+    final allPlans = [...loadedCustomPlans, ...ReadingPlansData.getPlansForDate(simulatedDate)];
     final completedMap = <String, Set<int>>{};
     final chaptersMap = <String, Map<int, Set<int>>>{};
 
@@ -331,19 +336,10 @@ class ReadingPlanSessionNotifier extends StateNotifier<ReadingPlanSessionState> 
   Future<void> resetPlan(String planId) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // 1. Remove completed days pref
-    await prefs.remove('plan_${planId}_completed');
+    // 1. Remove completed days and all chapter prefs (handles dynamic-length plans)
+    await _clearPlanChapterPrefs(prefs, planId);
 
-    // 2. Remove read chapters for every passage in this plan
-    final plan = state.allAvailablePlans.firstWhere(
-      (p) => p.id == planId,
-      orElse: () => ReadingPlansData.allPlans.first,
-    );
-    for (final passage in plan.passages) {
-      await prefs.remove('plan_${planId}_day_${passage.day}_chapters');
-    }
-
-    // 3. Update in-memory state
+    // 2. Update in-memory state
     final updatedCompletedDays = Map<String, Set<int>>.from(state.completedDaysByPlan);
     updatedCompletedDays[planId] = <int>{};
 

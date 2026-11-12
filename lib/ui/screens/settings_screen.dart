@@ -376,7 +376,8 @@ class SettingsScreen extends ConsumerWidget {
                                 ),
                                 child: Text(
                                   '${themeConfig.fontSize.toInt()} pt',
-                                  style: TextStyle(
+                                  style: themeConfig.getAppStyle(
+                                    isEnglish: true,
                                     fontWeight: FontWeight.w800,
                                     fontSize: 12,
                                     color: themeConfig.accentColor,
@@ -846,37 +847,14 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        translation.name,
-                        style: themeConfig.getAppStyle(
-                          isEnglish: isEnglish,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          fontSize: isEnglish ? 14 : 14.5,
-                          color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                        ),
-                      ),
-                      if (translation.id == 2) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: themeConfig.accentColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            isEnglish ? 'Primary' : 'ዋና ቀኖና',
-                            style: themeConfig.getAppStyle(
-                              isEnglish: isEnglish,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: themeConfig.accentColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                  Text(
+                    translation.name,
+                    style: themeConfig.getAppStyle(
+                      isEnglish: isEnglish,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: isEnglish ? 14 : 14.5,
+                      color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(

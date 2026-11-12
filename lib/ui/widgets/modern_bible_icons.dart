@@ -432,3 +432,369 @@ class _ModernSettingsPainter extends CustomPainter {
   bool shouldRepaint(covariant _ModernSettingsPainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.isFilled != isFilled;
 }
+
+/// Bespoke Ethiopian Orthodox Tewahedo & illuminated-manuscript vector icon kinds.
+enum OrthodoxIconKind {
+  birannaCodex,
+  geezScroll,
+  orthodoxCross,
+  censer,
+  marianEmblem,
+  sanctuaryLamp,
+  begenaHarp,
+  bethlehemStar,
+  faithShield,
+  prophecyScroll,
+  vigilFlame,
+}
+
+/// Crisp, resolution-independent vector icon tailored to Ethiopian Orthodox scripture UX.
+class OrthodoxVectorIcon extends StatelessWidget {
+  final OrthodoxIconKind kind;
+  final double size;
+  final Color color;
+
+  const OrthodoxVectorIcon({
+    super.key,
+    required this.kind,
+    this.size = 22,
+    required this.color,
+  });
+
+  /// Maps reading-plan `coverIcon` identifiers to bespoke Orthodox vectors.
+  static OrthodoxIconKind kindForPlanCover(String name) {
+    switch (name) {
+      case 'church':
+        return OrthodoxIconKind.orthodoxCross;
+      case 'lightbulb':
+        return OrthodoxIconKind.sanctuaryLamp;
+      case 'music_note':
+        return OrthodoxIconKind.begenaHarp;
+      case 'spa':
+        return OrthodoxIconKind.censer;
+      case 'favorite':
+        return OrthodoxIconKind.marianEmblem;
+      case 'stars':
+        return OrthodoxIconKind.bethlehemStar;
+      case 'shield':
+        return OrthodoxIconKind.faithShield;
+      case 'visibility':
+        return OrthodoxIconKind.prophecyScroll;
+      case 'menu_book':
+        return OrthodoxIconKind.geezScroll;
+      case 'auto_stories':
+      default:
+        return OrthodoxIconKind.birannaCodex;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _OrthodoxVectorPainter(kind: kind, color: color),
+    );
+  }
+}
+
+class _OrthodoxVectorPainter extends CustomPainter {
+  final OrthodoxIconKind kind;
+  final Color color;
+
+  const _OrthodoxVectorPainter({required this.kind, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final sw = (w * 0.082).clamp(1.25, 2.2);
+
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = sw
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final softFill = Paint()
+      ..color = color.withValues(alpha: 0.14)
+      ..style = PaintingStyle.fill;
+
+    final solidFill = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    switch (kind) {
+      case OrthodoxIconKind.birannaCodex:
+        // Bound Biranna leather codex with spine clasps & embossed cross
+        final cover = RRect.fromRectAndRadius(
+          Rect.fromLTRB(w * 0.22, h * 0.14, w * 0.80, h * 0.84),
+          Radius.circular(w * 0.08),
+        );
+        canvas.drawRRect(cover, softFill);
+        canvas.drawRRect(cover, stroke);
+        // Spine crease & clasp ribs
+        canvas.drawLine(Offset(w * 0.34, h * 0.14), Offset(w * 0.34, h * 0.84), stroke);
+        canvas.drawLine(Offset(w * 0.17, h * 0.32), Offset(w * 0.25, h * 0.32), stroke);
+        canvas.drawLine(Offset(w * 0.17, h * 0.66), Offset(w * 0.25, h * 0.66), stroke);
+        // Cover cross emblem
+        canvas.drawLine(Offset(w * 0.57, h * 0.33), Offset(w * 0.57, h * 0.61), stroke);
+        canvas.drawLine(Offset(w * 0.45, h * 0.44), Offset(w * 0.69, h * 0.44), stroke);
+        // Hanging bookmark ribbon
+        final ribbon = Path()
+          ..moveTo(w * 0.45, h * 0.84)
+          ..lineTo(w * 0.45, h * 0.94)
+          ..lineTo(w * 0.52, h * 0.89)
+          ..lineTo(w * 0.59, h * 0.94)
+          ..lineTo(w * 0.59, h * 0.84);
+        canvas.drawPath(ribbon, stroke);
+        break;
+
+      case OrthodoxIconKind.geezScroll:
+        // Vertical Ge'ez parchment scroll with rolled wood handles
+        final body = Rect.fromLTRB(w * 0.25, h * 0.22, w * 0.75, h * 0.78);
+        canvas.drawRect(body, softFill);
+        canvas.drawLine(Offset(w * 0.25, h * 0.24), Offset(w * 0.25, h * 0.76), stroke);
+        canvas.drawLine(Offset(w * 0.75, h * 0.24), Offset(w * 0.75, h * 0.76), stroke);
+        // Top & bottom spindles
+        final topRoll = RRect.fromRectAndRadius(
+          Rect.fromLTRB(w * 0.18, h * 0.14, w * 0.82, h * 0.25),
+          Radius.circular(w * 0.06),
+        );
+        final botRoll = RRect.fromRectAndRadius(
+          Rect.fromLTRB(w * 0.18, h * 0.75, w * 0.82, h * 0.86),
+          Radius.circular(w * 0.06),
+        );
+        canvas.drawRRect(topRoll, stroke);
+        canvas.drawRRect(botRoll, stroke);
+        // Script text rules
+        canvas.drawLine(Offset(w * 0.36, h * 0.38), Offset(w * 0.64, h * 0.38), stroke);
+        canvas.drawLine(Offset(w * 0.36, h * 0.50), Offset(w * 0.64, h * 0.50), stroke);
+        canvas.drawLine(Offset(w * 0.36, h * 0.62), Offset(w * 0.55, h * 0.62), stroke);
+        break;
+
+      case OrthodoxIconKind.orthodoxCross:
+        // Compact Ethiopian flared cross emblem with hollow diamond core
+        final cx = w * 0.5;
+        final cy = h * 0.5;
+        final r = w * 0.39;
+        final flare = w * 0.13;
+        final neck = w * 0.055;
+        final cross = Path();
+        for (int i = 0; i < 4; i++) {
+          final angle = i * math.pi / 2;
+          final cosA = math.cos(angle);
+          final sinA = math.sin(angle);
+          Offset rot(double x, double y) => Offset(cx + x * cosA - y * sinA, cy + x * sinA + y * cosA);
+          final p1 = rot(-neck, -neck);
+          final p2 = rot(-flare, -r * 0.82);
+          final p3 = rot(0, -r);
+          final p4 = rot(flare, -r * 0.82);
+          final p5 = rot(neck, -neck);
+          if (i == 0) cross.moveTo(p1.dx, p1.dy);
+          cross.lineTo(p2.dx, p2.dy);
+          cross.lineTo(p3.dx, p3.dy);
+          cross.lineTo(p4.dx, p4.dy);
+          cross.lineTo(p5.dx, p5.dy);
+        }
+        cross.close();
+        canvas.drawPath(cross, softFill);
+        canvas.drawPath(cross, stroke);
+        canvas.drawCircle(Offset(cx, cy), w * 0.055, solidFill);
+        break;
+
+      case OrthodoxIconKind.censer:
+        // Liturgical brass incense censer (Tsina) with rising incense curl
+        canvas.drawCircle(Offset(w * 0.5, h * 0.14), w * 0.05, stroke);
+        // Suspension chains
+        canvas.drawLine(Offset(w * 0.46, h * 0.18), Offset(w * 0.28, h * 0.50), stroke);
+        canvas.drawLine(Offset(w * 0.54, h * 0.18), Offset(w * 0.72, h * 0.50), stroke);
+        // Incense curl rising cleanly in center
+        final smoke = Path()
+          ..moveTo(w * 0.50, h * 0.48)
+          ..cubicTo(w * 0.42, h * 0.39, w * 0.58, h * 0.33, w * 0.50, h * 0.25);
+        canvas.drawPath(smoke, stroke);
+        // Censer bowl & pedestal foot
+        final bowl = Path()
+          ..moveTo(w * 0.24, h * 0.50)
+          ..lineTo(w * 0.76, h * 0.50)
+          ..quadraticBezierTo(w * 0.72, h * 0.74, w * 0.50, h * 0.76)
+          ..quadraticBezierTo(w * 0.28, h * 0.74, w * 0.24, h * 0.50)
+          ..close();
+        canvas.drawPath(bowl, softFill);
+        canvas.drawPath(bowl, stroke);
+        canvas.drawLine(Offset(w * 0.50, h * 0.76), Offset(w * 0.50, h * 0.86), stroke);
+        canvas.drawLine(Offset(w * 0.34, h * 0.87), Offset(w * 0.66, h * 0.87), stroke);
+        break;
+
+      case OrthodoxIconKind.marianEmblem:
+        // Crowned Marian rosette chalice emblem
+        final center = Offset(w * 0.5, h * 0.54);
+        // 3 sacred crown rays at top
+        canvas.drawLine(Offset(w * 0.50, h * 0.13), Offset(w * 0.50, h * 0.24), stroke);
+        canvas.drawLine(Offset(w * 0.34, h * 0.17), Offset(w * 0.40, h * 0.26), stroke);
+        canvas.drawLine(Offset(w * 0.66, h * 0.17), Offset(w * 0.60, h * 0.26), stroke);
+        // Concentric halo ring
+        canvas.drawCircle(center, w * 0.26, softFill);
+        canvas.drawCircle(center, w * 0.26, stroke);
+        // Centered triple-petal lily inside medallion
+        final lily = Path()
+          ..moveTo(w * 0.50, h * 0.72)
+          ..cubicTo(w * 0.36, h * 0.58, w * 0.39, h * 0.41, w * 0.50, h * 0.37)
+          ..cubicTo(w * 0.61, h * 0.41, w * 0.64, h * 0.58, w * 0.50, h * 0.72)
+          ..close();
+        canvas.drawPath(lily, stroke);
+        break;
+
+      case OrthodoxIconKind.sanctuaryLamp:
+        // Hanging Ethiopian oil lamp (Qendil) with glowing flame
+        canvas.drawLine(Offset(w * 0.5, h * 0.10), Offset(w * 0.5, h * 0.20), stroke);
+        // Glowing flame droplet
+        final flame = Path()
+          ..moveTo(w * 0.50, h * 0.22)
+          ..cubicTo(w * 0.60, h * 0.34, w * 0.59, h * 0.46, w * 0.50, h * 0.46)
+          ..cubicTo(w * 0.41, h * 0.46, w * 0.40, h * 0.34, w * 0.50, h * 0.22)
+          ..close();
+        canvas.drawPath(flame, softFill);
+        canvas.drawPath(flame, stroke);
+        // Oil lamp bowl & scalloped saucer
+        final dish = Path()
+          ..moveTo(w * 0.22, h * 0.52)
+          ..lineTo(w * 0.78, h * 0.52)
+          ..quadraticBezierTo(w * 0.70, h * 0.72, w * 0.50, h * 0.72)
+          ..quadraticBezierTo(w * 0.30, h * 0.72, w * 0.22, h * 0.52)
+          ..close();
+        canvas.drawPath(dish, softFill);
+        canvas.drawPath(dish, stroke);
+        canvas.drawLine(Offset(w * 0.50, h * 0.72), Offset(w * 0.50, h * 0.85), stroke);
+        canvas.drawLine(Offset(w * 0.32, h * 0.86), Offset(w * 0.68, h * 0.86), stroke);
+        break;
+
+      case OrthodoxIconKind.begenaHarp:
+        // Authentic 10-string Begena (Harp of David) silhouette
+        // Soundbox at bottom
+        final box = Path()
+          ..moveTo(w * 0.28, h * 0.56)
+          ..lineTo(w * 0.72, h * 0.56)
+          ..lineTo(w * 0.65, h * 0.85)
+          ..lineTo(w * 0.35, h * 0.85)
+          ..close();
+        canvas.drawPath(box, softFill);
+        canvas.drawPath(box, stroke);
+        // Two tilted side pillars & top crossbar (Kenber)
+        canvas.drawLine(Offset(w * 0.28, h * 0.56), Offset(w * 0.19, h * 0.20), stroke);
+        canvas.drawLine(Offset(w * 0.72, h * 0.56), Offset(w * 0.81, h * 0.20), stroke);
+        final topBar = Path()
+          ..moveTo(w * 0.15, h * 0.20)
+          ..quadraticBezierTo(w * 0.50, h * 0.14, w * 0.85, h * 0.20);
+        canvas.drawPath(topBar, stroke);
+        // Vertical harp strings
+        for (final frac in [0.36, 0.45, 0.55, 0.64]) {
+          canvas.drawLine(
+            Offset(w * frac, h * 0.18),
+            Offset(w * frac, h * 0.56),
+            Paint()
+              ..color = color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = (sw * 0.72).clamp(1.0, 1.5),
+          );
+        }
+        break;
+
+      case OrthodoxIconKind.bethlehemStar:
+        // Eight-pointed Ethiopian illuminated star / Harege rosette
+        final cx = w * 0.5;
+        final cy = h * 0.5;
+        final majorR = w * 0.40;
+        final minorR = w * 0.26;
+        final innerR = w * 0.12;
+        final star = Path();
+        for (int i = 0; i < 8; i++) {
+          final aOuter = i * math.pi / 4 - math.pi / 2;
+          final aInner = aOuter + math.pi / 8;
+          final tipR = (i % 2 == 0) ? majorR : minorR;
+          final outerPt = Offset(cx + tipR * math.cos(aOuter), cy + tipR * math.sin(aOuter));
+          final innerPt = Offset(cx + innerR * math.cos(aInner), cy + innerR * math.sin(aInner));
+          if (i == 0) {
+            star.moveTo(outerPt.dx, outerPt.dy);
+          } else {
+            star.lineTo(outerPt.dx, outerPt.dy);
+          }
+          star.lineTo(innerPt.dx, innerPt.dy);
+        }
+        star.close();
+        canvas.drawPath(star, softFill);
+        canvas.drawPath(star, stroke);
+        canvas.drawCircle(Offset(cx, cy), w * 0.045, solidFill);
+        break;
+
+      case OrthodoxIconKind.faithShield:
+        // Traditional pointed Ethiopian heritage shield (Gasha) with central cross
+        final shield = Path()
+          ..moveTo(w * 0.50, h * 0.14)
+          ..quadraticBezierTo(w * 0.76, h * 0.18, w * 0.80, h * 0.42)
+          ..quadraticBezierTo(w * 0.80, h * 0.68, w * 0.50, h * 0.87)
+          ..quadraticBezierTo(w * 0.20, h * 0.68, w * 0.20, h * 0.42)
+          ..quadraticBezierTo(w * 0.24, h * 0.18, w * 0.50, h * 0.14)
+          ..close();
+        canvas.drawPath(shield, softFill);
+        canvas.drawPath(shield, stroke);
+        canvas.drawLine(Offset(w * 0.50, h * 0.30), Offset(w * 0.50, h * 0.68), stroke);
+        canvas.drawLine(Offset(w * 0.35, h * 0.44), Offset(w * 0.65, h * 0.44), stroke);
+        break;
+
+      case OrthodoxIconKind.prophecyScroll:
+        // Rising prophetic dawn rays over an open scripture scroll
+        canvas.drawArc(
+          Rect.fromCircle(center: Offset(w * 0.50, h * 0.48), radius: w * 0.18),
+          math.pi,
+          math.pi,
+          false,
+          stroke,
+        );
+        canvas.drawLine(Offset(w * 0.50, h * 0.15), Offset(w * 0.50, h * 0.24), stroke);
+        canvas.drawLine(Offset(w * 0.28, h * 0.23), Offset(w * 0.34, h * 0.30), stroke);
+        canvas.drawLine(Offset(w * 0.72, h * 0.23), Offset(w * 0.66, h * 0.30), stroke);
+        // Horizontal open scroll banner
+        final banner = RRect.fromRectAndRadius(
+          Rect.fromLTRB(w * 0.18, h * 0.52, w * 0.82, h * 0.78),
+          Radius.circular(w * 0.08),
+        );
+        canvas.drawRRect(banner, softFill);
+        canvas.drawRRect(banner, stroke);
+        canvas.drawLine(Offset(w * 0.32, h * 0.65), Offset(w * 0.68, h * 0.65), stroke);
+        break;
+
+      case OrthodoxIconKind.vigilFlame:
+        // Vigil taper candle (Tuwaf) in brass saucer replacing generic flame
+        // Outer tear-drop flame
+        final outerFlame = Path()
+          ..moveTo(w * 0.50, h * 0.12)
+          ..cubicTo(w * 0.66, h * 0.28, w * 0.62, h * 0.44, w * 0.50, h * 0.44)
+          ..cubicTo(w * 0.38, h * 0.44, w * 0.34, h * 0.28, w * 0.50, h * 0.12)
+          ..close();
+        canvas.drawPath(outerFlame, softFill);
+        canvas.drawPath(outerFlame, stroke);
+        // Candle column
+        final candle = RRect.fromRectAndRadius(
+          Rect.fromLTRB(w * 0.39, h * 0.47, w * 0.61, h * 0.78),
+          Radius.circular(w * 0.04),
+        );
+        canvas.drawRRect(candle, softFill);
+        canvas.drawRRect(candle, stroke);
+        // Saucer tray & handle ring
+        final tray = Path()
+          ..moveTo(w * 0.22, h * 0.78)
+          ..lineTo(w * 0.78, h * 0.78)
+          ..quadraticBezierTo(w * 0.72, h * 0.88, w * 0.50, h * 0.88)
+          ..quadraticBezierTo(w * 0.28, h * 0.88, w * 0.22, h * 0.78)
+          ..close();
+        canvas.drawPath(tray, stroke);
+        break;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrthodoxVectorPainter oldDelegate) =>
+      oldDelegate.kind != kind || oldDelegate.color != color;
+}

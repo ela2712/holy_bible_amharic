@@ -11,8 +11,16 @@ class ReadingProgressNotifier extends StateNotifier<ReadingProgressState> {
     state = stateData;
   }
 
-  Future<void> markChapterRead(int bookNumber, int chapter) async {
-    final updated = await ReadingProgressService.instance.markChapterRead(bookNumber, chapter);
+  Future<void> markChapterRead(int bookNumber, int chapter, {String? canonicalId}) async {
+    if (state.isChapterReadToday(bookNumber, chapter, canonicalId: canonicalId) &&
+        state.isChapterRead(bookNumber, chapter)) {
+      return;
+    }
+    final updated = await ReadingProgressService.instance.markChapterRead(
+      bookNumber,
+      chapter,
+      canonicalId: canonicalId,
+    );
     state = updated;
   }
 }

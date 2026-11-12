@@ -207,13 +207,17 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                 color: isSelected ? Colors.white : themeConfig.secondaryTextColor,
               ),
               const SizedBox(width: 6),
-              Text(
-                '$label ($count)',
-                style: themeConfig.getAppStyle(
-                  isEnglish: isEnglish,
-                  fontSize: isEnglish ? 11.5 : 12,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : themeConfig.textColor,
+              Flexible(
+                child: Text(
+                  '$label ($count)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontSize: isEnglish ? 11.5 : 12,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? Colors.white : themeConfig.textColor,
+                  ),
                 ),
               ),
             ],
@@ -273,11 +277,14 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
   }
 
   Widget _buildBookmarksList(ReaderThemeConfig themeConfig, bool isDark) {
+    final isEnglish = ref.watch(isEnglishUiProvider);
     if (_bookmarks.isEmpty) {
       return _buildEmptyVaultState(
         icon: Icons.bookmark_border_rounded,
-        title: 'ምንም የተቀመጡ ዕልባቶች የሉም',
-        subtitle: 'በንባብ ጊዜ ማንኛውንም ጥቅስ በመጫን ዕልባት ማድረግ ይችላሉ።',
+        title: isEnglish ? 'No saved bookmarks yet' : 'ምንም የተቀመጡ ዕልባቶች የሉም',
+        subtitle: isEnglish
+            ? 'Tap any verse while reading to save a bookmark.'
+            : 'በንባብ ጊዜ ማንኛውንም ጥቅስ በመጫን ዕልባት ማድረግ ይችላሉ።',
         themeConfig: themeConfig,
       );
     }
@@ -303,28 +310,35 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: themeConfig.accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.bookmark_rounded, size: 13, color: themeConfig.accentColor),
-                          const SizedBox(width: 5),
-                          Text(
-                            '${b.bookName} ${b.chapter}:${b.verse}',
-                            style: themeConfig.getAppStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: themeConfig.accentColor,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeConfig.accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.bookmark_rounded, size: 13, color: themeConfig.accentColor),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                '${b.bookName} ${b.chapter}:${b.verse}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: themeConfig.getAppStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: themeConfig.accentColor,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 4),
                     const Spacer(),
                     IconButton(
                       visualDensity: VisualDensity.compact,
@@ -332,7 +346,9 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: '${b.bookName} ${b.chapter}:${b.verse}\n«${b.verseText}»'));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('ጥቅሱ ተገልብጧል (Copied)')),
+                          SnackBar(
+                            content: Text(isEnglish ? 'Verse copied' : 'ጥቅሱ ተገልብጧል'),
+                          ),
                         );
                       },
                     ),
@@ -410,15 +426,19 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '${h.bookName} ${h.chapter}:${h.verse}',
-                      style: themeConfig.getAppStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: themeConfig.textColor,
+                    Expanded(
+                      child: Text(
+                        '${h.bookName} ${h.chapter}:${h.verse}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: themeConfig.getAppStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: themeConfig.textColor,
+                        ),
                       ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 4),
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.redAccent),
@@ -489,21 +509,26 @@ class _AnnotationsScreenState extends ConsumerState<AnnotationsScreen> {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: themeConfig.accentColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${n.bookName} ${n.chapter}:${n.verse}',
-                        style: themeConfig.getAppStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: themeConfig.accentColor,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: themeConfig.accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${n.bookName} ${n.chapter}:${n.verse}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: themeConfig.getAppStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: themeConfig.accentColor,
+                          ),
                         ),
                       ),
                     ),
+                    const SizedBox(width: 8),
                     const Spacer(),
                     IconButton(
                       visualDensity: VisualDensity.compact,

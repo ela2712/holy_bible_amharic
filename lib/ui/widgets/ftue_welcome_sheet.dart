@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/app_language_provider.dart';
 import '../../providers/theme_provider.dart';
 import 'ethiopian_cross_painter.dart';
+import 'modern_bible_icons.dart';
 
 /// Reverent First-Time User Experience (FTUE) Welcome Sheet
 /// Introduces the Ethiopian Orthodox 81 Books Canon, gestures, homophone search, and study tools.
@@ -229,9 +230,9 @@ class FtueWelcomeSheet extends ConsumerWidget {
                       themeConfig: themeConfig,
                       isDark: isDark,
                       isEnglish: isEnglish,
-                      iconWidget: Icon(
-                        Icons.shield_outlined,
-                        size: 21,
+                      iconWidget: OrthodoxVectorIcon(
+                        kind: OrthodoxIconKind.faithShield,
+                        size: 22,
                         color: themeConfig.accentColor,
                       ),
                       title: isEnglish ? '100% Offline & Ad-Free' : 'ኦፍላይንና ከማስታወቂያ የጸዳ',

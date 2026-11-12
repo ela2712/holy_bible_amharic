@@ -89,8 +89,8 @@ void main() {
   });
 
   group('Reading Plans Clean Language Separation Tests', () {
-    test('All 15 Reading Plans have pure Amharic titles without English in brackets', () {
-      expect(ReadingPlansData.allPlans.length, 15);
+    test('All 17 Reading Plans have pure Amharic titles without English in brackets', () {
+      expect(ReadingPlansData.allPlans.length, 17);
 
       for (final plan in ReadingPlansData.allPlans) {
         // Amharic title must NOT contain English bracketed suffixes

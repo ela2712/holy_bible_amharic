@@ -1,6 +1,8 @@
+import 'dart:math' show min, max;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/canonical_book_map.dart';
 import '../../core/utils/geez_numbers.dart';
@@ -11,11 +13,14 @@ import '../../providers/bible_state.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/reading_plan_session_provider.dart';
 import '../../providers/reading_progress_provider.dart';
+import '../../services/bible_repository.dart';
 import 'book_selector_screen.dart';
 import 'search_screen.dart';
 import 'study_tools_dialog.dart';
+import 'verse_card_maker_screen.dart';
 import '../../services/bahire_hasab_service.dart';
 import '../widgets/ethiopian_cross_painter.dart';
+import '../widgets/modern_bible_icons.dart';
 
 class HomeReaderScreen extends ConsumerStatefulWidget {
   final ValueChanged<bool>? onChromeVisibilityChanged;
@@ -36,7 +41,12 @@ class HomeReaderScreen extends ConsumerStatefulWidget {
 class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _isChromeVisible = true;
-  int? _selectedVerseNumber;
+  // Multi-verse range selection state
+  int? _selectionStart;
+  int? _selectionEnd;
+  bool get _hasSelection => _selectionStart != null;
+  bool get _isSingleSelection =>
+      _selectionStart != null && _selectionStart == _selectionEnd;
   bool _isPinching = false;
   final Map<int, Offset> _pointerPositions = {};
   double _initialPinchDistance = 0.0;
@@ -72,7 +82,18 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     final currentBook = bibleState.currentBook;
     final currentChapter = bibleState.currentChapter;
     if (currentBook == null) return;
-    ref.read(readingProgressProvider.notifier).markChapterRead(currentBook.bookNumber, currentChapter);
+    final currentTransId = bibleState.currentTranslation?.id ?? 2;
+    final canonicalId = CanonicalBookMap.getCanonicalId(currentTransId, currentBook.bookNumber);
+    final progressState = ref.read(readingProgressProvider);
+    if (progressState.isChapterReadToday(currentBook.bookNumber, currentChapter, canonicalId: canonicalId) &&
+        progressState.isChapterRead(currentBook.bookNumber, currentChapter)) {
+      return;
+    }
+    ref.read(readingProgressProvider.notifier).markChapterRead(
+          currentBook.bookNumber,
+          currentChapter,
+          canonicalId: canonicalId.isNotEmpty ? canonicalId : null,
+        );
   }
 
   void _markActivePlanChapterReadIfApplicable() {
@@ -147,7 +168,10 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
   void _scrollToApproximateVerse(int verseNumber, int totalVerses) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() => _selectedVerseNumber = verseNumber);
+      setState(() {
+        _selectionStart = verseNumber;
+        _selectionEnd = verseNumber;
+      });
       if (!_scrollController.hasClients || totalVerses <= 1) return;
       if (verseNumber <= 2) {
         _scrollController.animateTo(
@@ -258,7 +282,10 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     BibleViewState bibleState, {
     int initialTabIndex = 0,
   }) {
-    setState(() => _selectedVerseNumber = verse.verse);
+    setState(() {
+      _selectionStart = verse.verse;
+      _selectionEnd = verse.verse;
+    });
     _restoreChrome();
 
     StudyToolsSheet.show(
@@ -272,7 +299,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       },
       onDismissed: () {
         if (mounted) {
-          setState(() => _selectedVerseNumber = null);
+          _clearSelection();
         }
       },
       onJumpToReference: (targetBookNum, targetCh, targetVerse) async {
@@ -284,6 +311,456 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
         );
       },
       initialTabIndex: initialTabIndex,
+    );
+  }
+
+  // ── Multi-verse selection helpers ─────────────────────────────────────────
+
+  void _clearSelection() {
+    setState(() {
+      _selectionStart = null;
+      _selectionEnd = null;
+    });
+  }
+
+  bool _isVerseInSelection(Verse verse) {
+    if (_selectionStart == null) return false;
+    final lo = _selectionStart!;
+    final hi = _selectionEnd ?? lo;
+    final vStart = verse.verse;
+    final vEnd = verse.verseEnd ?? verse.verse;
+    return vStart <= hi && vEnd >= lo;
+  }
+
+  List<Verse> _selectedVersesList(List<Verse> allVerses) {
+    if (_selectionStart == null) return [];
+    return allVerses.where(_isVerseInSelection).toList();
+  }
+
+  String _buildRangeReference(String bookName, int chapter) {
+    if (_selectionStart == null) return '';
+    if (_selectionEnd == null || _selectionStart == _selectionEnd) {
+      return '$bookName $chapter:$_selectionStart';
+    }
+    return '$bookName $chapter:$_selectionStart–$_selectionEnd';
+  }
+
+  String _buildCombinedShareText(
+    List<Verse> verses,
+    String bookName,
+    int chapter,
+    bool isEnglish,
+  ) {
+    final ref2 = _buildRangeReference(bookName, chapter);
+    final lines = verses.map((v) => '${v.verse} ${v.text}').join('\n');
+    final attribution = isEnglish ? '— Holy Bible' : '— ከመጽሐፍ ቅዱስ';
+    return '$ref2\n$lines\n$attribution';
+  }
+
+  void _handleVerseTap(Verse verse, BibleViewState bibleState) {
+    HapticFeedback.selectionClick();
+    if (!_hasSelection) {
+      // First tap: start selection
+      setState(() {
+        _selectionStart = verse.verse;
+        _selectionEnd = verse.verse;
+      });
+    } else if (_isSingleSelection && _selectionStart == verse.verse) {
+      // Tap the same sole verse → open StudyToolsSheet
+      _openVerseStudySheet(context, verse, bibleState);
+    } else {
+      // Extend / shrink the range to include this verse
+      final lo = min(_selectionStart!, verse.verse);
+      final hi = max(_selectionEnd!, verse.verse);
+      setState(() {
+        _selectionStart = lo;
+        _selectionEnd = hi;
+      });
+    }
+  }
+
+  void _handleVerseLongPress(Verse verse) {
+    HapticFeedback.mediumImpact();
+    if (!_hasSelection) {
+      setState(() {
+        _selectionStart = verse.verse;
+        _selectionEnd = verse.verse;
+      });
+    }
+  }
+
+  // ── Multi-verse floating action bar ──────────────────────────────────────
+
+  static const List<Map<String, dynamic>> _highlightColors = [
+    {'hex': '#FDE68A', 'color': Color(0xFFFDE68A)},
+    {'hex': '#A7F3D0', 'color': Color(0xFFA7F3D0)},
+    {'hex': '#BAE6FD', 'color': Color(0xFFBAE6FD)},
+    {'hex': '#FECDD3', 'color': Color(0xFFFECDD3)},
+    {'hex': '#DDD6FE', 'color': Color(0xFFDDD6FE)},
+  ];
+
+  Widget _buildMultiVerseActionBar(
+    BibleViewState bibleState,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+    bool isEnglish,
+  ) {
+    final allVerses = bibleState.verses;
+    final selectedVerses = _selectedVersesList(allVerses);
+    final bookName = bibleState.currentBook?.name ?? 'መጽሐፍ ቅዱስ';
+    final chapter = bibleState.currentChapter;
+    final rangeRef = _buildRangeReference(bookName, chapter);
+    final repository = ref.read(bibleRepositoryProvider);
+    final bookNumber = bibleState.currentBook?.bookNumber ?? 1;
+
+    // Shared card decoration
+    final cardColor = isDark ? const Color(0xFF1E2128) : Colors.white;
+    final borderColor = themeConfig.accentColor.withValues(alpha: 0.28);
+
+    // Action button builder
+    Widget actionBtn({
+      required IconData icon,
+      required String tooltip,
+      required VoidCallback onTap,
+      Color? iconColor,
+    }) {
+      return Tooltip(
+        message: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Icon(
+              icon,
+              size: 22,
+              color: iconColor ?? themeConfig.textColor,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: isDark ? 0.45 : 0.18),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: borderColor, width: 1.2),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Reference label row
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.format_quote_rounded,
+                      size: 13, color: themeConfig.accentColor),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      rangeRef,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: themeConfig.getAppStyle(
+                        isEnglish: false,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: themeConfig.accentColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '(${selectedVerses.length})',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: themeConfig.secondaryTextColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Thin divider
+            Divider(
+                height: 1,
+                thickness: 0.8,
+                color: themeConfig.cardBorderColor.withValues(alpha: 0.5)),
+            const SizedBox(height: 2),
+            // Action buttons row
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                // Cancel
+                actionBtn(
+                  icon: Icons.close_rounded,
+                  tooltip: isEnglish ? 'Cancel' : 'ሰርዝ',
+                  iconColor: themeConfig.secondaryTextColor,
+                  onTap: _clearSelection,
+                ),
+                _verticalDivider(themeConfig),
+                // Copy
+                actionBtn(
+                  icon: Icons.copy_rounded,
+                  tooltip: isEnglish ? 'Copy' : 'ቅዳ',
+                  onTap: () async {
+                    final text = _buildCombinedShareText(
+                        selectedVerses, bookName, chapter, isEnglish);
+                    await Clipboard.setData(ClipboardData(text: text));
+                    if (mounted) {
+                      _clearSelection();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isEnglish
+                                ? 'Verses copied!'
+                                : 'ጥቅሶቹ ተቀድተዋል!',
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 13,
+                              color: Colors.white,
+                            ),
+                          ),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          backgroundColor: themeConfig.accentColor,
+                        ),
+                      );
+                    }
+                  },
+                ),
+                // Share
+                actionBtn(
+                  icon: Icons.ios_share_rounded,
+                  tooltip: isEnglish ? 'Share' : 'አጋራ',
+                  onTap: () {
+                    final text = _buildCombinedShareText(
+                        selectedVerses, bookName, chapter, isEnglish);
+                    Share.share(text);
+                    _clearSelection();
+                  },
+                ),
+                _verticalDivider(themeConfig),
+                // Bookmark all
+                actionBtn(
+                  icon: Icons.bookmark_add_outlined,
+                  tooltip: isEnglish ? 'Bookmark all' : 'ሁሉንም አስቀምጥ',
+                  iconColor: themeConfig.accentColor,
+                  onTap: () async {
+                    for (final v in selectedVerses) {
+                      await repository.toggleBookmark(
+                          bookId: bookNumber, chapter: chapter, verse: v.verse);
+                    }
+                    ref.read(bibleStateProvider.notifier).refreshVerses();
+                    if (mounted) {
+                      _clearSelection();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                          isEnglish
+                              ? 'Bookmarked ${selectedVerses.length} verse(s)'
+                              : '${selectedVerses.length} ጥቅሶቹ ተቆርጠዋል',
+                          style: themeConfig.getAppStyle(
+                            isEnglish: isEnglish,
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        backgroundColor: themeConfig.accentColor,
+                      ));
+                    }
+                  },
+                ),
+                // Highlight all — shows color picker
+                actionBtn(
+                  icon: Icons.palette_outlined,
+                  tooltip: isEnglish ? 'Highlight' : 'አጉላ',
+                  iconColor: const Color(0xFFFDE68A),
+                  onTap: () => _showHighlightPicker(
+                    context,
+                    selectedVerses,
+                    bookNumber,
+                    chapter,
+                    themeConfig,
+                    isDark,
+                    isEnglish,
+                    repository,
+                  ),
+                ),
+                // Verse Card Maker
+                actionBtn(
+                  icon: Icons.photo_outlined,
+                  tooltip: isEnglish ? 'Verse Card Maker' : 'የጥቅስ ምስል አዘጋጅ',
+                  iconColor: themeConfig.accentColor,
+                  onTap: () {
+                    if (selectedVerses.isEmpty) return;
+                    final cardText = selectedVerses.length == 1
+                        ? selectedVerses.first.text
+                        : selectedVerses
+                            .map((v) => '${v.verse} ${v.text}')
+                            .join('\n');
+                    _clearSelection();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => VerseCardMakerScreen(
+                          reference: rangeRef,
+                          verseText: cardText,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Study (single-verse only)
+                if (_isSingleSelection && selectedVerses.isNotEmpty) ...[
+                  _verticalDivider(themeConfig),
+                  actionBtn(
+                    icon: Icons.auto_stories_outlined,
+                    tooltip: isEnglish ? 'Study' : 'ጥናት',
+                    iconColor: themeConfig.accentColor,
+                    onTap: () =>
+                        _openVerseStudySheet(context, selectedVerses.first, bibleState),
+                  ),
+                ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _verticalDivider(ReaderThemeConfig themeConfig) {
+    return SizedBox(
+      height: 22,
+      child: VerticalDivider(
+        width: 8,
+        thickness: 0.8,
+        color: themeConfig.cardBorderColor.withValues(alpha: 0.5),
+      ),
+    );
+  }
+
+  Future<void> _showHighlightPicker(
+    BuildContext context,
+    List<Verse> verses,
+    int bookNumber,
+    int chapter,
+    ReaderThemeConfig themeConfig,
+    bool isDark,
+    bool isEnglish,
+    BibleRepository repository,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E2128) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: themeConfig.accentColor.withValues(alpha: 0.2),
+                width: 1.2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isEnglish ? 'Choose Highlight Color' : 'ቀለም ይምረጡ',
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: themeConfig.textColor,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ..._highlightColors.map((c) {
+                    return GestureDetector(
+                      onTap: () async {
+                        Navigator.of(ctx).pop();
+                        for (final v in verses) {
+                          await repository.setHighlight(
+                              bookId: bookNumber, chapter: chapter, verse: v.verse, colorHex: c['hex'] as String);
+                        }
+                        ref.read(bibleStateProvider.notifier).refreshVerses();
+                        if (mounted) _clearSelection();
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: c['color'] as Color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  // Remove highlight
+                  GestureDetector(
+                    onTap: () async {
+                      Navigator.of(ctx).pop();
+                      for (final v in verses) {
+                        await repository.removeHighlight(
+                            bookId: bookNumber, chapter: chapter, verse: v.verse);
+                      }
+                      ref.read(bibleStateProvider.notifier).refreshVerses();
+                      if (mounted) _clearSelection();
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF2A2D35)
+                            : const Color(0xFFF3F4F6),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: themeConfig.cardBorderColor
+                              .withValues(alpha: 0.6),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(Icons.format_color_reset_rounded,
+                          size: 18,
+                          color: themeConfig.secondaryTextColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -332,10 +809,10 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                             if (details.primaryVelocity != null) {
                               if (details.primaryVelocity! < -300) {
                                 ref.read(bibleStateProvider.notifier).nextChapter();
-                                setState(() => _selectedVerseNumber = null);
+                                _clearSelection();
                               } else if (details.primaryVelocity! > 300) {
                                 ref.read(bibleStateProvider.notifier).prevChapter();
-                                setState(() => _selectedVerseNumber = null);
+                                _clearSelection();
                               }
                             }
                           },
@@ -470,6 +947,27 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                 ),
               ),
 
+
+            // 3. Multi-verse floating action bar
+            if (_hasSelection)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                bottom: (planSession.activeSessionPlan != null) ? 190 : 76,
+                left: 16,
+                right: 16,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 680),
+                    child: _buildMultiVerseActionBar(
+                      bibleState,
+                      themeConfig,
+                      isDark,
+                      ref.watch(isEnglishUiProvider),
+                    ),
+                  ),
+                ),
+              ),
 
             // 4. Pinch Zoom Font Indicator Pill
             if (_isPinching)
@@ -709,37 +1207,13 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          displayTitle,
-                                          style: themeConfig.getAppStyle(
-                                            fontSize: 13.5,
-                                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                            color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
-                                          ),
-                                        ),
-                                      ),
-                                      if (t.id == 2) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: themeConfig.accentColor.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            isEnglish ? 'Primary' : 'ዋና ቀኖና',
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.w700,
-                                              color: themeConfig.accentColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
+                                  Text(
+                                    displayTitle,
+                                    style: themeConfig.getAppStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                      color: isSelected ? themeConfig.accentColor : themeConfig.textColor,
+                                    ),
                                   ),
                                   if (displaySubtitle.isNotEmpty) ...[
                                     const SizedBox(height: 2),
@@ -1168,7 +1642,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.auto_stories_outlined, size: 15, color: themeConfig.accentColor),
+                      OrthodoxVectorIcon(kind: OrthodoxIconKind.birannaCodex, size: 16, color: themeConfig.accentColor),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -1200,7 +1674,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             // C. Search Action Icon (Replaces Parallel)
             IconButton(
               visualDensity: VisualDensity.compact,
-              icon: Icon(Icons.search_rounded, size: 21, color: themeConfig.accentColor),
+              icon: ModernSearchIcon(size: 20, color: themeConfig.accentColor),
               tooltip: isEnglish ? 'Search Scripture' : 'ጥቅስ ፈልግ',
               onPressed: () {
                 HapticFeedback.lightImpact();
@@ -1291,8 +1765,9 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
         ),
 
         // 4. Dignified Chapter Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             GestureDetector(
               onTap: () {
@@ -1307,6 +1782,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               },
               child: Text(
                 displayBookTitle,
+                textAlign: TextAlign.center,
                 style: _getScriptureTextStyle(
                   themeConfig,
                   fontSize: 18.5,
@@ -1320,7 +1796,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
                 '—',
-                style: TextStyle(
+                style: themeConfig.getAppStyle(
+                  isEnglish: isEnglish,
                   color: themeConfig.goldAccent,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -1340,6 +1817,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               },
               child: Text(
                 displayChapterTitle,
+                textAlign: TextAlign.center,
                 style: _getScriptureTextStyle(
                   themeConfig,
                   fontSize: 18.5,
@@ -1379,9 +1857,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             spacing: 4,
             runSpacing: 8,
             children: chunkVerses.map((verse) {
-              final isSelected = _selectedVerseNumber != null &&
-                  _selectedVerseNumber! >= verse.verse &&
-                  _selectedVerseNumber! <= (verse.verseEnd ?? verse.verse);
+              final isSelected = _isVerseInSelection(verse);
               final verseNumStr = _formatVerseLabel(verse, themeConfig.useGeezNumerals);
 
               Color? bgHighlight;
@@ -1395,7 +1871,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               }
 
               return GestureDetector(
-                onTap: () => _openVerseStudySheet(context, verse, bibleState),
+                onTap: () => _handleVerseTap(verse, bibleState),
+                onLongPress: () => _handleVerseLongPress(verse),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
@@ -1482,9 +1959,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
     ReaderThemeConfig themeConfig,
     bool isDark,
   ) {
-    final isSelected = _selectedVerseNumber != null &&
-        _selectedVerseNumber! >= verse.verse &&
-        _selectedVerseNumber! <= (verse.verseEnd ?? verse.verse);
+    final isSelected = _isVerseInSelection(verse);
     Color? customHighlight;
     if (verse.highlightColor != null && verse.highlightColor!.isNotEmpty) {
       try {
@@ -1511,7 +1986,8 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
 
         InkWell(
           borderRadius: BorderRadius.circular(10),
-          onTap: () => _openVerseStudySheet(context, verse, bibleState),
+          onTap: () => _handleVerseTap(verse, bibleState),
+          onLongPress: () => _handleVerseLongPress(verse),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
             margin: const EdgeInsets.symmetric(vertical: 2),
@@ -1627,7 +2103,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
             ),
             onPressed: () {
               ref.read(bibleStateProvider.notifier).prevChapter();
-              setState(() => _selectedVerseNumber = null);
+              _clearSelection();
               _scrollToApproximateVerse(1, 30);
             },
             icon: const Icon(Icons.west_rounded, size: 16),
@@ -1658,7 +2134,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
               _markGeneralReadingProgress();
       _markActivePlanChapterReadIfApplicable();
               ref.read(bibleStateProvider.notifier).nextChapter();
-              setState(() => _selectedVerseNumber = null);
+              _clearSelection();
               _scrollToApproximateVerse(1, 30);
             },
             icon: Text(
@@ -1689,7 +2165,7 @@ class _HomeReaderScreenState extends ConsumerState<HomeReaderScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.auto_stories_outlined, size: 48, color: themeConfig.accentColor),
+          OrthodoxVectorIcon(kind: OrthodoxIconKind.birannaCodex, size: 52, color: themeConfig.accentColor),
           const SizedBox(height: 12),
           Text(
             isEnglish ? 'Loading chapter...' : 'ምዕራፉን በመጫን ላይ...',

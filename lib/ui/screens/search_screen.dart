@@ -266,17 +266,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isEnglish
-                    ? '${results.length} verses found'
-                    : '${results.length} ጥቅሶች ተገኝተዋል',
-                style: themeConfig.getAppStyle(
-                  isEnglish: isEnglish,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: themeConfig.accentColor,
+              Expanded(
+                child: Text(
+                  isEnglish
+                      ? '${results.length} verses found'
+                      : '${results.length} ጥቅሶች ተገኝተዋል',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: themeConfig.getAppStyle(
+                    isEnglish: isEnglish,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: themeConfig.accentColor,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

@@ -471,7 +471,8 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                           const SizedBox(height: 2),
                           Text(
                             isEnglish ? 'Cycle of Evangelist $evangelist' : 'ዘመነ $evangelist (የአራቱ ወንጌላውያን ዑደት)',
-                            style: TextStyle(
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: themeConfig.accentColor,
@@ -661,7 +662,8 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                                   themeConfig.useGeezNumerals && !isEnglish
                                       ? GeezNumbers.toGeez(dayNum)
                                       : '$dayNum',
-                                  style: TextStyle(
+                                  style: themeConfig.getAppStyle(
+                                    isEnglish: isEnglish || !themeConfig.useGeezNumerals,
                                     fontSize: 13,
                                     fontWeight: isSelected || isToday ? FontWeight.w800 : FontWeight.w600,
                                     color: isSelected
@@ -724,17 +726,22 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          isEnglish
-                              ? '$monthName $_selectedDay, $_selectedYear E.C.'
-                              : '$monthName $_selectedDay ቀን $_selectedYear ዓ.ም.',
-                          style: themeConfig.getAppStyle(
-                            isEnglish: isEnglish,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: themeConfig.textColor,
+                        Expanded(
+                          child: Text(
+                            isEnglish
+                                ? '$monthName $_selectedDay, $_selectedYear E.C.'
+                                : '$monthName $_selectedDay ቀን $_selectedYear ዓ.ም.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: themeConfig.textColor,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -746,8 +753,9 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                           child: Text(
                             isSelectedDayFast
                                 ? (isEnglish ? 'Fasting Day' : 'የጾም ቀን')
-                                : (isEnglish ? 'Feasting / Non-Fast' : 'የፈሰክ ቀን'),
-                            style: TextStyle(
+                                : (isEnglish ? 'Feasting / Non-Fast' : 'የፍስክ ቀን'),
+                            style: themeConfig.getAppStyle(
+                              isEnglish: isEnglish,
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                               color: isSelectedDayFast ? const Color(0xFFDC2626) : const Color(0xFF047857),
@@ -771,7 +779,11 @@ class _LiturgicalCalendarScreenState extends ConsumerState<LiturgicalCalendarScr
                                 isEnglish
                                     ? 'Daily liturgical office and ordinary prayer service.'
                                     : 'መደበኛ የዕለቱ ጸሎትና ምስጋና።',
-                                style: TextStyle(fontSize: 13, color: themeConfig.secondaryTextColor),
+                                style: themeConfig.getAppStyle(
+                                  isEnglish: isEnglish,
+                                  fontSize: 13,
+                                  color: themeConfig.secondaryTextColor,
+                                ),
                               ),
                             ),
                           ],

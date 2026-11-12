@@ -8,6 +8,7 @@ class ReadingProgressState {
   final int chaptersReadToday;
   final String? lastReadDate;
   final Set<String> readChapters;
+  final Set<String> todayReadChapters;
   final Set<String> activeDates;
 
   const ReadingProgressState({
@@ -17,11 +18,19 @@ class ReadingProgressState {
     this.chaptersReadToday = 0,
     this.lastReadDate,
     this.readChapters = const {},
+    this.todayReadChapters = const {},
     this.activeDates = const {},
   });
 
   bool isChapterRead(int bookNumber, int chapter) =>
       readChapters.contains('${bookNumber}_$chapter');
+
+  bool isChapterReadToday(int bookNumber, int chapter, {String? canonicalId}) {
+    final key = (canonicalId != null && canonicalId.isNotEmpty)
+        ? '${canonicalId}_$chapter'
+        : '${bookNumber}_$chapter';
+    return todayReadChapters.contains(key);
+  }
 
   int getChaptersReadForBook(int bookNumber) {
     final prefix = '${bookNumber}_';
@@ -56,6 +65,7 @@ class ReadingProgressService {
   static const _keyLastReadDate = 'reading_progress_last_read_date';
   static const _keyActiveDates = 'reading_progress_active_dates_v1';
   static const _keyTodayCount = 'reading_progress_today_chapters_count';
+  static const _keyTodayChapters = 'reading_progress_today_chapters_v2';
 
   static final ReadingProgressService instance = ReadingProgressService._();
   ReadingProgressService._();
@@ -64,25 +74,44 @@ class ReadingProgressService {
     return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 
-  Future<ReadingProgressState> loadState() async {
+  static String _buildTodayChapterKey(int bookNumber, int chapter, String? canonicalId) {
+    if (canonicalId != null && canonicalId.isNotEmpty) {
+      return '${canonicalId}_$chapter';
+    }
+    return '${bookNumber}_$chapter';
+  }
+
+  Future<ReadingProgressState> loadState({DateTime? nowOverride}) async {
     final prefs = await SharedPreferences.getInstance();
     final readList = prefs.getStringList(_keyReadChapters) ?? [];
     final activeList = prefs.getStringList(_keyActiveDates) ?? [];
     final currentStreak = prefs.getInt(_keyCurrentStreak) ?? 0;
     final longestStreak = prefs.getInt(_keyLongestStreak) ?? 0;
     final lastReadDate = prefs.getString(_keyLastReadDate);
-    final todayCount = prefs.getInt(_keyTodayCount) ?? 0;
+    final storedTodayChapters = prefs.getStringList(_keyTodayChapters);
 
-    final todayStr = _formatDate(DateTime.now());
-    final yesterdayStr = _formatDate(DateTime.now().subtract(const Duration(days: 1)));
+    final now = nowOverride ?? DateTime.now();
+    final todayStr = _formatDate(now);
+    final yesterdayStr = _formatDate(now.subtract(const Duration(days: 1)));
 
-    // Check if streak was broken (last read date was before yesterday)
     int calculatedStreak = currentStreak;
-    int calculatedTodayCount = todayCount;
+    Set<String> todayChaptersSet = <String>{};
+
     if (lastReadDate != null && lastReadDate != todayStr) {
-      calculatedTodayCount = 0;
       if (lastReadDate != yesterdayStr) {
         calculatedStreak = 0;
+      }
+      if (storedTodayChapters != null && storedTodayChapters.isNotEmpty) {
+        await prefs.setStringList(_keyTodayChapters, const []);
+        await prefs.setInt(_keyTodayCount, 0);
+      }
+    } else if (lastReadDate == todayStr) {
+      if (storedTodayChapters != null) {
+        todayChaptersSet = storedTodayChapters.toSet();
+      } else {
+        // Clear any legacy inflated scroll count from before unique chapter tracking
+        await prefs.setStringList(_keyTodayChapters, const []);
+        await prefs.setInt(_keyTodayCount, 0);
       }
     }
 
@@ -90,61 +119,82 @@ class ReadingProgressService {
       currentStreak: calculatedStreak,
       longestStreak: longestStreak,
       totalChaptersRead: readList.length,
-      chaptersReadToday: calculatedTodayCount,
+      chaptersReadToday: todayChaptersSet.length,
       lastReadDate: lastReadDate,
       readChapters: readList.toSet(),
+      todayReadChapters: todayChaptersSet,
       activeDates: activeList.toSet(),
     );
   }
 
-  Future<ReadingProgressState> markChapterRead(int bookNumber, int chapter) async {
+  Future<ReadingProgressState> markChapterRead(
+    int bookNumber,
+    int chapter, {
+    String? canonicalId,
+    DateTime? nowOverride,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    final readList = (prefs.getStringList(_keyReadChapters) ?? []).toSet();
-    final activeList = (prefs.getStringList(_keyActiveDates) ?? []).toSet();
+    final readSet = (prefs.getStringList(_keyReadChapters) ?? []).toSet();
+    final activeSet = (prefs.getStringList(_keyActiveDates) ?? []).toSet();
     int currentStreak = prefs.getInt(_keyCurrentStreak) ?? 0;
     int longestStreak = prefs.getInt(_keyLongestStreak) ?? 0;
     final lastReadDate = prefs.getString(_keyLastReadDate);
-    int todayCount = prefs.getInt(_keyTodayCount) ?? 0;
+    final storedTodayChapters = prefs.getStringList(_keyTodayChapters) ?? [];
 
-    final now = DateTime.now();
+    final now = nowOverride ?? DateTime.now();
     final todayStr = _formatDate(now);
     final yesterdayStr = _formatDate(now.subtract(const Duration(days: 1)));
 
-    // Add chapter to read set
     final chapterKey = '${bookNumber}_$chapter';
-    readList.add(chapterKey);
+    final todayChapterKey = _buildTodayChapterKey(bookNumber, chapter, canonicalId);
+    final bool isSameDay = lastReadDate == todayStr;
 
-    // Add today to active dates
-    activeList.add(todayStr);
+    final Set<String> todayChapters = isSameDay ? storedTodayChapters.toSet() : <String>{};
 
-    // Update streak logic
+    // Guard against redundant scroll-tick writes when chapter was already counted today
+    if (isSameDay && todayChapters.contains(todayChapterKey) && readSet.contains(chapterKey)) {
+      return ReadingProgressState(
+        currentStreak: currentStreak,
+        longestStreak: longestStreak,
+        totalChaptersRead: readSet.length,
+        chaptersReadToday: todayChapters.length,
+        lastReadDate: todayStr,
+        readChapters: readSet,
+        todayReadChapters: todayChapters,
+        activeDates: activeSet,
+      );
+    }
+
+    readSet.add(chapterKey);
+    todayChapters.add(todayChapterKey);
+    activeSet.add(todayStr);
+
     if (lastReadDate == null) {
       currentStreak = 1;
-      todayCount = 1;
     } else if (lastReadDate == todayStr) {
-      todayCount += 1;
+      if (currentStreak == 0) currentStreak = 1;
     } else if (lastReadDate == yesterdayStr) {
       currentStreak += 1;
-      todayCount = 1;
     } else {
-      // Missed one or more days
       currentStreak = 1;
-      todayCount = 1;
     }
 
     if (currentStreak > longestStreak) {
       longestStreak = currentStreak;
     }
 
+    final int todayCount = todayChapters.length;
+
     // Keep active dates bounded to last 180 days
-    if (activeList.length > 180) {
-      final sorted = activeList.toList()..sort();
-      activeList.clear();
-      activeList.addAll(sorted.skip(sorted.length - 180));
+    if (activeSet.length > 180) {
+      final sorted = activeSet.toList()..sort();
+      activeSet.clear();
+      activeSet.addAll(sorted.skip(sorted.length - 180));
     }
 
-    await prefs.setStringList(_keyReadChapters, readList.toList());
-    await prefs.setStringList(_keyActiveDates, activeList.toList());
+    await prefs.setStringList(_keyReadChapters, readSet.toList());
+    await prefs.setStringList(_keyTodayChapters, todayChapters.toList());
+    await prefs.setStringList(_keyActiveDates, activeSet.toList());
     await prefs.setInt(_keyCurrentStreak, currentStreak);
     await prefs.setInt(_keyLongestStreak, longestStreak);
     await prefs.setString(_keyLastReadDate, todayStr);
@@ -153,11 +203,12 @@ class ReadingProgressService {
     return ReadingProgressState(
       currentStreak: currentStreak,
       longestStreak: longestStreak,
-      totalChaptersRead: readList.length,
+      totalChaptersRead: readSet.length,
       chaptersReadToday: todayCount,
       lastReadDate: todayStr,
-      readChapters: readList,
-      activeDates: activeList,
+      readChapters: readSet,
+      todayReadChapters: todayChapters,
+      activeDates: activeSet,
     );
   }
 }
